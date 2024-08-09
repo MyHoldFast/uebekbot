@@ -11,7 +11,7 @@ ADMIN_ID = os.getenv("ADMIN_ID")
 router = Router()
 
 start_time = datetime.now()
-
+@router.message(Command("uptime"))
 async def cmd_uptime(message: Message):
     user_id = message.from_user.id
     if str(user_id) != ADMIN_ID: return
