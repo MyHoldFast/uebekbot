@@ -7,9 +7,10 @@ from duckduckgo_search import AsyncDDGS
 import pickle
 import os
 import gzip
+from pylatexenc.latex2text import LatexNodes2Text
 from tinydb import Query, TinyDB
 from localization import get_localization, DEFAULT_LANGUAGE 
-from keyboards.gpt import get_gpt_keyboard, models 
+from keyboards.gpt import get_gpt_keyboard, models
 
 router = Router()
 db = TinyDB('db/models.json')
@@ -85,7 +86,7 @@ async def cmd_start(message: Message, command: CommandObject):
             save_user_context(user_id, (d._chat_messages, d._chat_vqd))
 
             for x in range(0, len(answer), 4000):
-                await message.reply(telegram_format(answer[x:x + 4000]), parse_mode="HTML")
+                await message.reply(telegram_format(LatexNodes2Text().latex_to_text(answer[x:x + 4000])), parse_mode="HTML")
         else:
             keyboard = get_gpt_keyboard(model)
             await message.reply(_("gpt_help"), reply_markup=keyboard, parse_mode="markdown")
@@ -94,7 +95,7 @@ async def cmd_start(message: Message, command: CommandObject):
         await message.bot.send_chat_action(chat_id=message.chat.id, action='cancel')
         if answer:
             for x in range(0, len(answer), 4000):
-                await message.reply(html.quote(answer[x:x + 4000]), parse_mode="html")
+                await message.reply(LatexNodes2Text().latex_to_text(html.quote(answer[x:x + 4000])), parse_mode="html")
         else:
             await message.reply(_("gpt_error"), parse_mode="html")
 
