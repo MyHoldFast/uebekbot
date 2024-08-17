@@ -26,4 +26,3 @@ tinydb==4.8.0
 typing_extensions==4.12.2
 urllib3==2.2.2
 yarl==1.9.4
-pylatexenc==2.10
