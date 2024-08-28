@@ -6,6 +6,7 @@ from aiogram.types import Message, CallbackQuery
 from duckduckgo_search import AsyncDDGS
 import pickle
 import os
+import time
 import gzip
 from tinydb import Query, TinyDB
 from localization import get_localization, DEFAULT_LANGUAGE 
@@ -21,8 +22,12 @@ async def update_model_message(callback_query: CallbackQuery, model: str):
 def load_user_context(user_id):
     file_path = f'db/{user_id}.pcl.gz'
     if os.path.exists(file_path):
-        with gzip.open(file_path, 'rb') as file:
-            return pickle.load(file)
+        last_modified_time = os.path.getmtime(file_path)
+        current_time = time.time()
+        # Проверяем, прошло ли меньше 3 часов (3 часа = 3 * 3600 секунд)
+        if current_time - last_modified_time < 3 * 3600:
+            with gzip.open(file_path, 'rb') as file:
+                return pickle.load(file)
     return None, None
 
 def save_user_context(user_id, context):
