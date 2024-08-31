@@ -5,12 +5,38 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 import aiohttp
-import time, random
+import time, random, os
+import subprocess
 from io import BytesIO
 from localization import get_localization, DEFAULT_LANGUAGE
 
 API_URLS = ["https://api-inference.huggingface.co/models/openai/whisper-medium", "https://api-inference.huggingface.co/models/openai/whisper-base", "https://api-inference.huggingface.co/models/openai/whisper-tiny"]
 headers = {"Authorization": "Bearer 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"}
+
+async def download_as_audio(file_path, output_file):
+    token = os.getenv("TG_BOT_TOKEN")
+    command = [
+        'ffmpeg',
+        '-i', f"https://api.telegram.org/file/bot{token}/{file_path}",
+        '-vn', '-y',
+        '-c:a', 'libvorbis',
+        '-b:a', '64k',
+        '-fs', '10M',
+        output_file
+    ]
+    process = await asyncio.create_subprocess_exec(
+        *command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    chunk = []
+    if process.returncode != 0:
+        print(f"Error during conversion: {stderr.decode()}")
+    else:
+        with open(output_file, 'rb') as f:
+            return f.read()
+    return chunk
 
 
 
@@ -56,25 +82,29 @@ router = Router()
 async def tts_command(message: types.Message, bot: Bot):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
-    if not message.reply_to_message or not message.reply_to_message.voice:
+    if not message.reply_to_message or (not message.reply_to_message.voice and not message.reply_to_message.video):
         await message.reply(_("voice_help"))
         return
 
     await message.bot.send_chat_action(chat_id=message.chat.id, action='typing')
-    voice = message.reply_to_message.voice
-    file_id = voice.file_id
+    if message.reply_to_message.voice:
+        voice = message.reply_to_message.voice
+        file_id = voice.file_id
+        duration = voice.duration
+    if message.reply_to_message.video:
+        video = message.reply_to_message.video
+        file_id = video.file_id
+        duration = video.duration
     
     file = await bot.get_file(file_id)
     file_path = file.file_path
-    audio_file = await bot.download_file(file_path)
-    
-    audio_bytes = io.BytesIO()
-    audio_bytes.write(audio_file.getvalue())
-    audio_bytes.seek(0)
+
+    content = await download_as_audio(file_path, f"tmp/{file_id}.ogg")
+    audio_bytes = io.BytesIO(content)
     api = 0
-    if voice.duration > 180:
+    if duration > 180:
         api = 2
-    elif voice.duration > 120:
+    elif duration > 120:
         api = 1
     #print(API_URLS[api])
     transcription = await process_audio(audio_bytes, message, api)
@@ -87,4 +117,4 @@ async def tts_command(message: types.Message, bot: Bot):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[translate_button]])
     
     await message.reply(transcription, reply_markup=keyboard)
-
+    os.remove(f"tmp/{file_id}.ogg")
