@@ -3,7 +3,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 models = [
     ("gpt-4o-mini"),
     ("claude-3-haiku"),
-    ("llama-3-70b"),
+    ("llama-3.1-70b"),
     ("mixtral-8x7b")
 ]
 
