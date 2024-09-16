@@ -13,7 +13,7 @@ async def main():
     dp.include_routers(ya_ocr.router, summary.router, gpt.router, admin.router, stt.router)
 
     await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
+    await dp.start_polling(bot, polling_timeout=50)
 
 
 if __name__ == "__main__":

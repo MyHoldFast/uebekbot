@@ -1,6 +1,6 @@
 import re
 import asyncio
-import aiohttp
+import aiohttp, httpx
 import os
 from bs4 import BeautifulSoup
 from aiogram import Router
@@ -18,10 +18,12 @@ ya300_apikey = os.getenv("YANDEX_OAUTH_TOKEN")
 
 
 gen_url = "https://300.ya.ru/api/generation"
+
 cook = {
-    "yp": "2032087015.udn.czo2MTk0NDA2ODp2azpob2xkZmFzdA%3D%3D#1733562602.szm.1_25:1536x864:1519x695#1720473009.csc.1",
-    "Session_id": "3:1717794598.5.0.1716727015439:xusZXg:27.1.2:1|342167374.-1.2.3:1716727015|6:10191834.350194.zbiJnVlFAkn2iCNoImLy95FUhag"
-}
+    'Session_id': os.getenv("YANDEX_SESSIONID_COOK"),
+    'yp': os.getenv("YANDEX_YP_COOK")
+  }
+
 headers = {'Authorization': f'OAuth {ya300_apikey}'}
 
 
@@ -31,9 +33,8 @@ async def fetch(session, url, data):
 
 async def summarize(input_value: str, is_text=False) -> str:
     sum = ''
-    
     async with aiohttp.ClientSession() as session:
-        params = {"text": input_value} if is_text else {"video_url": input_value}
+        params = {"text": input_value, "type": "text"} if is_text else {"video_url": input_value, "type": "video"}
         gen_start_json = await fetch(session, gen_url, params)
 
     if "message" in gen_start_json:
@@ -48,7 +49,7 @@ async def summarize(input_value: str, is_text=False) -> str:
     while first_run or gen_data.get('status_code') == 1:
         first_run = False
         async with aiohttp.ClientSession() as session:
-            params = {"session_id": ya300_session_id, "text": input_value} if is_text else {"session_id": ya300_session_id, "video_url": input_value}
+            params = {"session_id": ya300_session_id, "text": input_value, "type": "text"} if is_text else {"session_id": ya300_session_id, "video_url": input_value, "type": "video"}
             gen_data = await fetch(session, gen_url, params)
 
         interval = gen_data['poll_interval_ms']
@@ -80,19 +81,34 @@ async def send_yandex_api(link):
 
 async def read_url(target):
     final_url = await send_yandex_api(target)
+    title = ''
+    description = ''
+    headers = {
+        'DNT': '1',
+        'Upgrade-Insecure-Requests': '1',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+        'sec-ch-ua': '"Chromium";v="128", "Not;A=Brand";v="24", "Google Chrome";v="128"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"Windows"'
+    }
+
     if final_url:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(final_url) as response:
-                soup = BeautifulSoup(await response.text(), "html.parser")
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            response = await client.post(final_url, headers=headers)
+            
+            if response.status_code == 200:
+                response.encoding = 'utf-8'
+                soup = BeautifulSoup(response.text, "html.parser")
                 og_title_tag = soup.find("meta", attrs={"property": "og:title"})
                 if og_title_tag:
                     title = og_title_tag["content"]
-                og_description_tag = soup.find("meta", attrs={"property": "og:description"})
+                og_description_tag = soup.find("meta", attrs={"name": "description"})
                 if og_description_tag:
-                    description = og_description_tag["content"]
+                    description = og_description_tag.get("content")
                 return (title + "\n\n" + description).replace(" - Пересказ YandexGPT", "")
-    else:
-        return None
+    
+    return None
+
 
 async def parse_url(text):    
     if text==None:
@@ -108,11 +124,13 @@ async def parse_url(text):
 
 
     for regex, func in regexes:
-        match = re.search(regex, (text))
+        match = re.search(regex, text)
         if match:
             matched = True
             link = match.group()
-            result += "\n\n" + (await func(link))
+            func_result = await func(link)
+            if func_result is not None: 
+                result += "\n\n" + func_result
 
     if not matched:
         
@@ -133,12 +151,9 @@ async def summary(message: Message):
         link_preview = message.reply_to_message.link_preview_options
         text = message.reply_to_message.caption or message.reply_to_message.text
      
-    try:
-        await message.bot.send_chat_action(chat_id=message.chat.id, action='typing')
-        if link_preview and link_preview.url: text = link_preview.url
-        result = await parse_url(text)
-    except Exception as e:
-        result = ""
+    await message.bot.send_chat_action(chat_id=message.chat.id, action='typing')
+    if link_preview and link_preview.url: text = link_preview.url
+    result = await parse_url(text)
     
     if result:
         if user_language and user_language != "ru" and user_language in LANGUAGES:
