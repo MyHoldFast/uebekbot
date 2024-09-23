@@ -82,7 +82,7 @@ router = Router()
 async def stt_command(message: types.Message, bot: Bot):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
-    if not message.reply_to_message or (not message.reply_to_message.voice and not message.reply_to_message.video):
+    if not message.reply_to_message or (not message.reply_to_message.voice and not message.reply_to_message.video and not message.reply_to_message.video_note):
         await message.reply(_("voice_help"))
         return
 
@@ -93,6 +93,10 @@ async def stt_command(message: types.Message, bot: Bot):
         duration = voice.duration
     if message.reply_to_message.video:
         video = message.reply_to_message.video
+        file_id = video.file_id
+        duration = video.duration
+    if message.reply_to_message.video_note:
+        video = message.reply_to_message.video_note
         file_id = video.file_id
         duration = video.duration
     
