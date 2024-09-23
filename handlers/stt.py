@@ -79,7 +79,7 @@ async def process_audio(wav_buffer: BytesIO, message, api=0):
 router = Router()
 
 @router.message(Command(commands=["stt"]))
-async def tts_command(message: types.Message, bot: Bot):
+async def stt_command(message: types.Message, bot: Bot):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
     if not message.reply_to_message or (not message.reply_to_message.voice and not message.reply_to_message.video):
