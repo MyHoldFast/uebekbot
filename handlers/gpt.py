@@ -1,5 +1,5 @@
 from chatgpt_md_converter import telegram_format 
-from aiogram import Router
+from aiogram import Router, Bot
 from aiogram import html
 from aiogram.filters import CommandObject, Command
 from aiogram.types import Message, CallbackQuery
@@ -8,12 +8,17 @@ import pickle
 import os
 import time
 import gzip
+import google.generativeai as genai
 from tinydb import Query, TinyDB
+from dotenv import load_dotenv
 from localization import get_localization, DEFAULT_LANGUAGE 
 from keyboards.gpt import get_gpt_keyboard, models
 
+load_dotenv()
+
 router = Router()
 db = TinyDB('db/models.json')
+genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
 async def update_model_message(callback_query: CallbackQuery, model: str):
     keyboard = get_gpt_keyboard(model)
@@ -65,19 +70,48 @@ async def callback_query_handler(callback_query: CallbackQuery):
         )
 
 @router.message(Command("gpt"))
-async def cmd_start(message: Message, command: CommandObject):
+async def cmd_start(message: Message, command: CommandObject, bot: Bot):
+    messagetext = message.reply_to_message.text if message.reply_to_message else command.args
     await message.bot.send_chat_action(chat_id=message.chat.id, action='typing')
-    user_id = message.from_user.id
-    d = AsyncDDGS()
+    user_id = message.from_user.id      
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
 
+    photo = None
+
+    if message.reply_to_message:
+        if message.reply_to_message.photo:
+            photo = message.reply_to_message.photo[-1]
+        elif message.reply_to_message.document:
+            if message.reply_to_message.document.mime_type.startswith('image/'):
+                photo = message.reply_to_message.document
+
+    if not photo and message.photo:
+        photo = message.photo[-1]
+
+    if photo and command.args:
+        file = await bot.get_file(photo.file_id)
+        file_path = file.file_path
+        bytesIO = await bot.download_file(file_path)
+        image_data = bytesIO.read()
+        with open("tmp/"+photo.file_id+".jpg", "wb") as temp_file:
+            temp_file.write(image_data)
+        myfile = genai.upload_file("tmp/"+photo.file_id+".jpg")
+        os.remove(f"tmp/"+photo.file_id+".jpg")
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        result = model.generate_content(
+            [myfile, "\n\n", command.args]
+        )
+        if result.text:
+            await message.reply(result.text, parse_mode="markdown")
+        return   
+
+    d = AsyncDDGS()
     chat_messages, chat_vqd = load_user_context(user_id)
     if chat_messages is not None and chat_vqd is not None:
         d._chat_messages = chat_messages
         d._chat_vqd = chat_vqd
-
-    messagetext = message.reply_to_message.text if message.reply_to_message else command.args
+    
     answer = ""
     default = "gpt-4o-mini"
     model = default

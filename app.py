@@ -1,7 +1,7 @@
 import asyncio
 import os
 import logging
-from quart import Quart
+from quart import Quart # type: ignore
 from aiogram import Bot, Dispatcher
 from dotenv import load_dotenv
 from handlers import callbacks, ya_ocr, summary, gpt, admin, stt
