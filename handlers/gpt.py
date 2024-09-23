@@ -103,7 +103,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
             [myfile, "\n\n", command.args]
         )
         if result.text:
-            await message.reply(result.text, parse_mode="markdown")
+            await message.reply(result.text, parse_mode="html")
         return   
 
     d = AsyncDDGS()
