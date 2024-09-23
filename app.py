@@ -4,6 +4,7 @@ import logging
 from quart import Quart
 from aiogram import Bot, Dispatcher
 from dotenv import load_dotenv
+from handlers import callbacks, ya_ocr, summary, gpt, admin, stt
 
 app = Quart(__name__)
 
@@ -17,6 +18,9 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 bot = Bot(token=os.getenv("TG_BOT_TOKEN"))
 dp = Dispatcher()
+
+dp.include_router(callbacks.router)
+dp.include_routers(ya_ocr.router, summary.router, gpt.router, admin.router, stt.router)
 
 @app.route('/')
 async def index():
