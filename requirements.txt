@@ -16,7 +16,6 @@ idna==3.7
 magic-filter==1.0.12
 multidict==6.0.5
 pillow==10.4.0
-primp==0.5.5
 pydantic==2.8.2
 pydantic_core==2.20.1
 python-dotenv==1.0.1
