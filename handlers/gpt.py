@@ -103,7 +103,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
                 [myfile, "\n\n", command.args]
             )
             if result.text:
-                await message.reply(telegram_format(result.text), parse_mode="markdown")
+                await message.reply(telegram_format(result.text), parse_mode="HTML")
         except:
             await message.reply(_("gpt_gemini_error"))   
         os.remove(f"tmp/"+photo.file_id+".jpg")         
