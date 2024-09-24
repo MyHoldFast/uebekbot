@@ -24,6 +24,9 @@ msgstr "Контекст видалено"
 msgid "gpt_error"
 msgstr "Виникла помилка, спробуйте видалити контекст і повторити запит знову"
 
+msgid "gpt_gemini_error"
+msgstr "Виконати запит не вдалося."
+
 msgid "gpt_help"
 msgstr ""
 "Введіть свій запит після команди /gpt \n"

@@ -96,14 +96,17 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
         image_data = bytesIO.read()
         with open("tmp/"+photo.file_id+".jpg", "wb") as temp_file:
             temp_file.write(image_data)
-        myfile = genai.upload_file("tmp/"+photo.file_id+".jpg")
-        os.remove(f"tmp/"+photo.file_id+".jpg")
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        result = model.generate_content(
-            [myfile, "\n\n", command.args]
-        )
-        if result.text:
-            await message.reply(result.text, parse_mode="html")
+        try:
+            myfile = genai.upload_file("tmp/"+photo.file_id+".jpg")                    
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            result = model.generate_content(
+                [myfile, "\n\n", command.args]
+            )
+            if result.text:
+                await message.reply(telegram_format(result.text), parse_mode="markdown")
+        except:
+            await message.reply(_("gpt_gemini_error"))   
+        os.remove(f"tmp/"+photo.file_id+".jpg")         
         return   
 
     d = AsyncDDGS()
