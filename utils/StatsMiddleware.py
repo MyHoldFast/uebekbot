@@ -1,4 +1,4 @@
-import json
+import json, re
 from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, Awaitable, Optional, Tuple
 from aiogram import BaseMiddleware
@@ -9,16 +9,19 @@ moscow_tz = pytz.timezone('Europe/Moscow')
 cmds = ['/summary', '/ocr', '/gpt', '/stt', '/neuro']
 
 class StatsMiddleware(BaseMiddleware):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, text: str = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.text = text
 
     async def __call__(
             self,
             handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
             event: TelegramObject,
             data: Dict[str, Any],
-    ) -> Any:
-        cmd = (event.message.text.split(' ', 1)[0] if event.message.text else event.message.caption.split(' ', 1)[0] if event.message.caption else None)
+    ) -> Any:        
+        pattern = r'[@\s]+' + re.escape(self.text) + r'\b'        
+        cmd = (re.split(pattern, event.message.text, 1)[0] if event.message.text else 
+               re.split(pattern, event.message.caption, 1)[0] if event.message.caption else None)
         if cmd in cmds:
             save_stats(cmd)
 

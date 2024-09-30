@@ -22,13 +22,13 @@ dp = Dispatcher()
 
 dp.include_router(callbacks.router)
 dp.include_routers(ya_ocr.router, summary.router, gpt.router, admin.router, stt.router, neuro.router)
-dp.update.middleware(StatsMiddleware())
 
 @app.route('/')
 async def index():
     return "Главная страница"
 
 async def main():
+    dp.update.middleware(StatsMiddleware((await bot.get_me()).username))
     await bot.delete_webhook(drop_pending_updates=True)
     #logger.info("Бот успешно запущен!")
     asyncio.create_task(dp.start_polling(bot, polling_timeout=50))

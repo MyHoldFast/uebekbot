@@ -11,7 +11,7 @@ async def main():
 
     dp.include_router(callbacks.router)
     dp.include_routers(ya_ocr.router, summary.router, gpt.router, admin.router, stt.router, neuro.router)
-    dp.update.middleware(StatsMiddleware())
+    dp.update.middleware(StatsMiddleware((await bot.get_me()).username)) 
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot, polling_timeout=50)
