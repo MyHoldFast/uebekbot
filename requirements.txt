@@ -27,3 +27,4 @@ urllib3==2.2.2
 yarl==1.9.4
 httpx
 google-generativeai
+pytz
