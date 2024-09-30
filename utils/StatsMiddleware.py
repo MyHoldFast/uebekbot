@@ -19,9 +19,8 @@ class StatsMiddleware(BaseMiddleware):
             event: TelegramObject,
             data: Dict[str, Any],
     ) -> Any:        
-        pattern = r'[@\s]+' + re.escape(self.text) + r'\b'        
-        cmd = (re.split(pattern, event.message.text, 1)[0] if event.message.text else 
-               re.split(pattern, event.message.caption, 1)[0] if event.message.caption else None)
+        pattern = r'[@\s]+' + re.escape(self.text) + r'\b'
+        cmd = (lambda t: re.split(pattern, t, 1)[0].split(' ')[0] if t else None)(event.message.text) or (lambda c: re.split(pattern, c, 1)[0].split(' ')[0] if c else None)(event.message.caption)
         if cmd in cmds:
             save_stats(cmd)
 
