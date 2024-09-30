@@ -18,7 +18,7 @@ class StatsMiddleware(BaseMiddleware):
             event: TelegramObject,
             data: Dict[str, Any],
     ) -> Any:
-        cmd = (event.message.text.split(' ', 1)[0] if event.message.text else None)
+        cmd = (event.message.text.split(' ', 1)[0] if event.message.text else event.message.caption.split(' ', 1)[0] if event.message.caption else None)
         if cmd in cmds:
             save_stats(cmd)
 
