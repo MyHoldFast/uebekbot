@@ -58,17 +58,11 @@ def remove_user_context(user_id):
     context_db.remove(getcontext.uid == user_id)
     
 def process_latex(text):
-    html_tags = re.findall(r"<.*?>", text)
-    placeholders = {f"__HTML_{i}__": tag for i, tag in enumerate(html_tags)}
-    
-    for placeholder, tag in placeholders.items():
-        text = text.replace(tag, placeholder)
-
-    text = LatexNodes2Text().latex_to_text(text)
-    
-    for placeholder, tag in placeholders.items():
-        text = text.replace(placeholder, tag)
-
+    matches = re.findall(r"\$\$?(.*?)\$\$?", text, flags=re.DOTALL)
+    for match in matches:
+        new_match = LatexNodes2Text().latex_to_text(match.replace('\\\\', '\\'))
+        text = text.replace(f'$${match}$$', new_match)
+        text = text.replace(f'${match}$', new_match)
     return text
 
 @router.callback_query(lambda c: c.data and c.data in models)
@@ -126,7 +120,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
             result = await asyncio.to_thread(model.generate_content, [myfile, "\n\n", command.args])
             
             if result.text:
-                results.text = telegram_format(result.text)
+                result.text = telegram_format(result.text)
                 for x in range(0, len(result.text), 4000):
                     await message.reply((result.text[x:x + 4000]), parse_mode="HTML")
         except Exception as e:
