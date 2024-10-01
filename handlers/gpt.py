@@ -7,6 +7,7 @@ import os
 import time
 import base64
 import json
+import asyncio
 import google.generativeai as genai
 from utils.dbmanager import DB
 from dotenv import load_dotenv
@@ -81,9 +82,45 @@ async def callback_query_handler(callback_query: CallbackQuery):
         )
 
 @router.message(Command("gpt"))
-async def cmd_start(message: Message, command: CommandObject):
+async def cmd_start(message: Message, command: CommandObject, bot: Bot):
+    messagetext = message.reply_to_message.text if message.reply_to_message else command.args
     await message.bot.send_chat_action(chat_id=message.chat.id, action='typing')
-    user_id = message.from_user.id
+    user_id = message.from_user.id      
+    user_language = message.from_user.language_code or DEFAULT_LANGUAGE
+    _ = get_localization(user_language)
+
+    photo = None
+
+    if message.reply_to_message:
+        if message.reply_to_message.photo:
+            photo = message.reply_to_message.photo[-1]
+        elif message.reply_to_message.document:
+            if message.reply_to_message.document.mime_type.startswith('image/'):
+                photo = message.reply_to_message.document
+
+    if not photo and message.photo:
+        photo = message.photo[-1]
+
+    if photo and command.args:
+        file = await bot.get_file(photo.file_id)
+        file_path = file.file_path
+        bytesIO = await bot.download_file(file_path)
+        image_data = bytesIO.read()
+        with open("tmp/"+photo.file_id+".jpg", "wb") as temp_file:
+            temp_file.write(image_data)
+        try:
+            myfile = await asyncio.to_thread(genai.upload_file, "tmp/" + photo.file_id + ".jpg")
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            result = await asyncio.to_thread(model.generate_content, [myfile, "\n\n", command.args])
+            
+            if result.text:
+                for x in range(0, len(result.text), 4000):
+                    await message.reply(telegram_format(result.text[x:x + 4000]), parse_mode="HTML")
+        except Exception as e:
+            await message.reply(_("gpt_gemini_error"))  
+        os.remove(f"tmp/"+photo.file_id+".jpg")         
+        return   
+    
     d = AsyncDDGS()
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
