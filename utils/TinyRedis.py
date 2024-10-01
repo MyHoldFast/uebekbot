@@ -16,10 +16,19 @@ class Query:
         return self
 
 class TinyRedisDB:
+    _instance = None
+    _redis_connection = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(TinyRedisDB, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self, db_name=None, url=None):
-        url = url or os.getenv("REDIS_URL", "redis://localhost:6379")
-        self.redis = self._connect_via_url(url)
-        #self.redis.flushdb()
+        if TinyRedisDB._redis_connection is None:
+            url = url or os.getenv("REDIS_URL", "redis://localhost:6379")
+            TinyRedisDB._redis_connection = self._connect_via_url(url)
+        self.redis = TinyRedisDB._redis_connection
         self.db_name = db_name or "default_db"
 
     def _connect_via_url(self, url):
@@ -69,3 +78,4 @@ class TinyRedisDB:
             elif record_value != value:
                 return False
         return True
+                
