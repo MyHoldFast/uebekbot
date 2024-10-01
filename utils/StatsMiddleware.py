@@ -5,9 +5,7 @@ from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 import pytz, asyncio
 from utils.dbmanager import DB
-from dotenv import load_dotenv
 
-load_dotenv()
 db, Query = DB('db/stats.json').get_db()
 moscow_tz = pytz.timezone('Europe/Moscow')
 cmds = ['/summary', '/ocr', '/gpt', '/stt', '/neuro']

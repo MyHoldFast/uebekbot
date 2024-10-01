@@ -2,12 +2,9 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 import os
-from dotenv import load_dotenv
 from datetime import datetime
 from functools import wraps
 from utils.StatsMiddleware import get_stats, cmds
-load_dotenv()
-ADMIN_ID = os.getenv("ADMIN_ID")
 
 router = Router()
 
@@ -16,7 +13,7 @@ start_time = datetime.now()
 def admin_only(func):
     @wraps(func)
     async def wrapper(message: Message, *args, **kwargs):
-        if str(message.from_user.id) != ADMIN_ID:
+        if str(message.from_user.id) != os.getenv("ADMIN_ID"):
             return
         return await func(message, *args, **kwargs)
     return wrapper

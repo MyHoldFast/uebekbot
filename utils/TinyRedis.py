@@ -2,9 +2,6 @@ import redis
 import re
 import ssl
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 class Query:
     def __init__(self):

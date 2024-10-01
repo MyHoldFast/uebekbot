@@ -5,24 +5,17 @@ import aiohttp
 import asyncio
 import re, os
 from chatgpt_md_converter import telegram_format 
-from dotenv import load_dotenv
 from utils.translate import translate_text
 from localization import get_localization, DEFAULT_LANGUAGE, LANGUAGES
 
-
-load_dotenv()
 router = Router() 
-
-headers = {
-     'cookie': f'Session_id={os.getenv("YANDEXKZ_SESSIONID_COOK")}'
-}
 
 async def fetch_fresh_message(session, response_message_id):
     url = 'https://yandex.kz/neuralsearch/api/get_fresh_message?lr='
     data = {"ResponseMessageId": response_message_id}
 
     while True:
-        async with session.post(url, headers=headers, json=data) as res:
+        async with session.post(url, headers={'cookie': f'Session_id={os.getenv("YANDEXKZ_SESSIONID_COOK")}'}, json=data) as res:
             result = await res.json()
             if result.get('IsCompleteResults'):
                 return re.sub(r'\[\`\`\`\d+\`\`\`\]\(.*?\)', '', result.get('TargetMarkdownText'))
@@ -33,7 +26,7 @@ async def send_request(user_request):
     data = {"UserRequest": user_request}
 
     async with aiohttp.ClientSession() as session:
-        async with session.post(url, headers=headers, json=data) as res:
+        async with session.post(url, headers={'cookie': f'Session_id={os.getenv("YANDEXKZ_SESSIONID_COOK")}'}, json=data) as res:
             try:
                 response = await res.json()
                 submissions_left, response_message_id = response['ResponseStatus']['LimitsInfo']['SubmissionsLeft'], response['ResponseMessageId']

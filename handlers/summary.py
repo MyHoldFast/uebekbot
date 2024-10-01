@@ -6,29 +6,18 @@ from bs4 import BeautifulSoup
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
-from dotenv import load_dotenv
 from utils.translate import translate_text
 from localization import get_localization, DEFAULT_LANGUAGE, LANGUAGES
 
-load_dotenv()
-
 router = Router()
-
-ya300_apikey = os.getenv("YANDEX_OAUTH_TOKEN")
-
 
 gen_url = "https://300.ya.ru/api/generation"
 
-cook = {
-    'Session_id': os.getenv("YANDEX_SESSIONID_COOK"),
-    'yp': os.getenv("YANDEX_YP_COOK")
-  }
-
-headers = {'Authorization': f'OAuth {ya300_apikey}'}
-
-
 async def fetch(session, url, data):
-    async with session.post(url, json=data, headers=headers, cookies=cook) as response:
+    async with session.post(url, json=data, headers=
+        {'Authorization': f'OAuth {os.getenv("YANDEX_OAUTH_TOKEN")}'}, 
+        cookies={'Session_id': os.getenv("YANDEX_SESSIONID_COOK"),
+        'yp': os.getenv("YANDEX_YP_COOK")}) as response:
         return await response.json() 
 
 async def summarize(input_value: str, is_text=False) -> str:
@@ -74,7 +63,7 @@ async def send_yandex_api(link):
         async with session.post(
             endpoint,
             json={"article_url": f"{link}"},
-            headers={"Authorization": f'OAuth {ya300_apikey}'},
+            headers={"Authorization": f'OAuth {os.getenv("YANDEX_OAUTH_TOKEN")}'},
         ) as response:
             data = await response.json()
             return data.get("sharing_url")

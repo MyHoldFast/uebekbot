@@ -9,10 +9,7 @@ from aiogram import Router, Bot
 from aiogram.filters import Command
 from aiogram.types import Message
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from dotenv import load_dotenv
 from localization import get_localization, DEFAULT_LANGUAGE
-
-load_dotenv()
 
 router = Router()
 
@@ -20,8 +17,6 @@ lock = asyncio.Lock()
 token_lock = asyncio.Lock()
 
 url = "https://ocr.api.cloud.yandex.net/ocr/v1/recognizeText"
-oauth_token = os.getenv("YANDEX_OAUTH_TOKEN")
-folder_id = os.getenv("FOLDER_ID")
 
 iam_token = None
 token_expiry_time = 0
@@ -31,7 +26,7 @@ async def fetch_token():
     async with token_lock:
         if time.time() > token_expiry_time:
             async with aiohttp.ClientSession() as session:
-                async with session.post("https://iam.api.cloud.yandex.net/iam/v1/tokens", data=json.dumps({"yandexPassportOauthToken": oauth_token})) as response:
+                async with session.post("https://iam.api.cloud.yandex.net/iam/v1/tokens", data=json.dumps({"yandexPassportOauthToken": os.getenv("YANDEX_OAUTH_TOKEN")})) as response:
                     response.raise_for_status()
                     token_data = await response.json()
                     iam_token = token_data['iamToken']
@@ -52,7 +47,7 @@ async def do_ocr_request(file_id, bot):
         try:
             token = await fetch_token()
             async with aiohttp.ClientSession() as session:
-                async with session.post(url, data=json.dumps(curData), headers={"Authorization": "Bearer {}".format(token), "Content-Type": "application/json", "x-folder-id": folder_id}) as response:
+                async with session.post(url, data=json.dumps(curData), headers={"Authorization": "Bearer {}".format(token), "Content-Type": "application/json", "x-folder-id": os.getenv("FOLDER_ID")}) as response:
                     response.raise_for_status()
                     ocr_result = await response.json()
         except aiohttp.ClientError as ex:

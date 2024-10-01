@@ -10,16 +10,12 @@ import json
 import asyncio
 import google.generativeai as genai
 from utils.dbmanager import DB
-from dotenv import load_dotenv
 from localization import get_localization, DEFAULT_LANGUAGE 
 from keyboards.gpt import get_gpt_keyboard, models
-
-load_dotenv()
 
 router = Router()
 db, Query = DB('db/models.json').get_db()
 context_db, ContextQuery = DB('db/user_context.json').get_db()
-genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
 async def update_model_message(callback_query: CallbackQuery, model: str):
     keyboard = get_gpt_keyboard(model)
@@ -90,7 +86,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
     _ = get_localization(user_language)
 
     photo = None
-
+    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
     if message.reply_to_message:
         if message.reply_to_message.photo:
             photo = message.reply_to_message.photo[-1]
