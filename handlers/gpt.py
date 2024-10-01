@@ -124,6 +124,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
                 for x in range(0, len(result.text), 4000):
                     await message.reply((result.text[x:x + 4000]), parse_mode="HTML")
         except Exception as e:
+            print(e)
             await message.reply(_("gpt_gemini_error"))  
         os.remove(f"tmp/"+photo.file_id+".jpg")         
         return   
