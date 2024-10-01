@@ -1,87 +1,69 @@
-import json, re
+import re 
 from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, Awaitable, Optional, Tuple
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
-import pytz
+import pytz, asyncio
+from utils.dbmanager import DB
+from dotenv import load_dotenv
 
+load_dotenv()
+db, Query = DB('db/stats.json').get_db()
 moscow_tz = pytz.timezone('Europe/Moscow')
 cmds = ['/summary', '/ocr', '/gpt', '/stt', '/neuro']
 
 class StatsMiddleware(BaseMiddleware):
-    def __init__(self, text: str = None, *args, **kwargs):
+    def __init__(self, bot: str = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.text = text
+        self.bot = bot
+        self.text = None
+        asyncio.create_task(self.init())    
 
-    async def __call__(
-            self,
-            handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
-            event: TelegramObject,
-            data: Dict[str, Any],
-    ) -> Any:        
+    async def init(self):
+        bot_info = await self.bot.get_me()
+        self.text = bot_info.username
+
+    async def __call__(self, handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]], event: TelegramObject, data: Dict[str, Any]) -> Any:        
         pattern = r'[@\s]+' + re.escape(self.text) + r'\b'
-        cmd = (lambda t: re.split(pattern, t, 1)[0].split(' ')[0] if t else None)(event.message.text) or (lambda c: re.split(pattern, c, 1)[0].split(' ')[0] if c else None)(event.message.caption)
+        cmd = (lambda t: re.split(pattern, t, 1)[0].split(' ')[0] if t else None)(event.message.text if event.message else None) or \
+              (lambda c: re.split(pattern, c, 1)[0].split(' ')[0] if c else None)(event.message.caption if event.message else None)
         if cmd in cmds:
             save_stats(cmd)
-
         return await handler(event, data)
 
 def save_stats(cmd: str):
     current_date = datetime.now(moscow_tz).date()
-    stats_data = {}
+    stats_query = Query()
+    result = db.search(stats_query.date == str(current_date))
 
-    try:
-        with open('db/stats.json', 'r') as f:
-            for line in f:
-                entry = json.loads(line)
-                stats_data.update(entry)
-    except FileNotFoundError:
-        pass
-
-    if str(current_date) not in stats_data:
-        stats_data[str(current_date)] = {cmd: 1}
+    if not result:
+        stats_data = {cmd: 1}
         for other_cmd in cmds:
-            if other_cmd != cmd:
-                stats_data[str(current_date)][other_cmd] = 0
+            stats_data[other_cmd] = 0
+        db.insert({'date': str(current_date), **stats_data})
     else:
-        if cmd in stats_data[str(current_date)]:
-            stats_data[str(current_date)][cmd] += 1
-        else:
-            stats_data[str(current_date)][cmd] = 1
-
+        stats_data = result[0]
+        stats_data[cmd] = int(stats_data.get(cmd, 0) or 0) + 1
         for other_cmd in cmds:
-            if other_cmd not in stats_data[str(current_date)]:
-                stats_data[str(current_date)][other_cmd] = 0
-
-    with open('db/stats.json', 'w') as f:
-        for date, stats in stats_data.items():
-            json.dump({date: stats}, f)
-            f.write('\n')
+            if other_cmd not in stats_data:
+                stats_data[other_cmd] = 0
+        db.update(stats_data, stats_query.date == str(current_date))
 
 def get_stats(date: Optional[str] = None) -> Tuple[Optional[str], Dict[str, Any], Dict[str, int]]:
-    stats_data = {}
     total_stats = {cmd: 0 for cmd in cmds}
-
     if date is None:
         date = str(datetime.now(moscow_tz).date())
     elif date == "yesterday":
         date = str((datetime.now(moscow_tz) - timedelta(days=1)).date())
+    result = db.search(Query().date == date)
 
-    try:
-        with open('db/stats.json', 'r') as f:
-            for line in f:
-                entry = json.loads(line)
-                stats_data.update(entry)
-    except FileNotFoundError:
-        return None, {}, total_stats
-
-    if date in stats_data:
-        for stats in stats_data.values():
-            for cmd in cmds:
-                total_stats[cmd] += stats.get(cmd, 0)
-        return date, stats_data[date], total_stats
+    if result:
+        stats_data = result[0]
+        for cmd in cmds:
+            total_stats[cmd] += int(stats_data.get(cmd, 0) or 0)
+        return date, stats_data, total_stats
     else:
-        for stats in stats_data.values():
+        for stats_data in db.all():
             for cmd in cmds:
-                total_stats[cmd] += stats.get(cmd, 0)
+                total_stats[cmd] += int(stats_data.get(cmd, 0) or 0)
         return None, {}, total_stats

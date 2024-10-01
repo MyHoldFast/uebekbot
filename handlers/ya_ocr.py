@@ -88,7 +88,8 @@ async def ocr_handle(message: Message, bot: Bot):
         await message.bot.send_chat_action(chat_id=message.chat.id, action='typing')
         result = await do_ocr_request(photo.file_id, bot)
         if result:
-            await message.reply(result, reply_markup=keyboard)
+            for x in range(0, len(result), 4096):
+                await message.reply((result[x:x + 4096]), reply_markup=keyboard)
         else:
             await message.reply(_("recognition_failed"))
     else:

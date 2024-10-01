@@ -28,7 +28,7 @@ async def index():
     return "Главная страница"
 
 async def main():
-    dp.update.middleware(StatsMiddleware((await bot.get_me()).username))
+    dp.update.middleware(StatsMiddleware(bot)) 
     await bot.delete_webhook(drop_pending_updates=True)
     #logger.info("Бот успешно запущен!")
     asyncio.create_task(dp.start_polling(bot, polling_timeout=50))
