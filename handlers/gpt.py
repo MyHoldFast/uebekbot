@@ -8,6 +8,7 @@ import time
 import base64
 import json
 import asyncio
+from pylatexenc.latex2text import LatexNodes2Text
 import google.generativeai as genai
 from utils.dbmanager import DB
 from localization import get_localization, DEFAULT_LANGUAGE 
@@ -136,17 +137,22 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
         if messagetext:            
             answer = await d.achat(messagetext, model=model)
             save_user_context(user_id, d._chat_messages, d._chat_vqd)
+            answer = LatexNodes2Text().latex_to_text(telegram_format(answer))
+            answer = "\n".join(line.strip() for line in answer.splitlines() if line.strip())
 
             for x in range(0, len(answer), 4000):
-                await message.reply(telegram_format(answer[x:x + 4000]), parse_mode="HTML")
+                await message.reply((answer[x:x + 4000]), parse_mode="HTML")
         else:
             keyboard = get_gpt_keyboard(model)
             await message.reply(_("gpt_help"), reply_markup=keyboard, parse_mode="markdown")
     except Exception:
         await message.bot.send_chat_action(chat_id=message.chat.id, action='cancel')
         if answer:
+            answer = LatexNodes2Text().latex_to_text(answer)
+            answer = "\n".join(line.strip() for line in answer.splitlines() if line.strip())
+
             for x in range(0, len(answer), 4000):
-                await message.reply(html.quote(answer[x:x + 4000]), parse_mode="html")
+                await message.reply(html.quote((answer[x:x + 4000])), parse_mode="html")
         else:
             await message.reply(_("gpt_error"), parse_mode="html")
 

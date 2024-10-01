@@ -1,7 +1,5 @@
 import aiohttp, os
 
-API_KEY_TR = os.getenv("YANDEX_TR_API")
-
 async def translate_text(text, source_lang='auto', target_lang='ru'):
     url = "https://translate.googleapis.com/translate_a/single"
     params = {
@@ -28,7 +26,7 @@ async def translate_text_ya(texts, target_language):
 
     headers = {
         "Content-Type": "application/json",
-        "Authorization": "Api-Key {0}".format(API_KEY_TR)
+        "Authorization": "Api-Key {0}".format(os.getenv("YANDEX_TR_API"))
     }
 
     async with aiohttp.ClientSession() as session:
