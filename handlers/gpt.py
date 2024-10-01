@@ -138,7 +138,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
             answer = await d.achat(messagetext, model=model)
             save_user_context(user_id, d._chat_messages, d._chat_vqd)
             answer = LatexNodes2Text().latex_to_text(telegram_format(answer))
-            answer = "\n".join(line.strip() for line in answer.splitlines() if line.strip())
+            #answer = "\n".join(line.strip() for line in answer.splitlines() if line.strip())
 
             for x in range(0, len(answer), 4000):
                 await message.reply((answer[x:x + 4000]), parse_mode="HTML")
@@ -149,7 +149,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
         await message.bot.send_chat_action(chat_id=message.chat.id, action='cancel')
         if answer:
             answer = LatexNodes2Text().latex_to_text(answer)
-            answer = "\n".join(line.strip() for line in answer.splitlines() if line.strip())
+            #answer = "\n".join(line.strip() for line in answer.splitlines() if line.strip())
 
             for x in range(0, len(answer), 4000):
                 await message.reply(html.quote((answer[x:x + 4000])), parse_mode="html")
