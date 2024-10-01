@@ -4,6 +4,7 @@ from aiogram.filters import CommandObject, Command
 from aiogram.types import Message, CallbackQuery
 from duckduckgo_search import AsyncDDGS
 import os
+import re
 import time
 import base64
 import json
@@ -55,6 +56,20 @@ def save_user_context(user_id, chat_messages, chat_vqd):
 def remove_user_context(user_id):
     getcontext = ContextQuery()
     context_db.remove(getcontext.uid == user_id)
+    
+def process_latex(text):
+    html_tags = re.findall(r"<.*?>", text)
+    placeholders = {f"__HTML_{i}__": tag for i, tag in enumerate(html_tags)}
+    
+    for placeholder, tag in placeholders.items():
+        text = text.replace(tag, placeholder)
+
+    text = LatexNodes2Text().latex_to_text(text)
+    
+    for placeholder, tag in placeholders.items():
+        text = text.replace(placeholder, tag)
+
+    return text
 
 @router.callback_query(lambda c: c.data and c.data in models)
 async def callback_query_handler(callback_query: CallbackQuery):
@@ -111,8 +126,9 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
             result = await asyncio.to_thread(model.generate_content, [myfile, "\n\n", command.args])
             
             if result.text:
+                results.text = telegram_format(result.text)
                 for x in range(0, len(result.text), 4000):
-                    await message.reply(telegram_format(result.text[x:x + 4000]), parse_mode="HTML")
+                    await message.reply((result.text[x:x + 4000]), parse_mode="HTML")
         except Exception as e:
             await message.reply(_("gpt_gemini_error"))  
         os.remove(f"tmp/"+photo.file_id+".jpg")         
@@ -137,7 +153,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
         if messagetext:            
             answer = await d.achat(messagetext, model=model)
             save_user_context(user_id, d._chat_messages, d._chat_vqd)
-            answer = LatexNodes2Text().latex_to_text(telegram_format(answer))
+            answer = process_latex(telegram_format(answer))
             #answer = "\n".join(line.strip() for line in answer.splitlines() if line.strip())
 
             for x in range(0, len(answer), 4000):
@@ -148,7 +164,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
     except Exception:
         await message.bot.send_chat_action(chat_id=message.chat.id, action='cancel')
         if answer:
-            answer = LatexNodes2Text().latex_to_text(answer)
+            answer = process_latex(answer)
             #answer = "\n".join(line.strip() for line in answer.splitlines() if line.strip())
 
             for x in range(0, len(answer), 4000):
