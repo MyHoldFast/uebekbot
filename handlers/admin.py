@@ -41,5 +41,9 @@ async def stats(message: Message):
         message_text = f"Дата: {date}\n" + "\n".join(f"{cmd}: {stats.get(cmd, 0)}" for cmd in cmds)
     else:
         message_text = "Статистика за сегодня пуста."
+    
+    # Добавляем общую статистику
     message_text += "\n\nОбщая статистика:\n" + "\n".join(f"{cmd}: {total_stats[cmd]}" for cmd in cmds)
+    
     await message.answer(message_text)
+    
