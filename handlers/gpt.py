@@ -129,8 +129,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
             #print(e)
             await message.reply(_("gpt_gemini_error"))  
         os.remove(f"tmp/"+photo.file_id+".jpg")         
-        return    
-    
+        return     
 
     answer = ""
     model = "gpt-4o-mini"

@@ -35,9 +35,8 @@ def save_stats(cmd: str):
     result = db.search(stats_query.date == str(current_datetime.date()))
 
     if not result:
-        stats_data = {cmd: 1}
-        for other_cmd in cmds:
-            stats_data[other_cmd] = 0
+        stats_data = {cmd_name: 0 for cmd_name in cmds}
+        stats_data[cmd] = 1
         db.insert({'date': str(current_datetime.date()), **stats_data})
     else:
         stats_data = result[0]
