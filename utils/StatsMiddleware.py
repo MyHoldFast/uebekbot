@@ -2,7 +2,7 @@ import re
 from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, Awaitable, Optional, Tuple
 from aiogram import BaseMiddleware
-from aiogram.types import TelegramObject, Message
+from aiogram.types import TelegramObject
 import pytz, asyncio
 from utils.dbmanager import DB
 
@@ -32,18 +32,14 @@ class StatsMiddleware(BaseMiddleware):
 def save_stats(cmd: str):
     current_datetime = datetime.now(moscow_tz)
     stats_query = Query()
-    
-    # Проверяем, есть ли записи за текущий день
     result = db.search(stats_query.date == str(current_datetime.date()))
 
     if not result:
-        # Если запись за текущий день отсутствует, создаем новую
         stats_data = {cmd: 1}
         for other_cmd in cmds:
             stats_data[other_cmd] = 0
         db.insert({'date': str(current_datetime.date()), **stats_data})
     else:
-        # Если запись существует, инкрементируем счетчик команды
         stats_data = result[0]
         stats_data[cmd] = int(stats_data.get(cmd, 0)) + 1
         db.update(stats_data, stats_query.date == str(current_datetime.date()))
@@ -56,7 +52,6 @@ def get_stats(date: Optional[str] = None) -> Tuple[Optional[str], Dict[str, Any]
     elif date == "yesterday":
         date = str((datetime.now(moscow_tz) - timedelta(days=1)).date())
     
-    # Ищем статистику за указанный день
     result = db.search(Query().date == date)
 
     if result:
@@ -64,7 +59,6 @@ def get_stats(date: Optional[str] = None) -> Tuple[Optional[str], Dict[str, Any]
     else:
         stats_data = {cmd: 0 for cmd in cmds}
 
-    # Собираем общую статистику за все дни
     for stats_record in db.all():
         for cmd in cmds:
             total_stats[cmd] += int(stats_record.get(cmd, 0) or 0)

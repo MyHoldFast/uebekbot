@@ -1,13 +1,15 @@
-import re
-import asyncio
 import aiohttp, httpx
+import asyncio
 import os
-from bs4 import BeautifulSoup
+import re
+
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
+from bs4 import BeautifulSoup
+
+from localization import DEFAULT_LANGUAGE, LANGUAGES, get_localization
 from utils.translate import translate_text
-from localization import get_localization, DEFAULT_LANGUAGE, LANGUAGES
 
 router = Router()
 

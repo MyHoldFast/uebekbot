@@ -1,12 +1,15 @@
-from aiogram import Router, Bot
-from aiogram.filters import CommandObject, Command
-from aiogram.types import Message
 import aiohttp
 import asyncio
-import re, os
-from chatgpt_md_converter import telegram_format 
+import os
+import re
+
+from aiogram import Bot, Router
+from aiogram.filters import Command, CommandObject
+from aiogram.types import Message
+
+from chatgpt_md_converter import telegram_format
+from localization import DEFAULT_LANGUAGE, LANGUAGES, get_localization
 from utils.translate import translate_text
-from localization import get_localization, DEFAULT_LANGUAGE, LANGUAGES
 
 router = Router() 
 

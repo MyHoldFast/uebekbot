@@ -1,15 +1,16 @@
-import re
-import asyncio
-import json
-import base64
 import aiohttp
-import time
+import asyncio
+import base64
+import json
 import os
-from aiogram import Router, Bot
+import re
+import time
+
+from aiogram import Bot, Router
 from aiogram.filters import Command
-from aiogram.types import Message
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from localization import get_localization, DEFAULT_LANGUAGE
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+
+from localization import DEFAULT_LANGUAGE, get_localization
 
 router = Router()
 

@@ -1,14 +1,16 @@
-import io
+import aiohttp
 import asyncio
-from aiogram import Bot, types
-from aiogram import Router
+import os
+import random
+import subprocess
+import time
+from io import BytesIO
+
+from aiogram import Bot, Router, types
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-import aiohttp
-import time, random, os
-import subprocess
-from io import BytesIO
-from localization import get_localization, DEFAULT_LANGUAGE
+
+from localization import DEFAULT_LANGUAGE, get_localization
 
 API_URLS = ["https://api-inference.huggingface.co/models/openai/whisper-medium", "https://api-inference.huggingface.co/models/openai/whisper-base", "https://api-inference.huggingface.co/models/openai/whisper-tiny"]
 headers = {"Authorization": "Bearer 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"}
@@ -104,7 +106,7 @@ async def stt_command(message: types.Message, bot: Bot):
     file_path = file.file_path
 
     content = await download_as_audio(file_path, f"tmp/{file_id}.ogg")
-    audio_bytes = io.BytesIO(content)
+    audio_bytes = BytesIO(content)
     api = 0
     if duration > 180:
         api = 2

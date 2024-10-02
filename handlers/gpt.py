@@ -1,19 +1,21 @@
-from chatgpt_md_converter import telegram_format   
-from aiogram import Router, Bot, html
-from aiogram.filters import CommandObject, Command
-from aiogram.types import Message, CallbackQuery
-from duckduckgo_search import AsyncDDGS
+import asyncio
+import base64
+import json
 import os
 import re
 import time
-import base64
-import json
-import asyncio
-from pylatexenc.latex2text import LatexNodes2Text
+
+from aiogram import Bot, Router, html
+from aiogram.filters import Command, CommandObject
+from aiogram.types import CallbackQuery, Message
+from duckduckgo_search import AsyncDDGS
 import google.generativeai as genai
-from utils.dbmanager import DB
-from localization import get_localization, DEFAULT_LANGUAGE 
+from pylatexenc.latex2text import LatexNodes2Text
+
 from keyboards.gpt import get_gpt_keyboard, models
+from localization import get_localization, DEFAULT_LANGUAGE
+from utils.dbmanager import DB
+from chatgpt_md_converter import telegram_format
 
 router = Router()
 db, Query = DB('db/models.json').get_db()
@@ -24,7 +26,7 @@ async def update_model_message(callback_query: CallbackQuery, model: str):
     await callback_query.message.edit_reply_markup(reply_markup=keyboard)
 
 def load_user_context(user_id):
-    context_item = context_db.get(Query().uid == user_id)
+    context_item = context_db.get(ContextQuery().uid == user_id)
     if context_item:
         last_modified_time = float(context_item.get('last_modified_time', 0))
         current_time = time.time()
@@ -127,26 +129,23 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
             #print(e)
             await message.reply(_("gpt_gemini_error"))  
         os.remove(f"tmp/"+photo.file_id+".jpg")         
-        return   
+        return    
     
-    d = AsyncDDGS()
-    user_language = message.from_user.language_code or DEFAULT_LANGUAGE
-    _ = get_localization(user_language)
 
-    chat_messages, chat_vqd = load_user_context(user_id)
-    if chat_messages is not None and chat_vqd is not None:
-        d._chat_messages = chat_messages
-        d._chat_vqd = chat_vqd
-
-    messagetext = message.reply_to_message.text if message.reply_to_message else command.args
     answer = ""
     model = "gpt-4o-mini"
     try:
         user_model = db.get(Query().uid == user_id)
         if user_model and user_model["model"] in models:
             model = user_model["model"]
-        if messagetext:            
+        if messagetext:
+            d = AsyncDDGS()
+            chat_messages, chat_vqd = load_user_context(user_id)
+            if chat_messages is not None and chat_vqd is not None:
+                d._chat_messages = chat_messages
+                d._chat_vqd = chat_vqd            
             answer = await d.achat(messagetext, model=model)
+            
             save_user_context(user_id, d._chat_messages, d._chat_vqd)
             answer = process_latex(telegram_format(answer))
             #answer = "\n".join(line.strip() for line in answer.splitlines() if line.strip())
@@ -156,7 +155,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
         else:
             keyboard = get_gpt_keyboard(model)
             await message.reply(_("gpt_help"), reply_markup=keyboard, parse_mode="markdown")
-    except Exception:
+    except Exception as e:
         await message.bot.send_chat_action(chat_id=message.chat.id, action='cancel')
         if answer:
             answer = process_latex(answer)
@@ -168,7 +167,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
             await message.reply(_("gpt_error"), parse_mode="html")
 
 @router.message(Command("gptrm"))
-async def cmd_remove_context(message: Message, command: CommandObject):
+async def cmd_remove_context(message: Message):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
     remove_user_context(message.from_user.id)

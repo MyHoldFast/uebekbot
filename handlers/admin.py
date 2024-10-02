@@ -1,9 +1,11 @@
-from aiogram import Router
-from aiogram.filters import Command
-from aiogram.types import Message
 import os
 from datetime import datetime
 from functools import wraps
+
+from aiogram import Router
+from aiogram.filters import Command
+from aiogram.types import Message
+
 from utils.StatsMiddleware import get_stats, cmds
 
 router = Router()
@@ -42,7 +44,6 @@ async def stats(message: Message):
     else:
         message_text = "Статистика за сегодня пуста."
     
-    # Добавляем общую статистику
     message_text += "\n\nОбщая статистика:\n" + "\n".join(f"{cmd}: {total_stats[cmd]}" for cmd in cmds)
     
     await message.answer(message_text)

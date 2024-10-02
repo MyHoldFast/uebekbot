@@ -16,13 +16,17 @@ class Query:
         return self
 
 class TinyRedisDB:
-    def __init__(self, db_name=None, url=None):
-        url = url or os.getenv("REDIS_URL", "redis://localhost:6379")
-        self.redis = self._connect_via_url(url)
-        #self.redis.flushdb()
-        self.db_name = db_name or "default_db"
+    _redis_connection = None  
 
-    def _connect_via_url(self, url):
+    def __init__(self, db_name=None, url=None):
+        self.db_name = db_name or "default_db"
+        if TinyRedisDB._redis_connection is None:
+            url = url or os.getenv("REDIS_URL", "redis://localhost:6379")
+            TinyRedisDB._redis_connection = self._connect_via_url(url)
+        self.redis = TinyRedisDB._redis_connection
+
+    @staticmethod
+    def _connect_via_url(url):
         match = re.match(r'(?P<scheme>rediss?)://((?P<user>[^:]+):(?P<password>[^@]+)@)?(?P<host>[^:]+):(?P<port>\d+)', url)
         if not match:
             raise ValueError("Invalid Redis URL format")
@@ -69,3 +73,9 @@ class TinyRedisDB:
             elif record_value != value:
                 return False
         return True
+
+    def truncate(self):
+        keys = self.redis.keys(f"{self.db_name}:record:*")
+        if keys:
+            self.redis.delete(*keys)
+        self.redis.set(f"{self.db_name}:next_id", 0)
