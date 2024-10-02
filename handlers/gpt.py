@@ -60,11 +60,19 @@ def remove_user_context(user_id):
     context_db.remove(getcontext.uid == user_id)
     
 def process_latex(text):
-    matches = re.findall(r"\$\$?(.*?)\$\$?", text, flags=re.DOTALL)
-    for match in matches:
-        new_match = LatexNodes2Text().latex_to_text(match.replace('\\\\', '\\'))
-        text = text.replace(f'$${match}$$', new_match)
-        text = text.replace(f'${match}$', new_match)
+    block_matches = re.findall(r"\\\[(.*?)\\\]|\$\$(.*?)\$\$", text, flags=re.DOTALL)
+    for match in block_matches:
+        match_content = match[0] if match[0] else match[1]
+        clean_match = LatexNodes2Text().latex_to_text(match_content.replace('\\\\', '\\'))
+        text = text.replace(f'\\[{match_content}\\]', clean_match)
+        text = text.replace(f'$$ {match_content} $$', clean_match)
+
+    inline_matches = re.findall(r"\\\((.*?)\\\)|\$(.*?)\$", text, flags=re.DOTALL)
+    for match in inline_matches:
+        match_content = match[0] if match[0] else match[1]
+        clean_match = LatexNodes2Text().latex_to_text(match_content.replace('\\\\', '\\'))
+        text = text.replace(f'\\({match_content}\\)', clean_match)
+        text = text.replace(f'${match_content}$', clean_match)
     return text
 
 @router.callback_query(lambda c: c.data and c.data in models)
