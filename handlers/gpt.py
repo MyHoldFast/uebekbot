@@ -120,11 +120,11 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
             result = await asyncio.to_thread(model.generate_content, [myfile, "\n\n", command.args])
             
             if result.text:
-                result.text = telegram_format(result.text)
-                for x in range(0, len(result.text), 4000):
-                    await message.reply((result.text[x:x + 4000]), parse_mode="HTML")
+                result = telegram_format(result.text)
+                for x in range(0, len(result), 4000):
+                    await message.reply((result[x:x + 4000]), parse_mode="HTML")
         except Exception as e:
-            print(e)
+            #print(e)
             await message.reply(_("gpt_gemini_error"))  
         os.remove(f"tmp/"+photo.file_id+".jpg")         
         return   
