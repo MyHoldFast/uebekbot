@@ -154,22 +154,23 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
             answer = await d.achat(messagetext, model=model)
             
             save_user_context(user_id, d._chat_messages, d._chat_vqd)
-            answer = process_latex(telegram_format(answer))
+            answer2 = process_latex(telegram_format(answer))
             #answer = "\n".join(line.strip() for line in answer.splitlines() if line.strip())
 
-            for x in range(0, len(answer), 4000):
-                await message.reply((answer[x:x + 4000]), parse_mode="HTML")
+            for x in range(0, len(answer2), 4000):
+                await message.reply((answer2[x:x + 4000]), parse_mode="HTML")
         else:
             keyboard = get_gpt_keyboard(model)
             await message.reply(_("gpt_help"), reply_markup=keyboard, parse_mode="markdown")
     except Exception as e:
         await message.bot.send_chat_action(chat_id=message.chat.id, action='cancel')
         if answer:
-            answer = process_latex(answer)
+            answer = html.quote(answer)
+            #answer = process_latex(answer)
             #answer = "\n".join(line.strip() for line in answer.splitlines() if line.strip())
 
             for x in range(0, len(answer), 4000):
-                await message.reply(html.quote((answer[x:x + 4000])), parse_mode="html")
+                await message.reply(answer[x:x + 4000], parse_mode="html")
         else:
             await message.reply(_("gpt_error"), parse_mode="html")
 

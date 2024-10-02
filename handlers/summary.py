@@ -24,40 +24,42 @@ async def fetch(session, url, data):
 
 async def summarize(input_value: str, is_text=False) -> str:
     sum = ''
-    async with aiohttp.ClientSession() as session:
-        params = {"text": input_value, "type": "text"} if is_text else {"video_url": input_value, "type": "video"}
-        gen_start_json = await fetch(session, gen_url, params)
-
-    if "message" in gen_start_json:
-        return
-
-    ya300_session_id = gen_start_json['session_id']
-    await asyncio.sleep(gen_start_json['poll_interval_ms'] / 1000)
-
-    gen_data = {}
-    first_run = True
-
-    while first_run or gen_data.get('status_code') == 1:
-        first_run = False
+    try:    
         async with aiohttp.ClientSession() as session:
-            params = {"session_id": ya300_session_id, "text": input_value, "type": "text"} if is_text else {"session_id": ya300_session_id, "video_url": input_value, "type": "video"}
-            gen_data = await fetch(session, gen_url, params)
+            params = {"text": input_value, "type": "text"} if is_text else {"video_url": input_value, "type": "video"}
+            gen_start_json = await fetch(session, gen_url, params)
 
-        interval = gen_data['poll_interval_ms']
-        await asyncio.sleep(interval / 1000)
+        if "message" in gen_start_json:
+            return
 
-    if is_text:
-        keypoints = gen_data.get('thesis', [])
-    else:
-        keypoints = gen_data.get('keypoints', [])
+        ya300_session_id = gen_start_json['session_id']
+        await asyncio.sleep(gen_start_json['poll_interval_ms'] / 1000)
 
-    for keypoint in keypoints:
+        gen_data = {}
+        first_run = True
+
+        while first_run or gen_data.get('status_code') == 1:
+            first_run = False
+            async with aiohttp.ClientSession() as session:
+                params = {"session_id": ya300_session_id, "text": input_value, "type": "text"} if is_text else {"session_id": ya300_session_id, "video_url": input_value, "type": "video"}
+                gen_data = await fetch(session, gen_url, params)
+
+            interval = gen_data['poll_interval_ms']
+            await asyncio.sleep(interval / 1000)
+
         if is_text:
-            sum += f"* {keypoint['content']}\n"
+            keypoints = gen_data.get('thesis', [])
         else:
-            for thesis in keypoint['theses']:
-                sum += f"{keypoint['id']}.{thesis['id']}. {thesis['content']}\n"
-    return sum
+            keypoints = gen_data.get('keypoints', [])
+
+        for keypoint in keypoints:
+            if is_text:
+                sum += f"* {keypoint['content']}\n"
+            else:
+                for thesis in keypoint['theses']:
+                    sum += f"{keypoint['id']}.{thesis['id']}. {thesis['content']}\n"
+        return sum
+    except: return None
 
 async def send_yandex_api(link):
     endpoint = "https://300.ya.ru/api/sharing-url"
