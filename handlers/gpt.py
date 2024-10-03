@@ -62,7 +62,7 @@ def remove_user_context(user_id):
 def process_latex(text):
     return re.sub(
         r'(?m)^\s*\\\[\s*\n(.*?)\n\s*\\\]\s*$', 
-        lambda match: LatexNodes2Text().latex_to_text(f'$$\n{match.group(1).replace("\\\\", "\\")}\n$$'), 
+        lambda match: LatexNodes2Text().latex_to_text('$$\n' + match.group(1).replace('\\\\', '\\') + '\n$$'), 
         text, 
         flags=re.DOTALL
     )
