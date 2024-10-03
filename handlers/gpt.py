@@ -60,20 +60,12 @@ def remove_user_context(user_id):
     context_db.remove(getcontext.uid == user_id)
     
 def process_latex(text):
-    block_matches = re.findall(r"\\\[(.*?)\\\]|\$\$(.*?)\$\$", text, flags=re.DOTALL)
-    for match in block_matches:
-        match_content = match[0] if match[0] else match[1]
-        clean_match = LatexNodes2Text().latex_to_text(match_content.replace('\\\\', '\\'))
-        text = text.replace(f'\\[{match_content}\\]', clean_match)
-        text = text.replace(f'$$ {match_content} $$', clean_match)
-
-    inline_matches = re.findall(r"\\\((.*?)\\\)|\$(.*?)\$", text, flags=re.DOTALL)
-    for match in inline_matches:
-        match_content = match[0] if match[0] else match[1]
-        clean_match = LatexNodes2Text().latex_to_text(match_content.replace('\\\\', '\\'))
-        text = text.replace(f'\\({match_content}\\)', clean_match)
-        text = text.replace(f'${match_content}$', clean_match)
-    return text
+    return re.sub(
+        r'(?m)^\s*\\\[\s*\n(.*?)\n\s*\\\]\s*$', 
+        lambda match: LatexNodes2Text().latex_to_text(f'$$\n{match.group(1).replace("\\\\", "\\")}\n$$'), 
+        text, 
+        flags=re.DOTALL
+    )
 
 @router.callback_query(lambda c: c.data and c.data in models)
 async def callback_query_handler(callback_query: CallbackQuery):
