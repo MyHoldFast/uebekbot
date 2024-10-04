@@ -42,13 +42,13 @@ async def get_cookies():
     return ru_cookies, kz_cookies
 
 def update_environment_cookies(cookies):
-    if "KZ" in cookies and "RU" in cookies:
+    if "KZ" in cookies:
         kz_cookies = cookies["KZ"]
-        ru_cookies = cookies["RU"]
-        
         if "Session_id" in kz_cookies:
             os.environ["YANDEXKZ_SESSIONID_COOK"] = kz_cookies["Session_id"]
-        
+    
+    if "RU" in cookies:
+        ru_cookies = cookies["RU"]
         if "Session_id" in ru_cookies:
             os.environ["YANDEX_SESSIONID_COOK"] = ru_cookies["Session_id"]
         
@@ -89,13 +89,31 @@ async def stats(message: Message):
 @router.message(Command("update_cookie"))
 @admin_only
 async def update_cookie(message: Message, bot: Bot):
-    ru_cookies, kz_cookies = await get_cookies()    
-    update_environment_cookies({"RU": ru_cookies, "KZ": kz_cookies})
+    command_args = message.text.split()
 
-    output = {
-        "KZ": kz_cookies,
-        "RU": ru_cookies
-    }
+    if len(command_args) == 1: 
+        ru_cookies, kz_cookies = await get_cookies()
+        update_environment_cookies({"RU": ru_cookies, "KZ": kz_cookies})
+        output = {"KZ": kz_cookies, "RU": ru_cookies}
+        await bot.send_message(chat_id=os.getenv("ADMIN_ID"), text=f"Куки обновлены: {json.dumps(output, indent=4)}")
+        await message.answer(f"Куки обновлены.")
+    
+    elif len(command_args) == 2:
+        arg = command_args[1].lower()
 
-    await bot.send_message(chat_id=os.getenv("ADMIN_ID"), text=f"Куки обновлены: {json.dumps(output, indent=4)}")
-    await message.answer(f"Куки обновлены.")
+        if arg == "ru":
+            ru_cookies = await login_yandex_ru(os.getenv('YA_LOGIN'), os.getenv('YA_PASSWORD'), "https://passport.ya.ru/auth?retpath=https://300.ya.ru/?nr=1")
+            update_environment_cookies({"RU": ru_cookies})
+            await bot.send_message(chat_id=os.getenv("ADMIN_ID"), text=f"Куки RU обновлены: {json.dumps({'RU': ru_cookies}, indent=4)}")
+            await message.answer(f"Куки RU обновлены.")
+
+        elif arg == "kz":
+            kz_cookies = await login_yandex_kz(os.getenv('YA_LOGIN'), os.getenv('YA_PASSWORD'), "https://passport.yandex.kz/auth")
+            update_environment_cookies({"KZ": kz_cookies})
+            await bot.send_message(chat_id=os.getenv("ADMIN_ID"), text=f"Куки KZ обновлены: {json.dumps({'KZ': kz_cookies}, indent=4)}")
+            await message.answer(f"Куки KZ обновлены.")
+
+        else:
+            await message.answer("Неверный аргумент. Используйте 'ru' или 'kz'.")
+    else:
+        await message.answer("Слишком много аргументов. Используйте '/update_cookie' или '/update_cookie ru/kz'.")
