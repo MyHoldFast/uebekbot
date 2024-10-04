@@ -1,5 +1,5 @@
 import aiohttp
-import asyncio
+import httpx
 import json
 import os
 from datetime import datetime
@@ -12,7 +12,7 @@ from utils.StatsMiddleware import get_stats, cmds
 router = Router()
 start_time = datetime.now()
 
-async def login_yandex(login, password, url):
+async def login_yandex_ru(login, password, url):
     cookie_jar = aiohttp.CookieJar()
     async with aiohttp.ClientSession(cookie_jar=cookie_jar) as session:
         data = {'login': login, 'passwd': password}
@@ -21,15 +21,16 @@ async def login_yandex(login, password, url):
                 return {cookie.key: cookie.value for cookie in cookie_jar if cookie.key in {'Session_id', 'yp'}}
     return None
 
-async def fetch_with_cookies(url, cookies):
-    cookie_jar = aiohttp.CookieJar()
-    for key, value in cookies.items():
-        cookie_jar.update_cookies({key: value})
-
-    async with aiohttp.ClientSession(cookie_jar=cookie_jar) as session:
-        async with session.get(url) as response:
-            if response.status == 200:
-                return {cookie.key: cookie.value for cookie in cookie_jar}
+async def login_yandex_kz(login, password, url):
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        data = {
+            'login': login,
+            'passwd': password
+        }
+        response = await client.post(url, data=data)
+        if response.status_code == 200:
+            cookie_jar = client.cookies.jar
+            return {cookie.name: cookie.value for cookie in cookie_jar if cookie.name in {'Session_id', 'yp'}}
     return None
 
 async def get_cookies():
@@ -37,10 +38,11 @@ async def get_cookies():
         ("https://passport.ya.ru/auth?retpath=https://300.ya.ru/?nr=1", "RU"),
         ("https://passport.yandex.kz/auth", "KZ")
     ]
-    results = await asyncio.gather(*[login_yandex(os.getenv('YA_LOGIN'), os.getenv('YA_PASSWORD'), url) for url, _ in urls])
-    cookies = {region: result or {} for result, (_, region) in zip(results, urls)}
+
+    ru_cookies = await login_yandex_ru(os.getenv('YA_LOGIN'), os.getenv('YA_PASSWORD'), urls[0][0])
+    kz_cookies = await login_yandex_kz(os.getenv('YA_LOGIN'), os.getenv('YA_PASSWORD'), urls[1][0])
     
-    return cookies['RU'], cookies['KZ']
+    return ru_cookies, kz_cookies
 
 def update_environment_cookies(cookies):
     if "KZ" in cookies and "RU" in cookies:
@@ -49,9 +51,6 @@ def update_environment_cookies(cookies):
         
         if "Session_id" in kz_cookies:
             os.environ["YANDEXKZ_SESSIONID_COOK"] = kz_cookies["Session_id"]
-        
-        #if "yp" in kz_cookies:
-        #    os.environ["YANDEX_YP_COOK"] = kz_cookies["yp"]
         
         if "Session_id" in ru_cookies:
             os.environ["YANDEX_SESSIONID_COOK"] = ru_cookies["Session_id"]
@@ -86,13 +85,8 @@ async def cmd_stop(message: Message):
 @admin_only
 async def stats(message: Message):
     date, stats, total_stats = get_stats()
-    #if date:
     message_text = f"Дата: {date}\n" + "\n".join(f"{cmd}: {stats.get(cmd, 0)}" for cmd in cmds)
-    #else:
-    #    message_text = "Статистика за сегодня пуста."
-    
     message_text += "\n\nОбщая статистика:\n" + "\n".join(f"{cmd}: {total_stats[cmd]}" for cmd in cmds)
-    
     await message.answer(message_text)
 
 @router.message(Command("update_cookie"))
