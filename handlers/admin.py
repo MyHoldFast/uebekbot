@@ -23,10 +23,7 @@ async def login_yandex_ru(login, password, url):
 
 async def login_yandex_kz(login, password, url):
     async with httpx.AsyncClient(follow_redirects=True) as client:
-        data = {
-            'login': login,
-            'passwd': password
-        }
+        data = {'login': login, 'passwd': password}
         response = await client.post(url, data=data)
         if response.status_code == 200:
             cookie_jar = client.cookies.jar

@@ -109,7 +109,10 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
     if not photo and message.photo:
         photo = message.photo[-1]
 
-    if photo and command.args:
+    if photo:
+        if not command.args:
+            text = "опиши изображение на русском языке"
+        else: text = command.args
         file = await bot.get_file(photo.file_id)
         file_path = file.file_path
         bytesIO = await bot.download_file(file_path)
@@ -119,7 +122,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
         try:
             myfile = await asyncio.to_thread(genai.upload_file, "tmp/" + photo.file_id + ".jpg")
             model = genai.GenerativeModel("gemini-1.5-flash")
-            result = await asyncio.to_thread(model.generate_content, [myfile, "\n\n", command.args])
+            result = await asyncio.to_thread(model.generate_content, [myfile, "\n\n", text])
             
             if result.text:
                 result = telegram_format(result.text)
