@@ -57,7 +57,7 @@ async def do_ocr_request(file_id, bot):
         else:
             return re.sub(r'\n(?!\n)', ' ', ocr_result['result']['textAnnotation']['fullText'])
 
-@router.message(Command("ocr"))
+@router.message(Command("ocr", ignore_case=True))
 async def ocr_handle(message: Message, bot: Bot):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)

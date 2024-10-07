@@ -63,7 +63,7 @@ def admin_only(func):
         return await func(message, *args, **kwargs)
     return wrapper
 
-@router.message(Command("uptime"))
+@router.message(Command("uptime", ignore_case=True))
 @admin_only
 async def cmd_uptime(message: Message):
     now = datetime.now()
@@ -73,12 +73,12 @@ async def cmd_uptime(message: Message):
     minutes = (uptime.total_seconds() // 60) % 60
     await message.answer(f"Uptime: {days} days, {int(hours)} hours, {int(minutes)} minutes")
 
-@router.message(Command("stop"))
+@router.message(Command("stop", ignore_case=True))
 @admin_only
 async def cmd_stop(message: Message):
     os._exit(0)
 
-@router.message(Command("stats"))
+@router.message(Command("stats", ignore_case=True))
 @admin_only
 async def stats(message: Message):
     date, stats, total_stats = get_stats()
@@ -86,7 +86,7 @@ async def stats(message: Message):
     message_text += "\n\nОбщая статистика:\n" + "\n".join(f"{cmd}: {total_stats[cmd]}" for cmd in cmds)
     await message.answer(message_text)
 
-@router.message(Command("update_cookie"))
+@router.message(Command("update_cookie", ignore_case=True))
 @admin_only
 async def update_cookie(message: Message, bot: Bot):
     command_args = message.text.split()

@@ -80,7 +80,7 @@ async def process_audio(wav_buffer: BytesIO, message, api=0):
 
 router = Router()
 
-@router.message(Command(commands=["stt"]))
+@router.message(Command("stt", ignore_case=True))
 async def stt_command(message: types.Message, bot: Bot):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)

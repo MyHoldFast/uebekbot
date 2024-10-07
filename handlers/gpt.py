@@ -89,7 +89,7 @@ async def callback_query_handler(callback_query: CallbackQuery):
             f"{callback_query.from_user.first_name}, {_('you_choose_model')} {callback_query.data}"
         )
 
-@router.message(Command("gpt"))
+@router.message(Command("gpt", ignore_case=True))
 async def cmd_start(message: Message, command: CommandObject, bot: Bot):
     messagetext = message.reply_to_message.text if message.reply_to_message else command.args
     await message.bot.send_chat_action(chat_id=message.chat.id, action='typing')
@@ -169,7 +169,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
         else:
             await message.reply(_("gpt_error"), parse_mode="html")
 
-@router.message(Command("gptrm"))
+@router.message(Command("gptrm", ignore_case=True))
 async def cmd_remove_context(message: Message):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)

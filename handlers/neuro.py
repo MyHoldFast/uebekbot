@@ -40,7 +40,7 @@ async def send_request(user_request):
                 return await fetch_fresh_message(session, response_message_id)
             except: return "Произошла ошибка, попробуйте позднее"
 
-@router.message(Command("neuro"))
+@router.message(Command("neuro", ignore_case=True))
 async def neuro(message: Message, command: CommandObject, bot: Bot):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)

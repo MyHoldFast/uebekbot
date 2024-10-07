@@ -103,36 +103,40 @@ async def read_url(target):
     return None
 
 
-async def parse_url(text):    
-    if text==None:
-        return _("send_link") # type: ignore
+async def parse_url(text):
+    if not text:
+        return _("send_link")  # type: ignore
+    
     result = ""
-    matched = False
-
+    
     regexes = [
         (r'https?://(?:www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)/\S+', summarize),
         (r'https?://(?:www\.)?(?:[a-zA-Zа-яА-Я]{2,}\.)?(?:m\.)?wikipedia\.\w{2,}/wiki/[^\s]+', read_url),
         (r'https?://(?:www\.)?habr\.\w{2,}/\S+', read_url)
     ]
 
-
     for regex, func in regexes:
         match = re.search(regex, text)
         if match:
-            matched = True
-            link = match.group()
+            link = match.group()            
             func_result = await func(link)
-            if func_result is not None: 
+            if func_result:
                 result += "\n\n" + func_result
+            break
+    
+    if not result:
+        if text == '/summary':
+            return _("send_link")  # type: ignore
 
-    if not matched:
-        
-        if(text=='/summary'): result = _("send_link") # type: ignore
-        else: result = await summarize(text, True)
+        match = re.search(r'(https?://[^\s]+)', text)
+        if match:
+            result = await read_url(match.group(0))
+        else:
+            result = await summarize(text, True)
 
     return result
 
-@router.message(Command("summary"))
+@router.message(Command("summary", ignore_case=True))
 async def summary(message: Message):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
