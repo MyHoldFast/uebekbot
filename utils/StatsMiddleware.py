@@ -25,8 +25,8 @@ class StatsMiddleware(BaseMiddleware):
         pattern = r'[@\s]+' + re.escape(self.text) + r'\b'
         cmd = (lambda t: re.split(pattern, t, 1)[0].split(' ')[0] if t else None)(event.message.text if event.message else None) or \
               (lambda c: re.split(pattern, c, 1)[0].split(' ')[0] if c else None)(event.message.caption if event.message else None)
-        if cmd in cmds:
-            save_stats(cmd)
+        if cmd.lower() in cmds:
+            save_stats(cmd.lower())
         return await handler(event, data)
 
 def save_stats(cmd: str):
