@@ -12,7 +12,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from localization import DEFAULT_LANGUAGE, get_localization
 
-API_URLS = ["https://api-inference.huggingface.co/models/openai/whisper-medium", "https://api-inference.huggingface.co/models/openai/whisper-base", "https://api-inference.huggingface.co/models/openai/whisper-tiny"]
+API_URLS = ["https://api-inference.huggingface.co/models/openai/whisper-large-v3-turbo", "https://api-inference.huggingface.co/models/openai/whisper-base", "https://api-inference.huggingface.co/models/openai/whisper-tiny"]
 headers = {"Authorization": "Bearer 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"}
 
 async def download_as_audio(file_path, output_file):
@@ -108,10 +108,10 @@ async def stt_command(message: types.Message, bot: Bot):
     content = await download_as_audio(file_path, f"tmp/{file_id}.ogg")
     audio_bytes = BytesIO(content)
     api = 0
-    if duration > 180:
-        api = 2
-    elif duration > 120:
-        api = 1
+    #if duration > 180:
+    #    api = 2
+    #elif duration > 120:
+    #    api = 1
     #print(API_URLS[api])
     transcription = await process_audio(audio_bytes, message, api)
     
