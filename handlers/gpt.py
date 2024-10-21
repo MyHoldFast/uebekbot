@@ -4,14 +4,12 @@ import json
 import os
 import re
 import time
-
 from aiogram import Bot, Router, html
-from aiogram.filters import Command, CommandObject
+from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 from duckduckgo_search import AsyncDDGS
 import google.generativeai as genai
 from pylatexenc.latex2text import LatexNodes2Text
-
 from keyboards.gpt import get_gpt_keyboard, models
 from localization import get_localization, DEFAULT_LANGUAGE
 from utils.dbmanager import DB
@@ -22,156 +20,94 @@ db, Query = DB('db/models.json').get_db()
 context_db, ContextQuery = DB('db/user_context.json').get_db()
 
 async def update_model_message(callback_query: CallbackQuery, model: str):
-    keyboard = get_gpt_keyboard(model)
-    await callback_query.message.edit_reply_markup(reply_markup=keyboard)
+    await callback_query.message.edit_reply_markup(reply_markup=get_gpt_keyboard(model))
 
-def load_user_context(user_id):
-    context_item = context_db.get(ContextQuery().uid == user_id)
-    if context_item:
-        last_modified_time = float(context_item.get('last_modified_time', 0))
-        current_time = time.time()
-        if current_time - last_modified_time < 3 * 3600:
-            return json.loads(base64.b64decode(context_item.get('chat_messages')).decode('utf-8')), context_item.get('chat_vqd')
+def get_user_context(user_id):
+    context = context_db.get(ContextQuery().uid == user_id)
+    if context and time.time() - float(context.get('last_modified_time', 0)) < 3 * 3600:
+        return json.loads(base64.b64decode(context['chat_messages']).decode('utf-8')), context['chat_vqd']
     return None, None
 
-def save_user_context(user_id, chat_messages, chat_vqd):
-    getcontext = ContextQuery()
-    context_item = context_db.get(getcontext.uid == user_id)
-    current_time = time.time()
-    encoded_chat_messages = base64.b64encode(json.dumps(chat_messages, ensure_ascii=False).encode('utf-8')).decode('utf-8')
+def set_user_context(user_id, chat_messages, chat_vqd):
+    context_item = {
+        'uid': user_id,
+        'chat_messages': base64.b64encode(json.dumps(chat_messages).encode()).decode(),
+        'chat_vqd': chat_vqd,
+        'last_modified_time': time.time()
+    }
+    context_db.upsert(context_item, ContextQuery().uid == user_id)
 
-    if context_item:
-        context_db.update({
-            'uid': user_id,
-            'chat_messages': encoded_chat_messages,
-            'chat_vqd': chat_vqd,
-            'last_modified_time': current_time
-        }, getcontext.uid == user_id)        
-    else:
-        context_db.insert({
-            'uid': user_id,
-            'chat_messages': encoded_chat_messages,
-            'chat_vqd': chat_vqd,
-            'last_modified_time': current_time
-        })
-
-def remove_user_context(user_id):
-    getcontext = ContextQuery()
-    context_db.remove(getcontext.uid == user_id)
-    
 def process_latex(text):
     return re.sub(
         r'(?m)^\s*\\\[\s*\n(.*?)\n\s*\\\]\s*$', 
-        lambda match: LatexNodes2Text().latex_to_text('$$\n' + match.group(1).replace('\\\\', '\\') + '\n$$'), 
+        lambda m: LatexNodes2Text().latex_to_text(f"$${m.group(1).replace('\\\\', '\\')}$$"), 
         text, 
         flags=re.DOTALL
     )
 
-@router.callback_query(lambda c: c.data and c.data in models)
-async def callback_query_handler(callback_query: CallbackQuery):
-    if callback_query.data in models:
-        user_id = callback_query.from_user.id
-        getmodel = Query()
-        db_item = db.get(getmodel.uid == user_id)
+@router.callback_query(lambda c: c.data in models)
+async def handle_model_selection(callback_query: CallbackQuery):
+    user_id = callback_query.from_user.id
+    db.upsert({'uid': user_id, 'model': callback_query.data}, Query().uid == user_id)
+    set_user_context(user_id, [], None)
+    await callback_query.answer()
+    await update_model_message(callback_query, callback_query.data)
+    user_language = callback_query.from_user.language_code or DEFAULT_LANGUAGE
+    _ = get_localization(user_language)
+    await callback_query.message.answer(f"{callback_query.from_user.first_name}, {_('you_choose_model')} {callback_query.data}")
 
-        if not db_item:
-            db.insert({'uid': user_id, 'model': callback_query.data})
-        else:
-            db.update({'model': callback_query.data}, getmodel.uid == user_id)
-
-        remove_user_context(user_id)
-        await callback_query.answer()
-        await update_model_message(callback_query, callback_query.data)
-
-        user_language = callback_query.from_user.language_code or DEFAULT_LANGUAGE
-        _ = get_localization(user_language)
-        await callback_query.message.answer(
-            f"{callback_query.from_user.first_name}, {_('you_choose_model')} {callback_query.data}"
-        )
-
-@router.message(Command("gpt", ignore_case=True))
-async def cmd_start(message: Message, command: CommandObject, bot: Bot):
-    messagetext = message.reply_to_message.text if message.reply_to_message else command.args
-    await message.bot.send_chat_action(chat_id=message.chat.id, action='typing')
-    user_id = message.from_user.id      
+@router.message(Command("gpt"))
+async def handle_gpt(message: Message, command: Command, bot: Bot):
+    user_id = message.from_user.id
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
+    
+    messagetext = message.reply_to_message.text if message.reply_to_message else command.args
+    await bot.send_chat_action(message.chat.id, 'typing')
 
-    photo = None
-    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-    if message.reply_to_message:
-        if message.reply_to_message.photo:
-            photo = message.reply_to_message.photo[-1]
-        elif message.reply_to_message.document:
-            if message.reply_to_message.document.mime_type.startswith('image/'):
-                photo = message.reply_to_message.document
+    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-    if not photo and message.photo:
-        photo = message.photo[-1]
-
+    photo = message.photo[-1] if message.photo else None
     if photo:
-        if not command.args:
-            text = "опиши изображение на русском языке"
-        else: text = command.args
+        text = command.args or "опиши изображение на русском языке"
         file = await bot.get_file(photo.file_id)
-        file_path = file.file_path
-        bytesIO = await bot.download_file(file_path)
-        image_data = bytesIO.read()
-        with open("tmp/"+photo.file_id+".jpg", "wb") as temp_file:
-            temp_file.write(image_data)
+        image_data = await bot.download_file(file.file_path)
+        image_path = f"tmp/{photo.file_id}.jpg"
+        with open(image_path, "wb") as temp_file:
+            temp_file.write(image_data.read())
         try:
-            myfile = await asyncio.to_thread(genai.upload_file, "tmp/" + photo.file_id + ".jpg")
+            file_url = await asyncio.to_thread(genai.upload_file, image_path)
             model = genai.GenerativeModel("gemini-1.5-flash")
-            result = await asyncio.to_thread(model.generate_content, [myfile, "\n\n", text])
-            
-            if result.text:
-                result = telegram_format(result.text)
-                for x in range(0, len(result), 4000):
-                    await message.reply((result[x:x + 4000]), parse_mode="HTML")
-        except Exception as e:
-            #print(e)
-            await message.reply(_("gpt_gemini_error"))  
-        os.remove(f"tmp/"+photo.file_id+".jpg")         
-        return     
+            result = await asyncio.to_thread(model.generate_content, [file_url, "\n\n", text])
+            await message.reply(telegram_format(result.text), parse_mode="HTML")
+        finally:
+            os.remove(image_path)
+        return
 
-    answer = ""
-    model = "gpt-4o-mini"
-    try:
-        user_model = db.get(Query().uid == user_id)
-        if user_model and user_model["model"] in models:
-            model = user_model["model"]
-        if messagetext:
+    model = db.get(Query().uid == user_id)
+    model = model["model"] if model else "gpt-4o-mini"
+
+    chat_messages, chat_vqd = get_user_context(user_id)
+    if messagetext:
+        try:
             d = AsyncDDGS()
-            chat_messages, chat_vqd = load_user_context(user_id)
             if chat_messages is not None and chat_vqd is not None:
                 d._chat_messages = chat_messages
-                d._chat_vqd = chat_vqd            
+                d._chat_vqd = chat_vqd
             answer = await d.achat(messagetext, model=model)
-            
-            save_user_context(user_id, d._chat_messages, d._chat_vqd)
-            answer2 = process_latex(telegram_format(answer))
-            #answer = "\n".join(line.strip() for line in answer.splitlines() if line.strip())
+            set_user_context(user_id, d._chat_messages, d._chat_vqd)
+            answer_processed = process_latex(telegram_format(answer))
+            for chunk in (answer_processed[i:i + 4000] for i in range(0, len(answer_processed), 4000)):
+                await message.reply(chunk, parse_mode="HTML")
+        except Exception as e:
+            print(e)
+            await message.reply(_("gpt_error"), parse_mode="HTML")
+    else:
+        await message.reply(_("gpt_help"), reply_markup=get_gpt_keyboard(model), parse_mode="markdown")
 
-            for x in range(0, len(answer2), 4000):
-                await message.reply((answer2[x:x + 4000]), parse_mode="HTML")
-        else:
-            keyboard = get_gpt_keyboard(model)
-            await message.reply(_("gpt_help"), reply_markup=keyboard, parse_mode="markdown")
-    except Exception as e:
-        await message.bot.send_chat_action(chat_id=message.chat.id, action='cancel')
-        if answer:
-            answer = html.quote(answer)
-            #answer = process_latex(answer)
-            #answer = "\n".join(line.strip() for line in answer.splitlines() if line.strip())
-
-            for x in range(0, len(answer), 4000):
-                await message.reply(answer[x:x + 4000], parse_mode="html")
-        else:
-            await message.reply(_("gpt_error"), parse_mode="html")
-
-@router.message(Command("gptrm", ignore_case=True))
-async def cmd_remove_context(message: Message):
+@router.message(Command("gptrm"))
+async def remove_context(message: Message):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
-    remove_user_context(message.from_user.id)
+    set_user_context(message.from_user.id, [], None)
     await message.reply(_("gpt_ctx_removed"), parse_mode="markdown")

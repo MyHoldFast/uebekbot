@@ -30,10 +30,10 @@ async def summarize(input_value: str, is_text=False) -> str:
             gen_start_json = await fetch(session, gen_url, params)
 
         if "message" in gen_start_json:
-            return
+            return None
 
         ya300_session_id = gen_start_json['session_id']
-        await asyncio.sleep(gen_start_json['poll_interval_ms'] / 1000)
+        await asyncio.sleep(gen_start_json['poll_interval_ms'] / 1000)  # Оставляем как было
 
         gen_data = {}
         first_run = True
@@ -44,7 +44,7 @@ async def summarize(input_value: str, is_text=False) -> str:
                 params = {"session_id": ya300_session_id, "text": input_value, "type": "text"} if is_text else {"session_id": ya300_session_id, "video_url": input_value, "type": "video"}
                 gen_data = await fetch(session, gen_url, params)
 
-            interval = gen_data['poll_interval_ms']
+            interval = gen_data['poll_interval_ms']  # Оставляем как было
             await asyncio.sleep(interval / 1000)
 
         if is_text:
@@ -59,7 +59,9 @@ async def summarize(input_value: str, is_text=False) -> str:
                 for thesis in keypoint['theses']:
                     sum += f"{keypoint['id']}.{thesis['id']}. {thesis['content']}\n"
         return sum
-    except: return None
+    except Exception as e: 
+        print(f"Error: {e}")  # Логгируем исключение для отладки
+        return None
 
 async def send_yandex_api(link):
     endpoint = "https://300.ya.ru/api/sharing-url"
@@ -125,7 +127,7 @@ async def parse_url(text):
             break
     
     if not result:
-        if text == '/summary':
+        if text.startswith('/summary'):
             return _("send_link")  # type: ignore
 
         match = re.search(r'(https?://[^\s]+)', text)
