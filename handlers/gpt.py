@@ -40,7 +40,7 @@ def set_user_context(user_id, chat_messages, chat_vqd):
 def process_latex(text):
     return re.sub(
         r'(?m)^\s*\\\[\s*\n(.*?)\n\s*\\\]\s*$', 
-        lambda m: LatexNodes2Text().latex_to_text(f"$${m.group(1).replace('\\\\', '\\')}$$"), 
+        lambda m: LatexNodes2Text().latex_to_text("$$ {} $$".format(m.group(1).replace('\\\\', '\\\\'))), 
         text, 
         flags=re.DOTALL
     )
