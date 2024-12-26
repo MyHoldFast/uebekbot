@@ -6,6 +6,7 @@ from datetime import datetime
 from functools import wraps
 from aiogram import Router, Bot
 from aiogram.filters import Command
+from aiogram.filters.command import CommandObject 
 from aiogram.types import Message
 from utils.StatsMiddleware import get_stats, cmds
 
@@ -80,10 +81,20 @@ async def cmd_stop(message: Message):
 
 @router.message(Command("stats", ignore_case=True))
 @admin_only
-async def stats(message: Message):
-    date, stats, total_stats = get_stats()
-    message_text = f"Дата: {date}\n" + "\n".join(f"{cmd}: {stats.get(cmd, 0)}" for cmd in cmds)
-    message_text += "\n\nОбщая статистика:\n" + "\n".join(f"{cmd}: {total_stats[cmd]}" for cmd in cmds)
+async def stats(message: Message, command: CommandObject):
+    args = command.args.split() if command.args else []
+    if len(args) == 2:
+        start_date, end_date = args
+    else:
+        start_date, end_date = None, None  
+
+    date, stats, total_stats, earliest_date = get_stats(start_date, end_date)
+
+    message_text = f"Статистика за дату: {date}\n"
+    message_text += "\n".join(f"{cmd}: {stats.get(cmd, 0)}" for cmd in cmds)
+    message_text += f"\n\nОбщая статистика с {earliest_date or 'неизвестной даты'} до {end_date or 'сегодня'}:\n"
+    message_text += "\n".join(f"{cmd}: {total_stats[cmd]}" for cmd in cmds)
+
     await message.answer(message_text)
 
 @router.message(Command("update_cookie", ignore_case=True))
