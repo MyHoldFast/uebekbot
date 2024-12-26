@@ -65,7 +65,7 @@ def get_stats(start_date: Optional[str] = None, end_date: Optional[str] = None) 
 
     all_dates = [datetime.strptime(record.get("date", ""), "%Y-%m-%d").date() for record in db.all()]
     if all_dates:
-        earliest_date = str(min(all_dates))  
+        earliest_date = str(min(all_dates)) 
 
     for stats_record in db.all():
         record_date = datetime.strptime(stats_record.get("date", ""), "%Y-%m-%d").date()
