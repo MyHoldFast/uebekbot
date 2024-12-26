@@ -141,7 +141,12 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
         if user_model and user_model["model"] in models:
             model = user_model["model"]
         if messagetext:
-            d = DDGS()
+            proxy = os.environ["PROXY"]
+            if proxy:
+                d = DDGS(proxy=proxy, timeout=20)
+            else:
+                d = DDGS()
+
             chat_messages, chat_vqd = load_user_context(user_id)
             if chat_messages is not None and chat_vqd is not None:
                 d._chat_messages = chat_messages
