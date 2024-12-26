@@ -112,7 +112,8 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
     if photo:
         if not command.args:
             text = "опиши изображение на русском языке"
-        else: text = command.args
+        else:
+            text = command.args
         file = await bot.get_file(photo.file_id)
         file_path = file.file_path
         bytesIO = await bot.download_file(file_path)
@@ -123,17 +124,17 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
             myfile = await asyncio.to_thread(genai.upload_file, "tmp/" + photo.file_id + ".jpg")
             model = genai.GenerativeModel("gemini-1.5-flash")
             result = await asyncio.to_thread(model.generate_content, [myfile, "\n\n", text])
-            
+
             if result.text:
                 result = telegram_format(result.text)
                 for x in range(0, len(result), 4000):
                     await message.reply((result[x:x + 4000]), parse_mode="HTML")
         except Exception as e:
-            #print(e)
-            await message.reply(_("gpt_gemini_error"))  
+            await message.reply(_("gpt_gemini_error"))
         os.remove(f"tmp/"+photo.file_id+".jpg")         
-        return     
+        return
 
+    # Работа с текстовыми запросами
     answer = ""
     model = "gpt-4o-mini"
     try:
@@ -151,11 +152,11 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
             if chat_messages is not None and chat_vqd is not None:
                 d._chat_messages = chat_messages
                 d._chat_vqd = chat_vqd            
-            answer = d.chat(messagetext, model=model)
-            
+
+            answer = await asyncio.to_thread(d.chat, messagetext, model)
+
             save_user_context(user_id, d._chat_messages, d._chat_vqd)
             answer2 = process_latex(telegram_format(answer))
-            #answer = "\n".join(line.strip() for line in answer.splitlines() if line.strip())
 
             for x in range(0, len(answer2), 4000):
                 await message.reply((answer2[x:x + 4000]), parse_mode="HTML")
@@ -166,9 +167,6 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
         await message.bot.send_chat_action(chat_id=message.chat.id, action='cancel')
         if answer:
             answer = html.quote(answer)
-            #answer = process_latex(answer)
-            #answer = "\n".join(line.strip() for line in answer.splitlines() if line.strip())
-
             for x in range(0, len(answer), 4000):
                 await message.reply(answer[x:x + 4000], parse_mode="html")
         else:
