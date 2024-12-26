@@ -86,12 +86,13 @@ async def stats(message: Message, command: CommandObject):
     if len(args) == 2:
         start_date, end_date = args
     else:
-        start_date, end_date = None, None
+        start_date, end_date = None, None 
 
-    date, stats, total_stats, earliest_date = get_stats(start_date, end_date)
+    date, today_stats, total_stats, earliest_date = get_stats(start_date, end_date)
+
     message_text = f"Статистика за дату: {date}\n"
-    message_text += "\n".join(f"{cmd}: {stats.get(cmd, 0)}" for cmd in cmds)
-    message_text += f"\n\nОбщая статистика с {earliest_date or 'неизвестной даты'} до {end_date or 'сегодня'}:\n"
+    message_text += "\n".join(f"{cmd}: {today_stats.get(cmd, 0)}" for cmd in cmds)
+    message_text += f"\n\nОбщая статистика с {earliest_date or 'неизвестной даты'}:\n"
     message_text += "\n".join(f"{cmd}: {total_stats[cmd]}" for cmd in cmds)
 
     await message.answer(message_text)
