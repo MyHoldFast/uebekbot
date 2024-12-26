@@ -8,7 +8,7 @@ import time
 from aiogram import Bot, Router, html
 from aiogram.filters import Command, CommandObject
 from aiogram.types import CallbackQuery, Message
-from duckduckgo_search import AsyncDDGS
+from duckduckgo_search import DDGS
 import google.generativeai as genai
 from pylatexenc.latex2text import LatexNodes2Text
 
@@ -141,12 +141,12 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
         if user_model and user_model["model"] in models:
             model = user_model["model"]
         if messagetext:
-            d = AsyncDDGS()
+            d = DDGS()
             chat_messages, chat_vqd = load_user_context(user_id)
             if chat_messages is not None and chat_vqd is not None:
                 d._chat_messages = chat_messages
                 d._chat_vqd = chat_vqd            
-            answer = await d.achat(messagetext, model=model)
+            answer = d.chat(messagetext, model=model)
             
             save_user_context(user_id, d._chat_messages, d._chat_vqd)
             answer2 = process_latex(telegram_format(answer))
@@ -167,6 +167,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
             for x in range(0, len(answer), 4000):
                 await message.reply(answer[x:x + 4000], parse_mode="html")
         else:
+            print(e)
             await message.reply(_("gpt_error"), parse_mode="html")
 
 @router.message(Command("gptrm", ignore_case=True))
