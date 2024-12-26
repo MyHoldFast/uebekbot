@@ -134,7 +134,6 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
         os.remove(f"tmp/"+photo.file_id+".jpg")         
         return
 
-    # Работа с текстовыми запросами
     answer = ""
     model = "gpt-4o-mini"
     try:
