@@ -55,6 +55,7 @@ def update_environment_cookies(cookies):
         
         if "yp" in ru_cookies:
             os.environ["YANDEX_YP_COOK"] = ru_cookies["yp"]
+            
 
 def admin_only(func):
     @wraps(func)
@@ -129,3 +130,24 @@ async def update_cookie(message: Message, bot: Bot):
             await message.answer("Неверный аргумент. Используйте 'ru' или 'kz'.")
     else:
         await message.answer("Слишком много аргументов. Используйте '/update_cookie' или '/update_cookie ru/kz'.")
+
+
+@router.message(Command("proxy", ignore_case=True))
+@admin_only
+async def cmd_proxy(message: Message):
+    command_args = message.text.split()
+
+    if len(command_args) == 1:
+        proxy_value = os.getenv("PROXY")
+        if proxy_value:
+            await message.answer(f"Текущее значение PROXY: {proxy_value}")
+        else:
+            await message.answer("Переменная PROXY не установлена.")
+
+    elif len(command_args) == 2:
+        new_proxy = command_args[1]
+        os.environ["PROXY"] = new_proxy
+        await message.answer(f"Новое значение PROXY установлено: {new_proxy}")
+
+    else:
+        await message.answer("Слишком много аргументов. Используйте '/proxy' для отображения текущего значения или '/proxy <значение>' для установки нового значения.")
