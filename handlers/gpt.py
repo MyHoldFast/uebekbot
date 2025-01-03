@@ -143,7 +143,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
         if messagetext:
             proxy = os.getenv("PROXY")
             if proxy:
-                d = DDGS(proxy=proxy, timeout=20)
+                d = DDGS(proxy=proxy, verify=False, timeout=20)
             else:
                 d = DDGS()
 
