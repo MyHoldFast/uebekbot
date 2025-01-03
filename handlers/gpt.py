@@ -141,7 +141,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
         if user_model and user_model["model"] in models:
             model = user_model["model"]
         if messagetext:
-            proxy = os.environ["PROXY"]
+            proxy = os.getenv("PROXY")
             if proxy:
                 d = DDGS(proxy=proxy, timeout=20)
             else:
