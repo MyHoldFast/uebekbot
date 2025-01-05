@@ -5,6 +5,8 @@ import os
 import re
 import time
 
+from duckduckgo_chat import DuckDuckGoChat
+
 from aiogram import Bot, Router, html
 from aiogram.filters import Command, CommandObject
 from aiogram.types import CallbackQuery, Message
@@ -143,19 +145,19 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
         if messagetext:
             proxy = os.getenv("PROXY")
             if proxy:
-                #print("use proxy")
-                d = DDGS(proxy=proxy, verify=False, timeout=20)
+                print("use proxy")
+                d = DuckDuckGoChat(model=model, proxy=proxy)
             else:
-                d = DDGS()
+                d = DuckDuckGoChat(model=model)
 
             chat_messages, chat_vqd = load_user_context(user_id)
             if chat_messages is not None and chat_vqd is not None:
-                d._chat_messages = chat_messages
-                d._chat_vqd = chat_vqd            
+                d.messages = chat_messages
+                d.vqd = chat_vqd            
 
-            answer = await asyncio.to_thread(d.chat, messagetext, model)
+            answer = await asyncio.to_thread(d.chat, messagetext)
 
-            save_user_context(user_id, d._chat_messages, d._chat_vqd)
+            save_user_context(user_id, d.messages, d.vqd)
             answer2 = process_latex(telegram_format(answer))
 
             for x in range(0, len(answer2), 4000):
