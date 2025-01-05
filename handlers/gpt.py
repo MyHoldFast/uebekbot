@@ -6,11 +6,9 @@ import re
 import time
 
 from duckduckgo_chat import DuckDuckGoChat
-
 from aiogram import Bot, Router, html
 from aiogram.filters import Command, CommandObject
 from aiogram.types import CallbackQuery, Message
-from duckduckgo_search import DDGS
 import google.generativeai as genai
 from pylatexenc.latex2text import LatexNodes2Text
 
