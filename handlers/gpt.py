@@ -146,14 +146,14 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
     try:
         user_model = db.get(Query().uid == user_id)
         if user_model and user_model["model"] in models:
-            model = models_arr[user_model["model"]]
+            model = user_model["model"]
         if messagetext:
             proxy = os.getenv("PROXY")
             if proxy:
                 print("use proxy")
-                d = DuckDuckGoChat(model=model, proxy=proxy)
+                d = DuckDuckGoChat(model=models_arr[model], proxy=proxy)
             else:
-                d = DuckDuckGoChat(model=model)
+                d = DuckDuckGoChat(model=models_arr[model])
 
             chat_messages, chat_vqd = load_user_context(user_id)
             if chat_messages is not None and chat_vqd is not None:
