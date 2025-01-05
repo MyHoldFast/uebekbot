@@ -21,6 +21,13 @@ router = Router()
 db, Query = DB('db/models.json').get_db()
 context_db, ContextQuery = DB('db/user_context.json').get_db()
 
+models_arr = {
+            "claude-3-haiku": "claude-3-haiku-20240307",
+            "gpt-4o-mini": "gpt-4o-mini",
+            "llama-3.1-70b": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+            "mixtral-8x7b": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+        }
+
 async def update_model_message(callback_query: CallbackQuery, model: str):
     keyboard = get_gpt_keyboard(model)
     await callback_query.message.edit_reply_markup(reply_markup=keyboard)
@@ -139,7 +146,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
     try:
         user_model = db.get(Query().uid == user_id)
         if user_model and user_model["model"] in models:
-            model = user_model["model"]
+            model = models_arr[user_model["model"]]
         if messagetext:
             proxy = os.getenv("PROXY")
             if proxy:
