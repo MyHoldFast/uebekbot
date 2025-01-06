@@ -36,7 +36,7 @@ class DuckDuckGoChat:
             "model": self.model,
             "messages": self.messages,
         }
-        headers = DuckDuckGoChat.common_headers.copy()
+        headers = self.common_headers.copy()
         headers["x-vqd-4"] = self.vqd
         proxies = {"http": self.proxy, "https": self.proxy} if self.proxy else None
         response = requests.post(self.chat_url, headers=headers, json=payload, stream=True, proxies=proxies, timeout=timeout)

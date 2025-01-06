@@ -149,12 +149,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
             model = user_model["model"]
         if messagetext:
             proxy = os.getenv("PROXY")
-            if proxy:
-                print("use proxy")
-                d = DuckDuckGoChat(model=models_arr[model], proxy=proxy)
-            else:
-                d = DuckDuckGoChat(model=models_arr[model])
-
+            d = DuckDuckGoChat(model=models_arr[model], proxy=proxy)
             chat_messages, chat_vqd = load_user_context(user_id)
             if chat_messages is not None and chat_vqd is not None:
                 d.messages = chat_messages
