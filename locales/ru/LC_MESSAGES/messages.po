@@ -44,6 +44,12 @@ msgstr "Укажите ссылку на YouTube, Википедию или Habr
 msgid "summary_failed"
 msgstr "К сожалению, сделать краткую выжимку не удалось"
 
+msgid "summary_detail"
+msgstr "Подробнее"
+
+msgid "summary_detail_failed"
+msgstr "Не удалось загрузить подробности."
+
 msgid "use_reply_or_attach_image"
 msgstr "Пожалуйста, используйте реплай или приложите изображение"
 
