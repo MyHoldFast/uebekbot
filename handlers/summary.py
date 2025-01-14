@@ -4,7 +4,7 @@ import os
 import re
 
 from aiogram import Router
-from aiogram.filters import Command
+from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.types import CallbackQuery
@@ -105,7 +105,7 @@ async def extract_url_info(target):
     return None, None
 
 async def process_url(text):
-    if not text:
+    if not text:    
         return _("send_link"), None # type: ignore
 
     result = ""
@@ -130,9 +130,8 @@ async def process_url(text):
             break
 
     if not result:
-        if text.startswith('/summary'):
-            return _("send_link"), None # type: ignore
-
+        #if text.startswith('/summary'):
+        #   return _("send_link"), None # type: ignore
         match = re.search(r'(https?://[^\s]+)', text)
         if match:
             result, button_callback = await extract_url_info(match.group(0))
@@ -219,12 +218,12 @@ async def fetch_detailed_summary(final_url: str):
     return None
 
 @router.message(Command("summary", ignore_case=True))
-async def summary(message: Message):
+async def summary(message: Message, command: CommandObject):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
 
     link_preview = None
-    text = message.text
+    text = message.reply_to_message.text if message.reply_to_message else command.args
 
     if message.reply_to_message:
         link_preview = message.reply_to_message.link_preview_options
