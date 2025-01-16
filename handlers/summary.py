@@ -140,9 +140,9 @@ async def process_url(text):
 
     return result, button_callback
 
-@router.callback_query()
+@router.callback_query(lambda c: c.data.startswith("link:"))
 async def handle_details_callback(callback: CallbackQuery):
-    identifier = callback.data
+    identifier = callback.data[5:]
     target_url = f"https://300.ya.ru/{identifier}/"
     detailed_summary = await fetch_detailed_summary(target_url)
     user_language = callback.from_user.language_code or DEFAULT_LANGUAGE
@@ -240,7 +240,7 @@ async def summary(message: Message, command: CommandObject):
 
         keyboard = None
         if button_callback:
-            details_button = InlineKeyboardButton(text=_("summary_detail"), callback_data=button_callback)
+            details_button = InlineKeyboardButton(text=_("summary_detail"), callback_data='link:'+button_callback)
             keyboard = InlineKeyboardMarkup(inline_keyboard=[[details_button]])
 
         for x in range(0, len(result), 4096):
