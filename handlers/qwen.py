@@ -1,5 +1,5 @@
 from aiogram import Router, Bot
-from aiogram.filters import Command
+from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 import aiohttp, asyncio, json, os
 from chatgpt_md_converter import telegram_format
@@ -29,13 +29,13 @@ def remove_messages(user_id):
     context_db.remove(getcontext.uid == user_id)
 
 @router.message(Command("qwen", ignore_case=True))
-async def cmd_qwen(message: Message, bot: Bot):
+async def cmd_qwen(message: Message, command: CommandObject, bot: Bot):
     user_id = message.from_user.id
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
     messages = load_messages(user_id)
     
-    user_input = message.text[len("/qwen "):].strip()
+    user_input = message.reply_to_message.text if message.reply_to_message else command.args
     if not user_input:
         await message.reply(_("qwen_help"))
         return
