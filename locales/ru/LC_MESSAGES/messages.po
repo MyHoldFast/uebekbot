@@ -64,3 +64,21 @@ msgstr "Нет текста в ответе."
 
 msgid "translate_button"
 msgstr "Перевести"
+
+msgid "qwen_help"
+msgstr "Введите запрос после команды /qwen"
+
+msgid "qwen_server_error"
+msgstr "Ошибка: неверный ответ сервера"
+
+msgid "qwen_network"
+msgstr "Ошибка: проблема с соединением"
+
+msgid "qwen_timeout"
+msgstr "Ошибка: время ожидания ответа истекло"
+
+msgid "qwen_error"
+msgstr "Ошибка: не удалось выполнить запрос "
+
+msgid "qwen_history_rm"
+msgstr "История сообщений удалена"

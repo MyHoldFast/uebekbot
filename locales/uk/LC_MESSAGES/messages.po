@@ -65,3 +65,21 @@ msgstr "Немає тексту у відповіді."
 
 msgid "translate_button"
 msgstr "Перекласти"
+
+msgid "qwen_help"
+msgstr "Введіть запит після команди /qwen"
+
+msgid "wen_server_error"
+msgstr "Помилка: неправильна відповідь сервера"
+
+msgid "qwen_network"
+msgstr "Помилка: проблема з'єднання"
+
+msgid "qwen_timeout"
+msgstr "Помилка: час очікування відповіді минув"
+
+msgid "qwen_error"
+msgstr "Помилка: не вдалося виконати запит"
+
+msgid "qwen_history_rm"
+msgstr "Історія повідомлень видалена"
