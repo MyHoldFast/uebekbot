@@ -4,7 +4,7 @@ import os
 from quart import Quart # type: ignore
 from aiogram import Bot, Dispatcher
 from dotenv import load_dotenv
-from handlers import callbacks, ya_ocr, summary, gpt, admin, stt, neuro
+from handlers import callbacks, ya_ocr, summary, gpt, admin, stt, neuro, qwen
 from utils.StatsMiddleware import StatsMiddleware
 
 app = Quart(__name__)
@@ -21,7 +21,8 @@ bot = Bot(token=os.getenv("TG_BOT_TOKEN"))
 dp = Dispatcher()
 
 dp.include_router(callbacks.router)
-dp.include_routers(ya_ocr.router, summary.router, gpt.router, admin.router, stt.router, neuro.router)
+dp.include_routers(ya_ocr.router, summary.router, gpt.router, admin.router, stt.router, neuro.router, qwen.router)
+                
 
 @app.route('/')
 async def index():
