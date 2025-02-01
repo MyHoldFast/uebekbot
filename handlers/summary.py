@@ -149,8 +149,8 @@ async def handle_details_callback(callback: CallbackQuery):
     _ = get_localization(user_language)
 
     if detailed_summary:
-        if user_language and user_language != "ru" and user_language in LANGUAGES:
-            detailed_summary = await translate_text([detailed_summary], "ru", user_language) or detailed_summary 
+        #if user_language and user_language != "ru" and user_language in LANGUAGES:
+        #   detailed_summary = await translate_text([detailed_summary], "ru", user_language) or detailed_summary 
         for x in range(0, len(detailed_summary), 4096):
             await callback.message.reply(detailed_summary[x:x + 4096])
     else:

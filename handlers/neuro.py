@@ -49,8 +49,8 @@ async def neuro(message: Message, command: CommandObject, bot: Bot):
     await message.bot.send_chat_action(chat_id=message.chat.id, action='typing')
     if messagetext:
         result = (await send_request(messagetext))
-        if user_language and user_language != "ru" and user_language in LANGUAGES:
-            result = await translate_text([result], "ru", user_language) or result
+        #if user_language and user_language != "ru" and user_language in LANGUAGES:
+            #result = await translate_text([result], "ru", user_language) or result
         await message.reply(telegram_format(result), parse_mode="HTML")
     else:
          await message.reply(_('neuro_help'))
