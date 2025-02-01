@@ -47,7 +47,6 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot):
             user_input += '\n' + command.args
     else:
         user_input = command.args
-
  
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)

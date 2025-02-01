@@ -107,6 +107,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
     user_id = message.from_user.id      
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
+    
 
     photo = None
     genai.configure(api_key=os.environ["GEMINI_API_KEY"])
