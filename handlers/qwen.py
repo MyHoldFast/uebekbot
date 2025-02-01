@@ -15,19 +15,27 @@ def load_messages(user_id):
     context_item = context_db.get(ContextQuery().uid == user_id)
     if context_item:
         messages = json.loads(context_item.get('messages', '[]'))
-        timestamp = context_item.get('timestamp', 0)
+        timestamp = float(context_item.get('timestamp', 0))
         if time.time() - timestamp < MESSAGE_EXPIRY:
             return messages
     return []
 
 
 def save_messages(user_id, messages):
-    getcontext = ContextQuery()
-    context_db.update({
+    getcontext = ContextQuery().uid == user_id
+    context_item = context_db.get(getcontext)
+    
+    new_data = {
         'uid': user_id,
         'messages': json.dumps(messages, ensure_ascii=False),
         'timestamp': time.time()
-    }, getcontext.uid == user_id)
+    }
+
+    if context_item:
+        context_db.update(new_data, getcontext)
+    else:
+        context_db.insert(new_data) 
+
 
 
 def remove_messages(user_id):
