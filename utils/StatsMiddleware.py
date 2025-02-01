@@ -44,9 +44,9 @@ def save_stats(cmd: str):
         stats_data[cmd] = int(stats_data.get(cmd, 0)) + 1
         db.update(stats_data, stats_query.date == str(current_datetime.date()))
         
-def get_stats(start_date: Optional[str] = None, end_date: Optional[str] = None) -> Tuple[Optional[str], Dict[str, Any], Dict[str, int], Optional[str]]:
-    total_stats = {cmd: 0 for cmd in cmds}
-    selected_stats = {cmd: 0 for cmd in cmds} 
+def get_stats(start_date: Optional[str] = None, end_date: Optional[str] = None) -> Tuple[Optional[str], Dict[str, int], Dict[str, int], Optional[str]]:
+    total_stats = {cmd: 0 for cmd in cmds}  # Общая статистика за все время
+    selected_stats = {cmd: 0 for cmd in cmds}  # Статистика за заданный день/диапазон
     earliest_date = None
 
     if start_date == "yesterday":
@@ -59,20 +59,23 @@ def get_stats(start_date: Optional[str] = None, end_date: Optional[str] = None) 
         end_date = str(datetime.now(moscow_tz).date())
 
     all_records = db.all()
-    all_dates = [datetime.strptime(record.get("date", ""), "%Y-%m-%d").date() for record in all_records]
     
+    # Находим самую раннюю дату в базе
+    all_dates = [datetime.strptime(record.get("date", ""), "%Y-%m-%d").date() for record in all_records if "date" in record]
     if all_dates:
         earliest_date = str(min(all_dates))  
 
     for stats_record in all_records:
         record_date = datetime.strptime(stats_record.get("date", ""), "%Y-%m-%d").date()
         
+        # Считаем статистику за заданный день/диапазон
         if start_date <= str(record_date) <= end_date:
-            for cmd in cmds:
-                total_stats[cmd] += int(stats_record.get(cmd, 0) or 0)
-
-        if str(record_date) == start_date: 
             for cmd in cmds:
                 selected_stats[cmd] += int(stats_record.get(cmd, 0) or 0)
 
+        # Общая статистика за все время
+        for cmd in cmds:
+            total_stats[cmd] += int(stats_record.get(cmd, 0) or 0)
+
     return start_date, selected_stats, total_stats, earliest_date
+
