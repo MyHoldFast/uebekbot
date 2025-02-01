@@ -8,7 +8,7 @@ from utils.dbmanager import DB
 
 db, Query = DB('db/stats.json').get_db()
 moscow_tz = pytz.timezone('Europe/Moscow')
-cmds = ['/summary', '/ocr', '/gpt', '/stt', '/neuro']
+cmds = ['/summary', '/ocr', '/gpt', '/stt', '/neuro', '/qwen']
 
 class StatsMiddleware(BaseMiddleware):
     def __init__(self, bot: str = None, *args, **kwargs):
@@ -46,8 +46,12 @@ def save_stats(cmd: str):
         
 def get_stats(start_date: Optional[str] = None, end_date: Optional[str] = None) -> Tuple[Optional[str], Dict[str, Any], Dict[str, int], Optional[str]]:
     total_stats = {cmd: 0 for cmd in cmds}
+    selected_stats = {cmd: 0 for cmd in cmds} 
     earliest_date = None
-    today_stats = {cmd: 0 for cmd in cmds} 
+
+    if start_date == "yesterday":
+        start_date = (datetime.now(moscow_tz) - timedelta(days=1)).strftime("%Y-%m-%d")
+        end_date = start_date
 
     if start_date is None:
         start_date = str(datetime.now(moscow_tz).date())
@@ -55,22 +59,20 @@ def get_stats(start_date: Optional[str] = None, end_date: Optional[str] = None) 
         end_date = str(datetime.now(moscow_tz).date())
 
     all_records = db.all()
-
     all_dates = [datetime.strptime(record.get("date", ""), "%Y-%m-%d").date() for record in all_records]
+    
     if all_dates:
         earliest_date = str(min(all_dates))  
 
     for stats_record in all_records:
         record_date = datetime.strptime(stats_record.get("date", ""), "%Y-%m-%d").date()
-
-        for cmd in cmds:
-            total_stats[cmd] += int(stats_record.get(cmd, 0) or 0)
-
-        if record_date == datetime.now(moscow_tz).date():
+        
+        if start_date <= str(record_date) <= end_date:
             for cmd in cmds:
-                today_stats[cmd] += int(stats_record.get(cmd, 0) or 0)
+                total_stats[cmd] += int(stats_record.get(cmd, 0) or 0)
 
-    return start_date, today_stats, total_stats, earliest_date
+        if str(record_date) == start_date: 
+            for cmd in cmds:
+                selected_stats[cmd] += int(stats_record.get(cmd, 0) or 0)
 
-
-
+    return start_date, selected_stats, total_stats, earliest_date

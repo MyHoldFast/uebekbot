@@ -84,7 +84,10 @@ async def cmd_stop(message: Message):
 @admin_only
 async def stats(message: Message, command: CommandObject):
     args = command.args.split() if command.args else []
-    if len(args) == 2:
+    
+    if len(args) == 1 and args[0].lower() == "yesterday":
+        start_date, end_date = "yesterday", "yesterday"
+    elif len(args) == 2:
         start_date, end_date = args
     else:
         start_date, end_date = None, None 
@@ -97,6 +100,7 @@ async def stats(message: Message, command: CommandObject):
     message_text += "\n".join(f"{cmd}: {total_stats[cmd]}" for cmd in cmds)
 
     await message.answer(message_text)
+
 
 
 @router.message(Command("update_cookie", ignore_case=True))
