@@ -23,7 +23,7 @@ def load_messages(user_id):
 
 def save_messages(user_id, messages):
     getcontext = ContextQuery()
-    context_db.upsert({
+    context_db.update({
         'uid': user_id,
         'messages': json.dumps(messages, ensure_ascii=False),
         'timestamp': time.time()
