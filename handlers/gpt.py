@@ -98,13 +98,6 @@ async def callback_query_handler(callback_query: CallbackQuery):
 
 @router.message(Command("gpt", ignore_case=True))
 async def cmd_start(message: Message, command: CommandObject, bot: Bot):
-    if message.reply_to_message:
-        messagetext = message.reply_to_message.text
-    else:
-        messagetext = ''
-
-    if command.args:
-        messagetext += '\n' + command.args
 
     await message.bot.send_chat_action(chat_id=message.chat.id, action='typing')
     user_id = message.from_user.id      
@@ -148,6 +141,14 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
             await message.reply(_("gpt_gemini_error"))
         os.remove(f"tmp/"+photo.file_id+".jpg")         
         return
+
+    if message.reply_to_message:
+        messagetext = message.reply_to_message.text
+    else:
+        messagetext = ''
+
+    if command.args:
+        messagetext += '\n' + command.args
 
     answer = ""
     model = "gpt-4o-mini"
