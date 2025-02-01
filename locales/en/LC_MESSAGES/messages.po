@@ -1,0 +1,83 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2024-07-30 17:34+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.15.0\n"
+
+msgid "gpt_ctx_not_found"
+msgstr "Context not found"
+
+msgid "gpt_ctx_removed"
+msgstr "Context deleted"
+
+msgid "gpt_error"
+msgstr "An error has occurred, try deleting the context /gptrm and repeat the request again"
+
+msgid "gpt_gemini_error"
+msgstr "Request failed."
+
+msgid "neuro_help"
+msgstr "Enter your query after the /neuro command"
+
+msgid "gpt_help"
+msgstr ""
+"Enter your query after the command /gpt\n"
+"You can also select the AI model. When the model is selected, the context is deleted.:"
+
+msgid "recognition_failed"
+msgstr "Unfortunately, the text could not be recognized"
+
+msgid "send_link"
+msgstr "Specify a link to YouTube, Wikipedia or Habr after the command, or use a replay"
+
+msgid "summary_failed"
+msgstr "Unfortunately, it was not possible to make a brief summary"
+
+msgid "summary_detail"
+msgstr "More details"
+
+msgid "summary_detail_failed"
+msgstr "Could not upload details."
+
+msgid "use_reply_or_attach_image"
+msgstr "Please use a replay or attach an image"
+
+msgid "you_choose_model"
+msgstr "you have selected a model"
+
+msgid "voice_help"
+msgstr "Please reply to the voicemail /stt to generate speech to text."
+
+msgid "voice_error"
+msgstr "There is no text in the response."
+
+msgid "translate_button"
+msgstr "Translate"
+
+msgid "qwen_help"
+msgstr "Enter the query after the /qwen command"
+
+msgid "qwen_server_error"
+msgstr "Error: invalid server response"
+
+msgid "qwen_network"
+msgstr "Error: Connection problem"
+
+msgid "qwen_timeout"
+msgstr "Error: Response timeout expired"
+
+msgid "qwen_error"
+msgstr "Error: the request could not be completed "
+
+msgid "qwen_history_rm"
+msgstr "Message history deleted"

@@ -41,7 +41,7 @@ def split_message(text, limit=4000):
 
 @router.message(Command("qwen", ignore_case=True))
 async def cmd_qwen(message: Message, command: CommandObject, bot: Bot):
-    user_input = message.reply_to_message.text if message.reply_to_message else command.args
+    user_input = message.reply_to_message.text if message.reply_to_message else command.args    
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
     if not user_input:
