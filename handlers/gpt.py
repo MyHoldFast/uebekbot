@@ -98,7 +98,7 @@ async def callback_query_handler(callback_query: CallbackQuery):
 
 @router.message(Command("gpt", ignore_case=True))
 async def cmd_start(message: Message, command: CommandObject, bot: Bot):
-    messagetext = message.reply_to_message.text
+    messagetext = message.reply_to_message.text if message.reply_to_message else ''
     if message.reply_to_message and command.args:
         messagetext += '\n' + command.args
     elif not message.reply_to_message and command.args:
