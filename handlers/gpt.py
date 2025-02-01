@@ -98,7 +98,11 @@ async def callback_query_handler(callback_query: CallbackQuery):
 
 @router.message(Command("gpt", ignore_case=True))
 async def cmd_start(message: Message, command: CommandObject, bot: Bot):
-    messagetext = message.reply_to_message.text if message.reply_to_message else command.args
+    messagetext = message.reply_to_message.text
+    if message.reply_to_message and command.args:
+        messagetext += '\n' + command.args
+    elif not message.reply_to_message and command.args:
+        messagetext = command.args
     await message.bot.send_chat_action(chat_id=message.chat.id, action='typing')
     user_id = message.from_user.id      
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE

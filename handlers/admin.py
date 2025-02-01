@@ -107,8 +107,6 @@ async def stats(message: Message, command: CommandObject):
     await message.answer(message_text)
 
 
-
-
 @router.message(Command("update_cookie", ignore_case=True))
 @admin_only
 async def update_cookie(message: Message, bot: Bot):
