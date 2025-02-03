@@ -70,9 +70,26 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot):
     
     url = 'https://chat.qwenlm.ai/api/chat/completions'
     headers = {
-        'authorization': 'Bearer '+os.getenv("QWEN_AUTH"),
-        'content-type': 'application/json'
-    }
+    'authorization': 'Bearer '+os.getenv("QWEN_AUTH"),      
+    'content-type': 'application/json',    
+    'bx-v': '2.5.0',
+    'cache-control': 'no-cache',
+    'content-type': 'application/json',
+    #'cookie': 'YOUR_COOKIES_HERE',
+    'dnt': '1',
+    'origin': 'https://chat.qwenlm.ai',
+    'pragma': 'no-cache',
+    'priority': 'u=1, i',
+    'referer': 'https://chat.qwenlm.ai/c/6577ef55-cf1c-4136-bb96-0fc0b8603c51',
+    'sec-ch-ua': '"Not A(Brand";v="8", "Chromium";v="132", "Google Chrome";v="132"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"Windows"',
+    'sec-fetch-dest': 'empty',
+    'sec-fetch-mode': 'cors',
+    'sec-fetch-site': 'same-origin',
+    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36',
+    'x-request-id': 'bf8395d1-7156-4878-a4d2-6d462a06b084'
+}
     data = {"stream": False, "chat_type": "t2t", "model": "qwen-max-latest", "messages": messages}
     
     async with aiohttp.ClientSession() as session:
