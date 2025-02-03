@@ -11,7 +11,7 @@ from aiogram.types import CallbackQuery
 from bs4 import BeautifulSoup
 
 from localization import DEFAULT_LANGUAGE, LANGUAGES, get_localization
-from utils.translate import translate_text
+#from utils.translate import translate_text
 
 router = Router()
 
@@ -235,8 +235,8 @@ async def summary(message: Message, command: CommandObject):
     result, button_callback = await process_url(text)
 
     if result:
-        if user_language and user_language != "ru" and user_language in LANGUAGES:
-            result = await translate_text([result], "ru", user_language) or result 
+        #if user_language and user_language != "ru" and user_language in LANGUAGES:
+        #    result = await translate_text([result], "ru", user_language) or result 
 
         keyboard = None
         if button_callback:
