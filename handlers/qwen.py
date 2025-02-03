@@ -95,7 +95,7 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot):
     
     async with aiohttp.ClientSession() as session:
         try:
-            async with session.post(url, headers=headers, json=data, timeout=60) as r:
+            async with session.post(url, headers=headers, json=data, timeout=120) as r:
                 if r.status == 200:
                     result = await r.json()
                     assistant_reply = result.get("choices", [{}])[0].get("message", {}).get("content", "Ошибка")
