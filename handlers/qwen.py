@@ -153,7 +153,7 @@ async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
                 task_id = result['messages'][1]['extra']['wanx']['task_id']
                 await check_task_status(session, task_id, message, sent_message)
             else:
-                sent_message.delete()
+                await sent_message.delete()
                 await message.reply(_("qwenimg_err"))
 
 async def check_task_status(session, task_id, message, sent_message):
