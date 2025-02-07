@@ -8,7 +8,7 @@ from utils.dbmanager import DB
 
 db, Query = DB('db/stats.json').get_db()
 moscow_tz = pytz.timezone('Europe/Moscow')
-cmds = ['/summary', '/ocr', '/gpt', '/stt', '/neuro', '/qwen']
+cmds = ['/summary', '/ocr', '/gpt', '/stt', '/neuro', '/qwen', '/qwenimg']
 
 class StatsMiddleware(BaseMiddleware):
     def __init__(self, bot: str = None, *args, **kwargs):
