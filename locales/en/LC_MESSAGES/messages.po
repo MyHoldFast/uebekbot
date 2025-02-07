@@ -27,18 +27,18 @@ msgid "gpt_gemini_error"
 msgstr "❌ The request failed."
 
 msgid "neuro_help"
-msgstr "⚠️ Enter your query after the /neuro command"
+msgstr "ℹ️ Enter your query after the /neuro command"
 
 msgid "gpt_help"
 msgstr ""
-"⚠️ Enter your query after the /gpt command\n"
+"ℹ️ Enter your query after the /gpt command\n"
 "You can also select an AI model. When selecting a model, the context is removed.:"
 
 msgid "recognition_failed"
 msgstr "❌ Unfortunately, the text could not be recognized"
 
 msgid "send_link"
-msgstr "⚠️ Provide a link to YouTube, Wikipedia or Habr after the command, or use a replay"
+msgstr "ℹ️ Provide a link to YouTube, Wikipedia or Habr after the command, or use a replay"
 
 msgid "summary_failed"
 msgstr "❌ Unfortunately, it was not possible to make a short summary"
@@ -50,13 +50,13 @@ msgid "summary_detail_failed"
 msgstr "❌ Failed to load details."
 
 msgid "use_reply_or_attach_image"
-msgstr "⚠️ Please use a reply or attach an image"
+msgstr "ℹ️ Please use a reply or attach an image"
 
 msgid "you_choose_model"
 msgstr "you chose a model"
 
 msgid "voice_help"
-msgstr "⚠️ Please reply to voice message /stt to generate speech to text."
+msgstr "ℹ️ Please reply to voice message /stt to generate speech to text."
 
 msgid "voice_error"
 msgstr "No text in reply."
@@ -65,7 +65,7 @@ msgid "translate_button"
 msgstr "Translate"
 
 msgid "qwen_help"
-msgstr "⚠️ Enter query after /qwen command"
+msgstr "ℹ️ Enter query after /qwen command"
 
 msgid "qwen_server_error"
 msgstr "❌ Error: Invalid server response"
@@ -83,7 +83,7 @@ msgid "qwen_history_rm"
 msgstr "Message history deleted"
 
 msgid "qwenimghelp"
-msgstr "⚠️ Enter image description after command."
+msgstr "ℹ️ Enter image description after command."
 
 msgid "qwenimg_gen"
 msgstr "⏳ Generating image... Please wait."

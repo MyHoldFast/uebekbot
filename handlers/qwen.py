@@ -36,8 +36,6 @@ def save_messages(user_id, messages):
     else:
         context_db.insert(new_data) 
 
-
-
 def remove_messages(user_id):
     getcontext = ContextQuery()
     context_db.remove(getcontext.uid == user_id)

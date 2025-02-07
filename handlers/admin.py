@@ -1,161 +1,105 @@
-import aiohttp
-import httpx
-import json
 import os
 from datetime import datetime
 from functools import wraps
-from aiogram import Router, Bot
+from aiogram import Router
 from aiogram.filters import Command
-from aiogram.filters.command import CommandObject 
+from aiogram.filters.command import CommandObject
 from aiogram.types import Message
+from utils.dbmanager import DB
 from utils.StatsMiddleware import get_stats, cmds
 
 router = Router()
 start_time = datetime.now()
+ADMIN_ID = os.getenv("ADMIN_ID")
 
-async def login_yandex_ru(login, password, url):
-    cookie_jar = aiohttp.CookieJar()
-    async with aiohttp.ClientSession(cookie_jar=cookie_jar) as session:
-        data = {'login': login, 'passwd': password}
-        async with session.post(url, data=data, allow_redirects=True) as response:
-            if response.status == 200:
-                return {cookie.key: cookie.value for cookie in cookie_jar if cookie.key in {'Session_id', 'yp'}}
-    return None
-
-async def login_yandex_kz(login, password, url):
-    async with httpx.AsyncClient(follow_redirects=True) as client:
-        data = {'login': login, 'passwd': password}
-        response = await client.post(url, data=data)
-        if response.status_code == 200:
-            cookie_jar = client.cookies.jar
-            return {cookie.name: cookie.value for cookie in cookie_jar if cookie.name in {'Session_id', 'yp'}}
-    return None
-
-async def get_cookies():
-    urls = [
-        ("https://passport.ya.ru/auth?retpath=https://300.ya.ru/?nr=1", "RU"),
-        ("https://passport.yandex.kz/auth", "KZ")
-    ]
-
-    ru_cookies = await login_yandex_ru(os.getenv('YA_LOGIN'), os.getenv('YA_PASSWORD'), urls[0][0])
-    kz_cookies = await login_yandex_kz(os.getenv('YA_LOGIN'), os.getenv('YA_PASSWORD'), urls[1][0])
-    
-    return ru_cookies, kz_cookies
-
-def update_environment_cookies(cookies):
-    if "KZ" in cookies:
-        kz_cookies = cookies["KZ"]
-        if "Session_id" in kz_cookies:
-            os.environ["YANDEXKZ_SESSIONID_COOK"] = kz_cookies["Session_id"]
-    
-    if "RU" in cookies:
-        ru_cookies = cookies["RU"]
-        if "Session_id" in ru_cookies:
-            os.environ["YANDEX_SESSIONID_COOK"] = ru_cookies["Session_id"]
-        
-        if "yp" in ru_cookies:
-            os.environ["YANDEX_YP_COOK"] = ru_cookies["yp"]
-            
 
 def admin_only(func):
     @wraps(func)
     async def wrapper(message: Message, *args, **kwargs):
-        if str(message.from_user.id) != os.getenv("ADMIN_ID"):
+        if str(message.from_user.id) != ADMIN_ID:
             return
         return await func(message, *args, **kwargs)
     return wrapper
 
+
+def format_uptime():
+    uptime = datetime.now() - start_time
+    days, remainder = divmod(uptime.total_seconds(), 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes, _ = divmod(remainder, 60)
+    return f"Uptime: {int(days)} days, {int(hours)} hours, {int(minutes)} minutes"
+
+
 @router.message(Command("uptime", ignore_case=True))
 @admin_only
 async def cmd_uptime(message: Message):
-    now = datetime.now()
-    uptime = now - start_time
-    days = uptime.days
-    hours = (uptime.total_seconds() // 3600) % 24
-    minutes = (uptime.total_seconds() // 60) % 60
-    await message.answer(f"Uptime: {days} days, {int(hours)} hours, {int(minutes)} minutes")
+    await message.answer(format_uptime())
+
 
 @router.message(Command("stop", ignore_case=True))
 @admin_only
 async def cmd_stop(message: Message):
     os._exit(0)
 
+
+@router.message(Command("trunc", ignore_case=True))
+@admin_only
+async def cmd_trunc(message: Message, command: CommandObject):
+    db_list = ["models", "qwen_context", "stats", "user_context"]
+
+    if not command.args:
+        await message.answer(", ".join(db_list))
+        return
+
+    if command.args in db_list:
+        database = DB(f'db/{command.args}.json').get_db()[0]
+        database.truncate()
+        await message.answer(f"База {command.args} очищена")
+    else:
+        await message.answer("Неверное название базы данных.")
+
+
 @router.message(Command("stats", ignore_case=True))
 @admin_only
-async def stats(message: Message, command: CommandObject):
+async def cmd_stats(message: Message, command: CommandObject):
     args = command.args.split() if command.args else []
-    
+
     if len(args) == 1 and args[0].lower() == "yesterday":
         start_date, end_date = "yesterday", "yesterday"
     elif len(args) == 2:
         start_date, end_date = args
     else:
-        start_date, end_date = None, None 
+        start_date, end_date = None, None
 
     date, today_stats, total_stats, earliest_date = get_stats(start_date, end_date)
 
-    if start_date == end_date:
-        period_text = f"Статистика за дату: {date}\n"
-    else:
-        period_text = f"Статистика за период с {start_date} по {end_date}\n"
+    period_text = (
+        f"Статистика за дату: {date}\n"
+        if start_date == end_date
+        else f"Статистика за период с {start_date} по {end_date}\n"
+    )
 
-    message_text = period_text
-    message_text += "\n".join(f"{cmd}: {today_stats.get(cmd, 0)}" for cmd in cmds)
-    message_text += f"\n\nОбщая статистика с {earliest_date or 'неизвестной даты'}:\n"
-    message_text += "\n".join(f"{cmd}: {total_stats[cmd]}" for cmd in cmds)
+    today_stats_text = "\n".join(f"{cmd}: {today_stats.get(cmd, 0)}" for cmd in cmds)
+    total_stats_text = "\n".join(f"{cmd}: {total_stats.get(cmd, 0)}" for cmd in cmds)
+
+    message_text = (
+        f"{period_text}\n{today_stats_text}\n\n"
+        f"Общая статистика с {earliest_date or 'неизвестной даты'}:\n"
+        f"{total_stats_text}"
+    )
 
     await message.answer(message_text)
-
-
-@router.message(Command("update_cookie", ignore_case=True))
-@admin_only
-async def update_cookie(message: Message, bot: Bot):
-    command_args = message.text.split()
-
-    if len(command_args) == 1: 
-        ru_cookies, kz_cookies = await get_cookies()
-        update_environment_cookies({"RU": ru_cookies, "KZ": kz_cookies})
-        output = {"KZ": kz_cookies, "RU": ru_cookies}
-        await bot.send_message(chat_id=os.getenv("ADMIN_ID"), text=f"Куки обновлены: {json.dumps(output, indent=4)}")
-        await message.answer(f"Куки обновлены.")
-    
-    elif len(command_args) == 2:
-        arg = command_args[1].lower()
-
-        if arg == "ru":
-            ru_cookies = await login_yandex_ru(os.getenv('YA_LOGIN'), os.getenv('YA_PASSWORD'), "https://passport.ya.ru/auth?retpath=https://300.ya.ru/?nr=1")
-            update_environment_cookies({"RU": ru_cookies})
-            await bot.send_message(chat_id=os.getenv("ADMIN_ID"), text=f"Куки RU обновлены: {json.dumps({'RU': ru_cookies}, indent=4)}")
-            await message.answer(f"Куки RU обновлены.")
-
-        elif arg == "kz":
-            kz_cookies = await login_yandex_kz(os.getenv('YA_LOGIN'), os.getenv('YA_PASSWORD'), "https://passport.yandex.kz/auth")
-            update_environment_cookies({"KZ": kz_cookies})
-            await bot.send_message(chat_id=os.getenv("ADMIN_ID"), text=f"Куки KZ обновлены: {json.dumps({'KZ': kz_cookies}, indent=4)}")
-            await message.answer(f"Куки KZ обновлены.")
-
-        else:
-            await message.answer("Неверный аргумент. Используйте 'ru' или 'kz'.")
-    else:
-        await message.answer("Слишком много аргументов. Используйте '/update_cookie' или '/update_cookie ru/kz'.")
 
 
 @router.message(Command("proxy", ignore_case=True))
 @admin_only
 async def cmd_proxy(message: Message):
-    command_args = message.text.split()
+    command_args = message.text.split(maxsplit=1)
 
     if len(command_args) == 1:
         proxy_value = os.getenv("PROXY")
-        if proxy_value:
-            await message.answer(f"Текущее значение PROXY: {proxy_value}")
-        else:
-            await message.answer("Переменная PROXY не установлена.")
-
-    elif len(command_args) == 2:
+        await message.answer(f"Текущее значение PROXY: {proxy_value}" if proxy_value else "Переменная PROXY не установлена.")
+    else:
         new_proxy = command_args[1]
         os.environ["PROXY"] = new_proxy
         await message.answer(f"Новое значение PROXY установлено: {new_proxy}")
-
-    else:
-        await message.answer("Слишком много аргументов. Используйте '/proxy' для отображения текущего значения или '/proxy <значение>' для установки нового значения.")
