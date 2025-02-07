@@ -14,6 +14,7 @@
 В проекте используются следующие модели, предоставляемые DuckDuckGo:
 
 - `gpt-4o-mini`
+- `o3-mini`
 - `claude-3-haiku`
 - `llama-3.1-70b`
 - `mixtral-8x7b`
