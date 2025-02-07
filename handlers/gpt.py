@@ -8,11 +8,10 @@ import time
 from utils.duckduckgo_chat import DuckDuckGoChat
 from aiogram import Bot, Router, html
 from aiogram.filters import Command, CommandObject
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, InlineKeyboardMarkup
 import google.generativeai as genai
 from pylatexenc.latex2text import LatexNodes2Text
 
-from keyboards.gpt import get_gpt_keyboard, models
 from localization import get_localization, DEFAULT_LANGUAGE
 from utils.dbmanager import DB
 from chatgpt_md_converter import telegram_format
@@ -21,12 +20,20 @@ router = Router()
 db, Query = DB('db/models.json').get_db()
 context_db, ContextQuery = DB('db/user_context.json').get_db()
 
-models_arr = {
-            "claude-3-haiku": "claude-3-haiku-20240307",
-            "gpt-4o-mini": "gpt-4o-mini",
-            "llama-3.1-70b": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
-            "mixtral-8x7b": "mistralai/Mixtral-8x7B-Instruct-v0.1",
-        }
+models = {
+    "gpt-4o-mini": "gpt-4o-mini",
+    "o3-mini": "o3-mini",
+    "claude-3-haiku": "claude-3-haiku-20240307",    
+    "llama-3.1-70b": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+    "mixtral-8x7b": "mistralai/Mixtral-8x7B-Instruct-v0.1"
+}
+
+def get_gpt_keyboard(selected_model: str):
+    keyboard = []
+    for model_key in models.keys():
+        text = "✓ " + model_key if selected_model == model_key else model_key
+        keyboard.append([InlineKeyboardButton(text=text, callback_data=model_key)])
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 async def update_model_message(callback_query: CallbackQuery, model: str):
     keyboard = get_gpt_keyboard(model)
@@ -158,7 +165,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
             model = user_model["model"]
         if messagetext:
             proxy = os.getenv("PROXY")
-            d = DuckDuckGoChat(model=models_arr[model], proxy=proxy)
+            d = DuckDuckGoChat(model=models[model], proxy=proxy)
             chat_messages, chat_vqd = load_user_context(user_id)
             if chat_messages is not None and chat_vqd is not None:
                 d.messages = chat_messages
@@ -180,8 +187,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
             answer = html.quote(answer)
             for x in range(0, len(answer), 4000):
                 await message.reply(answer[x:x + 4000], parse_mode="html")
-        else:
-            print(e)
+        else:            
             await message.reply(_("gpt_error"), parse_mode="html")
 
 @router.message(Command("gptrm", ignore_case=True))
