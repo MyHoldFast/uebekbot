@@ -1,7 +1,7 @@
 from aiogram import Router, Bot, html
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
-import aiohttp, asyncio, json, os, time
+import aiohttp, asyncio, json, os, time, uuid
 from chatgpt_md_converter import telegram_format
 from utils.dbmanager import DB
 from localization import get_localization, DEFAULT_LANGUAGE
@@ -46,6 +46,27 @@ def remove_messages(user_id):
 def split_message(text, limit=4000):
     return [text[i:i+limit] for i in range(0, len(text), limit)]
 
+headers = {
+    'authorization': 'Bearer '+os.getenv("QWEN_AUTH"),      
+    'content-type': 'application/json',    
+    'bx-v': '2.5.0',
+    'cache-control': 'no-cache',
+    'content-type': 'application/json',
+    #'cookie': 'YOUR_COOKIES_HERE',
+    'dnt': '1',
+    'origin': 'https://chat.qwenlm.ai',
+    'pragma': 'no-cache',
+    'priority': 'u=1, i',
+    'referer': 'https://chat.qwenlm.ai/c/6577ef55-cf1c-4136-bb96-0fc0b8603c51',
+    'sec-ch-ua': '"Not A(Brand";v="8", "Chromium";v="132", "Google Chrome";v="132"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"Windows"',
+    'sec-fetch-dest': 'empty',
+    'sec-fetch-mode': 'cors',
+    'sec-fetch-site': 'same-origin',
+    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36',
+    'x-request-id': 'bf8395d1-7156-4878-a4d2-6d462a06b084'
+}
 
 @router.message(Command("qwen", ignore_case=True))
 async def cmd_qwen(message: Message, command: CommandObject, bot: Bot):
@@ -69,28 +90,7 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot):
     messages.append({"role": "user", "content": user_input})
     await bot.send_chat_action(chat_id=message.chat.id, action='typing')
     
-    url = 'https://chat.qwenlm.ai/api/chat/completions'
-    headers = {
-    'authorization': 'Bearer '+os.getenv("QWEN_AUTH"),      
-    'content-type': 'application/json',    
-    'bx-v': '2.5.0',
-    'cache-control': 'no-cache',
-    'content-type': 'application/json',
-    #'cookie': 'YOUR_COOKIES_HERE',
-    'dnt': '1',
-    'origin': 'https://chat.qwenlm.ai',
-    'pragma': 'no-cache',
-    'priority': 'u=1, i',
-    'referer': 'https://chat.qwenlm.ai/c/6577ef55-cf1c-4136-bb96-0fc0b8603c51',
-    'sec-ch-ua': '"Not A(Brand";v="8", "Chromium";v="132", "Google Chrome";v="132"',
-    'sec-ch-ua-mobile': '?0',
-    'sec-ch-ua-platform': '"Windows"',
-    'sec-fetch-dest': 'empty',
-    'sec-fetch-mode': 'cors',
-    'sec-fetch-site': 'same-origin',
-    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36',
-    'x-request-id': 'bf8395d1-7156-4878-a4d2-6d462a06b084'
-}
+    url = 'https://chat.qwenlm.ai/api/chat/completions'    
     data = {"stream": False, "chat_type": "t2t", "model": "qwen-max-latest", "messages": messages}
     
     async with aiohttp.ClientSession() as session:
@@ -128,3 +128,56 @@ async def cmd_qwenrm(message: Message, bot: Bot):
     _ = get_localization(user_language)
     remove_messages(user_id)
     await message.reply(_("qwen_history_rm"))
+
+
+@router.message(Command("qwenimg", ignore_case=True))
+async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
+    user_input = command.args if command.args else ""
+    user_language = message.from_user.language_code or DEFAULT_LANGUAGE
+    _ = get_localization(user_language)
+    
+    if not user_input:
+        await message.reply(_("qwenimghelp"))
+        return
+    
+    url = 'https://chat.qwenlm.ai/api/chat/completions'
+    data = {
+        "stream": False, "chat_type": "t2i", "model": "qwen-plus-latest", 
+        "size": "1280*720", "messages": [{"role": "user", "content": user_input}],
+        "id": str(uuid.uuid4()), "chat_id": str(uuid.uuid4())
+    }
+    
+    async with aiohttp.ClientSession() as session:
+        sent_message = await message.reply(_("qwenimg_gen"))
+        async with session.post(url, headers=headers, json=data, timeout=120) as r:
+            if r.status == 200:
+                result = await r.json()
+                task_id = result['messages'][1]['extra']['wanx']['task_id']
+                await check_task_status(session, task_id, message, sent_message)
+            else:
+                await message.reply(_("qwenimg_err"))
+
+async def check_task_status(session, task_id, message, sent_message):
+    user_language = message.from_user.language_code or DEFAULT_LANGUAGE
+    _ = get_localization(user_language)
+    status_url = f'https://chat.qwenlm.ai/api/v1/tasks/status/{task_id}'
+    while True:
+        async with session.get(status_url, headers=headers, timeout=180) as r:
+            if r.status == 200:
+                result = await r.json()
+                task_status = result.get("task_status", "")
+                if task_status == "success":
+                    image_url = result.get("content", "")
+                    await sent_message.delete()
+                    await message.reply_photo(photo=image_url)
+                    break
+                elif task_status in ["failed", "error"]:
+                    await sent_message.delete()
+                    await message.reply(_("qwenimg_err"))
+                    break
+                else:
+                    await asyncio.sleep(5)
+            else:
+                await sent_message.delete()
+                await message.reply(_("qwenimg_err"))
+                break

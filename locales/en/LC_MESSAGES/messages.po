@@ -18,66 +18,75 @@ msgid "gpt_ctx_not_found"
 msgstr "Context not found"
 
 msgid "gpt_ctx_removed"
-msgstr "Context deleted"
+msgstr "Context removed"
 
 msgid "gpt_error"
-msgstr "An error has occurred, try deleting the context /gptrm and repeat the request again"
+msgstr "❌ An error occurred, try removing the /gptrm context and retrying the request"
 
 msgid "gpt_gemini_error"
-msgstr "Request failed."
+msgstr "❌ The request failed."
 
 msgid "neuro_help"
-msgstr "Enter your query after the /neuro command"
+msgstr "⚠️ Enter your query after the /neuro command"
 
 msgid "gpt_help"
 msgstr ""
-"Enter your query after the command /gpt\n"
-"You can also select the AI model. When the model is selected, the context is deleted.:"
+"⚠️ Enter your query after the /gpt command\n"
+"You can also select an AI model. When selecting a model, the context is removed.:"
 
 msgid "recognition_failed"
-msgstr "Unfortunately, the text could not be recognized"
+msgstr "❌ Unfortunately, the text could not be recognized"
 
 msgid "send_link"
-msgstr "Specify a link to YouTube, Wikipedia or Habr after the command, or use a replay"
+msgstr "⚠️ Provide a link to YouTube, Wikipedia or Habr after the command, or use a replay"
 
 msgid "summary_failed"
-msgstr "Unfortunately, it was not possible to make a brief summary"
+msgstr "❌ Unfortunately, it was not possible to make a short summary"
 
 msgid "summary_detail"
 msgstr "More details"
 
 msgid "summary_detail_failed"
-msgstr "Could not upload details."
+msgstr "❌ Failed to load details."
 
 msgid "use_reply_or_attach_image"
-msgstr "Please use a replay or attach an image"
+msgstr "⚠️ Please use a reply or attach an image"
 
 msgid "you_choose_model"
-msgstr "you have selected a model"
+msgstr "you chose a model"
 
 msgid "voice_help"
-msgstr "Please reply to the voicemail /stt to generate speech to text."
+msgstr "⚠️ Please reply to voice message /stt to generate speech to text."
 
 msgid "voice_error"
-msgstr "There is no text in the response."
+msgstr "No text in reply."
 
 msgid "translate_button"
 msgstr "Translate"
 
 msgid "qwen_help"
-msgstr "Enter the query after the /qwen command"
+msgstr "⚠️ Enter query after /qwen command"
 
 msgid "qwen_server_error"
-msgstr "Error: invalid server response"
+msgstr "❌ Error: Invalid server response"
 
 msgid "qwen_network"
-msgstr "Error: Connection problem"
+msgstr "❌ Error: Connection problem"
 
 msgid "qwen_timeout"
-msgstr "Error: Response timeout expired"
+msgstr "❌ Error: Timed out waiting for response"
 
 msgid "qwen_error"
-msgstr "Error: the request could not be completed "
+msgstr "❌ Error: Failed to complete request"
 
 msgid "qwen_history_rm"
 msgstr "Message history deleted"
+
+msgid "qwenimghelp"
+msgstr "⚠️ Enter image description after command."
+
+msgid "qwenimg_gen"
+msgstr "⏳ Generating image... Please wait."
+
+msgid "qwenimg_err"
+msgstr "❌ Error generating image."
