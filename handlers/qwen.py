@@ -63,7 +63,7 @@ headers = {
     'sec-fetch-mode': 'cors',
     'sec-fetch-site': 'same-origin',
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36',
-    'x-request-id': 'bf8395d1-7156-4878-a4d2-6d462a06b084'
+    'x-request-id': '672cd8a6-9b52-4588-9b24-cd2f4fe99ea7'
 }
 
 @router.message(Command("qwen", ignore_case=True))
