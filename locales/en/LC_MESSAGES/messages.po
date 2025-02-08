@@ -15,10 +15,10 @@ msgstr ""
 "Generated-By: Babel 2.15.0\n"
 
 msgid "gpt_ctx_not_found"
-msgstr "Context not found"
+msgstr "ℹ️ Context not found"
 
 msgid "gpt_ctx_removed"
-msgstr "Context removed"
+msgstr "ℹ️ Context removed"
 
 msgid "gpt_error"
 msgstr "❌ An error occurred, try removing the /gptrm context and retrying the request"
@@ -80,7 +80,7 @@ msgid "qwen_error"
 msgstr "❌ Error: Failed to complete request"
 
 msgid "qwen_history_rm"
-msgstr "Message history deleted"
+msgstr "ℹ️ Message history deleted"
 
 msgid "qwenimghelp"
 msgstr "ℹ️ Enter image description after command."

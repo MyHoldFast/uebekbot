@@ -16,10 +16,10 @@ msgstr ""
 "Generated-By: Babel 2.15.0\n"
 
 msgid "gpt_ctx_not_found"
-msgstr "Контекст не знайдено"
+msgstr "ℹ️ Контекст не знайдено"
 
 msgid "gpt_ctx_removed"
-msgstr "Контекст видалено"
+msgstr "ℹ️ Контекст видалено"
 
 msgid "gpt_error"
 msgstr "❌ Виникла помилка, спробуйте видалити контекст /gptrm і повторити запит знову"
@@ -81,7 +81,7 @@ msgid "qwen_error"
 msgstr "❌ Помилка: не вдалося виконати запит"
 
 msgid "qwen_history_rm"
-msgstr "Історія повідомлень видалена"
+msgstr "ℹ️ Історія повідомлень видалена"
 
 msgid "qwenimghelp"
 msgstr "ℹ️ Введіть опис зображення після команди."
