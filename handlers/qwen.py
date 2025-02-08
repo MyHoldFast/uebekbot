@@ -13,6 +13,7 @@ router = Router()
 qwen_accs_str = os.getenv('QWEN_ACCS')
 qwen_accs = json.loads(qwen_accs_str)
 acc_index = 0
+last_update_time = None
 
 MESSAGE_EXPIRY = 3 * 60 * 60 
 
@@ -160,22 +161,21 @@ async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
     }    
     
     async def make_request(session, url, headers, data, message, sent_message):
-        global acc_index
-
-        bearer = qwen_accs[acc_index]['bearer']
-        x = qwen_accs[acc_index]['x']        
-        
-        headers['Authorization'] = 'Bearer ' + bearer
-        headers['x-request-id'] = x        
-        
+        global acc_index, last_update_time
         async with session.post(url, headers=headers, json=data, timeout=120) as r:
             if r.status == 200:
                 result = await r.json()
                 task_id = result['messages'][1]['extra']['wanx']['task_id']
                 await check_task_status(session, task_id, message, sent_message)
-            elif r.status == 429:
-                if acc_index + 1 < len(qwen_accs):                    
+            elif r.status == 429:                
+                if last_update_time is not None:
+                    time_diff = time.time() - last_update_time
+                    if time_diff > 86400: 
+                        acc_index = 0 
+
+                if acc_index + 1 < len(qwen_accs):
                     acc_index += 1
+                    last_update_time = time.time()
                     await session.close()
                     async with aiohttp.ClientSession() as new_session:
                         try:
