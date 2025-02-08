@@ -138,7 +138,13 @@ async def cmd_qwenrm(message: Message, bot: Bot):
 @router.message(Command("qwenimg", ignore_case=True))
 @check_command_enabled("qwenimg")
 async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
-    user_input = command.args if command.args else ""
+    if message.reply_to_message:
+        user_input = message.reply_to_message.text or message.reply_to_message.caption or ""
+        if command.args:
+            user_input += '\n' + command.args
+    else:
+        user_input = command.args if command.args else ""
+
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
     
