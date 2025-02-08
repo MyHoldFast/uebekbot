@@ -15,6 +15,7 @@ from pylatexenc.latex2text import LatexNodes2Text
 from localization import get_localization, DEFAULT_LANGUAGE
 from utils.dbmanager import DB
 from chatgpt_md_converter import telegram_format
+from utils.command_states import check_command_enabled
 
 router = Router()
 db, Query = DB('db/models.json').get_db()
@@ -104,6 +105,7 @@ async def callback_query_handler(callback_query: CallbackQuery):
         )
 
 @router.message(Command("gpt", ignore_case=True))
+@check_command_enabled("gpt")
 async def cmd_start(message: Message, command: CommandObject, bot: Bot):
 
     await message.bot.send_chat_action(chat_id=message.chat.id, action='typing')

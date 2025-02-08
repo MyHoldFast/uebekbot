@@ -5,6 +5,7 @@ import aiohttp, asyncio, json, os, time, uuid
 from chatgpt_md_converter import telegram_format
 from utils.dbmanager import DB
 from localization import get_localization, DEFAULT_LANGUAGE
+from utils.command_states import check_command_enabled
 
 context_db, ContextQuery = DB('db/qwen_context.json').get_db()
 router = Router()
@@ -71,6 +72,7 @@ headers = {
 }
 
 @router.message(Command("qwen", ignore_case=True))
+@check_command_enabled("qwen")
 async def cmd_qwen(message: Message, command: CommandObject, bot: Bot):
     if message.reply_to_message:
         user_input = message.reply_to_message.text or message.reply_to_message.caption or ""
@@ -82,6 +84,7 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot):
 
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
+    
     if not user_input:
         await message.reply(_("qwen_help"))
         return
@@ -133,6 +136,7 @@ async def cmd_qwenrm(message: Message, bot: Bot):
 
 
 @router.message(Command("qwenimg", ignore_case=True))
+@check_command_enabled("qwenimg")
 async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
     user_input = command.args if command.args else ""
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE

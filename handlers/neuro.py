@@ -6,6 +6,7 @@ import re
 from aiogram import Bot, Router
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
+from utils.command_states import check_command_enabled
 
 from chatgpt_md_converter import telegram_format
 from localization import DEFAULT_LANGUAGE, LANGUAGES, get_localization
@@ -41,6 +42,7 @@ async def send_request(user_request):
             except: return "Произошла ошибка, попробуйте позднее"
 
 @router.message(Command("neuro", ignore_case=True))
+@check_command_enabled("neuro")
 async def neuro(message: Message, command: CommandObject, bot: Bot):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)

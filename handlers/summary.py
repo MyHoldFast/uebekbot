@@ -9,6 +9,7 @@ from aiogram.types import Message
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.types import CallbackQuery
 from bs4 import BeautifulSoup
+from utils.command_states import check_command_enabled
 
 from localization import DEFAULT_LANGUAGE, LANGUAGES, get_localization
 #from utils.translate import translate_text
@@ -218,6 +219,7 @@ async def fetch_detailed_summary(final_url: str):
     return None
 
 @router.message(Command("summary", ignore_case=True))
+@check_command_enabled("summary")
 async def summary(message: Message, command: CommandObject):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)

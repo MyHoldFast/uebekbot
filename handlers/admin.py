@@ -7,6 +7,8 @@ from aiogram.filters.command import CommandObject
 from aiogram.types import Message
 from utils.dbmanager import DB
 from utils.StatsMiddleware import get_stats, cmds
+from utils.command_states import disable_command, enable_command, global_disabled_commands, chat_disabled_commands
+
 
 router = Router()
 start_time = datetime.now()
@@ -35,6 +37,45 @@ def format_uptime():
 async def cmd_uptime(message: Message):
     await message.answer(format_uptime())
 
+@router.message(Command("disable", ignore_case=True))
+@admin_only
+async def cmd_disable(message: Message):
+    args = message.text.split()
+    if len(args) < 2:
+        await message.answer("⚠ Укажите команду для отключения. Пример: `/disable start` или `/disable start global`")
+        return
+
+    command = args[1].lstrip("/")
+    if len(args) > 2 and args[2] == "global":
+        await disable_command(command)
+        await message.answer(f"🚫 Команда /{command} отключена глобально.")
+    else:
+        await disable_command(command, message.chat.id)
+        await message.answer(f"🚫 Команда /{command} отключена в этом чате.")
+
+@router.message(Command("enable", ignore_case=True))
+@admin_only
+async def cmd_enable(message: Message):
+    args = message.text.split()
+    if len(args) < 2:
+        await message.answer("⚠ Укажите команду для включения. Пример: `/enable start` или `/enable start global`")
+        return
+
+    command = args[1].lstrip("/")
+    if len(args) > 2 and args[2] == "global":
+        await enable_command(command)
+        await message.answer(f"✅ Команда /{command} включена глобально.")
+    else:
+        await enable_command(command, message.chat.id)
+        await message.answer(f"✅ Команда /{command} включена в этом чате.")
+
+@router.message(Command("commands"))
+@admin_only
+async def cmd_list_disabled(message: Message):
+    global_disabled = "\n".join([f"🌍 /{cmd}" for cmd in global_disabled_commands.keys()]) or "Нет"
+    chat_disabled = "\n".join([f"💬 /{cmd}" for cmd in chat_disabled_commands.get(message.chat.id, {}).keys()]) or "Нет"
+    
+    await message.answer(f"🚫 Отключенные команды:\n\nГлобально:\n{global_disabled}\n\nВ этом чате:\n{chat_disabled}")
 
 @router.message(Command("stop", ignore_case=True))
 @admin_only
@@ -45,7 +86,7 @@ async def cmd_stop(message: Message):
 @router.message(Command("trunc", ignore_case=True))
 @admin_only
 async def cmd_trunc(message: Message, command: CommandObject):
-    db_list = ["models", "qwen_context", "stats", "user_context"]
+    db_list = ["models", "qwen_context", "stats", "user_context", "command_states"]
 
     if not command.args:
         await message.answer(", ".join(db_list))

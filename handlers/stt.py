@@ -9,6 +9,7 @@ from io import BytesIO
 from aiogram import Bot, Router, types
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from utils.command_states import check_command_enabled
 
 from localization import DEFAULT_LANGUAGE, get_localization
 
@@ -81,6 +82,7 @@ async def process_audio(wav_buffer: BytesIO, message, api=0):
 router = Router()
 
 @router.message(Command("stt", ignore_case=True))
+@check_command_enabled("stt")
 async def stt_command(message: types.Message, bot: Bot):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)

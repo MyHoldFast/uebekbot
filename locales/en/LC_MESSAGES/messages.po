@@ -90,3 +90,9 @@ msgstr "⏳ Generating image... Please wait."
 
 msgid "qwenimg_err"
 msgstr "❌ Error generating image."
+
+msgid "disable_in_chat"
+msgstr "🚫 Command /{command_name} is disabled in this chat."
+
+msgid "disable_global"
+msgstr "🚫 Command /{command_name} is disabled globally."
