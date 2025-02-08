@@ -162,6 +162,13 @@ async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
     
     async def make_request(session, url, headers, data, message, sent_message):
         global acc_index, last_update_time
+
+        bearer = qwen_accs[acc_index]['bearer']
+        x = qwen_accs[acc_index]['x']        
+        
+        headers['Authorization'] = 'Bearer ' + bearer
+        headers['x-request-id'] = x     
+        
         async with session.post(url, headers=headers, json=data, timeout=120) as r:
             if r.status == 200:
                 result = await r.json()
