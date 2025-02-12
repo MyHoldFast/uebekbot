@@ -86,7 +86,7 @@ async def cmd_stop(message: Message):
 @router.message(Command("trunc", ignore_case=True))
 @admin_only
 async def cmd_trunc(message: Message, command: CommandObject):
-    db_list = ["models", "qwen_context", "stats", "user_context", "command_states"]
+    db_list = ["gpt_models", "qwen_context", "stats", "gpt_context", "command_states"]
 
     if not command.args:
         await message.answer(", ".join(db_list))

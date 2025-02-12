@@ -18,8 +18,8 @@ from chatgpt_md_converter import telegram_format
 from utils.command_states import check_command_enabled
 
 router = Router()
-db, Query = DB('db/models.json').get_db()
-context_db, ContextQuery = DB('db/user_context.json').get_db()
+db, Query = DB('db/gpt_models.json').get_db()
+context_db, ContextQuery = DB('db/gpt_context.json').get_db()
 
 models = {
     "gpt-4o-mini": "gpt-4o-mini",
