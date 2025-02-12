@@ -25,7 +25,7 @@ models = {
     "gpt-4o-mini": "gpt-4o-mini",
     "o3-mini": "o3-mini",
     "claude-3-haiku": "claude-3-haiku-20240307",    
-    "llama-3.1-70b": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+   # "llama-3.1-70b": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo", 
     "mixtral-8x7b": "mistralai/Mixtral-8x7B-Instruct-v0.1"
 }
 

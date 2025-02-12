@@ -42,7 +42,7 @@ async def cmd_uptime(message: Message):
 async def cmd_disable(message: Message):
     args = message.text.split()
     if len(args) < 2:
-        await message.answer("⚠ Укажите команду для отключения. Пример: `/disable start` или `/disable start global`")
+        await message.answer("⚠ Укажите команду для отключения. Пример: /disable start или /disable start global")
         return
 
     command = args[1].lstrip("/")
@@ -58,7 +58,7 @@ async def cmd_disable(message: Message):
 async def cmd_enable(message: Message):
     args = message.text.split()
     if len(args) < 2:
-        await message.answer("⚠ Укажите команду для включения. Пример: `/enable start` или `/enable start global`")
+        await message.answer("⚠ Укажите команду для включения. Пример: /enable start или /enable start global")
         return
 
     command = args[1].lstrip("/")
