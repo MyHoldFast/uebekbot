@@ -1,3 +1,4 @@
+
 from aiogram import Router, Bot, html
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
@@ -6,6 +7,9 @@ from chatgpt_md_converter import telegram_format
 from utils.dbmanager import DB
 from localization import get_localization, DEFAULT_LANGUAGE
 from utils.command_states import check_command_enabled
+
+from pylatexenc.latex2text import LatexNodes2Text
+import re
 
 context_db, ContextQuery = DB('db/qwen_context.json').get_db()
 router = Router()
@@ -49,6 +53,14 @@ def remove_messages(user_id):
 
 def split_message(text, limit=4000):
     return [text[i:i+limit] for i in range(0, len(text), limit)]
+
+def process_latex(text):
+    return re.sub(
+        r'(?m)^\s*\$\$\s*\n(.*?)\n\s*\$\$\s*$',
+        lambda match: LatexNodes2Text().latex_to_text(match.group(1)),
+        text,
+        flags=re.DOTALL
+    )
 
 headers = {
     'authorization': 'Bearer '+qwen_accs[0]['bearer'],      
@@ -106,7 +118,7 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot):
                     result = await r.json()
                     assistant_reply = result.get("choices", [{}])[0].get("message", {}).get("content", "Ошибка")
                     
-                    formatted_reply = telegram_format(assistant_reply)
+                    formatted_reply = process_latex(telegram_format(assistant_reply))
                     chunks = split_message(formatted_reply)
                     
                     for chunk in chunks:
