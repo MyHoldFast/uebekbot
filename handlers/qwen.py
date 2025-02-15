@@ -56,8 +56,8 @@ def split_message(text, limit=4000):
 
 def process_latex(text):
     return re.sub(
-        r'(?m)^\s*\$\$\s*\n(.*?)\n\s*\$\$\s*$',
-        lambda match: LatexNodes2Text().latex_to_text(match.group(1)),
+        r'(?m)^\s*(\$\$|\\\[)\s*\n(.*?)\n\s*(\$\$|\\\])\s*$',
+        lambda match: LatexNodes2Text().latex_to_text(match.group(2)),
         text,
         flags=re.DOTALL
     )
