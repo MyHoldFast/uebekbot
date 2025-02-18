@@ -26,7 +26,8 @@ models = {
     "gpt-4o-mini": "gpt-4o-mini",
     "o3-mini": "o3-mini",
     "claude-3-haiku": "claude-3-haiku-20240307",    
-    "mixtral-8x7b": "mistralai/Mixtral-8x7B-Instruct-v0.1"
+    "mixtral-8x7b": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+    "llama 3.3 70B": "meta-llama/Llama-3.3-70B-Instruct-Turbo"
 }
 
 def get_gpt_keyboard(selected_model: str):
