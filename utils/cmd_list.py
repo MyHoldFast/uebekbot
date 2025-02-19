@@ -1,0 +1,1 @@
+cmds = ['/summary', '/ocr', '/gpt', '/stt', '/neuro', '/qwen', '/qwenimg']

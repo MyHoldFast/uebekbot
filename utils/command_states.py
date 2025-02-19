@@ -33,9 +33,14 @@ def save_disabled_commands():
 
 global_disabled_commands, chat_disabled_commands = load_disabled_commands()
 
+def update():
+    global global_disabled_commands, chat_disabled_commands
+    global_disabled_commands, chat_disabled_commands = load_disabled_commands()
+    return global_disabled_commands, chat_disabled_commands
+
 def is_command_enabled(command: str, chat_id: int) -> bool:
     if command in global_disabled_commands:
-        return False  # Глобально отключена
+        return False 
     return command not in chat_disabled_commands.get(str(chat_id), {})
 
 async def disable_command(command: str, chat_id: int = None):

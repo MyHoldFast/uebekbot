@@ -9,7 +9,7 @@ from aiogram.types import Message
 from utils.command_states import check_command_enabled
 
 from chatgpt_md_converter import telegram_format
-from localization import DEFAULT_LANGUAGE, LANGUAGES, get_localization
+from localization import DEFAULT_LANGUAGE, get_localization
 #from utils.translate import translate_text
 
 router = Router() 

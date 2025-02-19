@@ -96,3 +96,6 @@ msgstr "🚫 Command /{command_name} is disabled in this chat."
 
 msgid "disable_global"
 msgstr "🚫 Command /{command_name} is disabled globally."
+
+msgid "ban_message"
+msgstr "🚫 You are banned and cannot interact with this bot."

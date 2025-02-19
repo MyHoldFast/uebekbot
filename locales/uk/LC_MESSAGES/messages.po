@@ -97,3 +97,6 @@ msgstr "🚫 Команда /{command_name} вимкнена в цьому ча�
 
 msgid "disable_global"
 msgstr "🚫 Команда /{command_name} відключена в глобальному режимі."
+
+msgid "ban_message"
+msgstr "🚫 Ви забанені і не можете взаємодіяти з цим ботом."

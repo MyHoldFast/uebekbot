@@ -5,10 +5,10 @@ from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 import pytz, asyncio
 from utils.dbmanager import DB
+from utils.cmd_list import cmds
 
 db, Query = DB('db/stats.json').get_db()
 moscow_tz = pytz.timezone('Europe/Moscow')
-cmds = ['/summary', '/ocr', '/gpt', '/stt', '/neuro', '/qwen', '/qwenimg']
 
 class StatsMiddleware(BaseMiddleware):
     def __init__(self, bot: str = None, *args, **kwargs):
@@ -45,8 +45,8 @@ def save_stats(cmd: str):
         db.update(stats_data, stats_query.date == str(current_datetime.date()))
         
 def get_stats(start_date: Optional[str] = None, end_date: Optional[str] = None) -> Tuple[Optional[str], Dict[str, int], Dict[str, int], Optional[str]]:
-    total_stats = {cmd: 0 for cmd in cmds}  # Общая статистика за все время
-    selected_stats = {cmd: 0 for cmd in cmds}  # Статистика за заданный день/диапазон
+    total_stats = {cmd: 0 for cmd in cmds}  
+    selected_stats = {cmd: 0 for cmd in cmds}  
     earliest_date = None
 
     if start_date == "yesterday":
@@ -60,7 +60,6 @@ def get_stats(start_date: Optional[str] = None, end_date: Optional[str] = None) 
 
     all_records = db.all()
     
-    # Находим самую раннюю дату в базе
     all_dates = [datetime.strptime(record.get("date", ""), "%Y-%m-%d").date() for record in all_records if "date" in record]
     if all_dates:
         earliest_date = str(min(all_dates))  
@@ -68,12 +67,10 @@ def get_stats(start_date: Optional[str] = None, end_date: Optional[str] = None) 
     for stats_record in all_records:
         record_date = datetime.strptime(stats_record.get("date", ""), "%Y-%m-%d").date()
         
-        # Считаем статистику за заданный день/диапазон
         if start_date <= str(record_date) <= end_date:
             for cmd in cmds:
                 selected_stats[cmd] += int(stats_record.get(cmd, 0) or 0)
 
-        # Общая статистика за все время
         for cmd in cmds:
             total_stats[cmd] += int(stats_record.get(cmd, 0) or 0)
 
