@@ -1,20 +1,3 @@
-import redis
-import re
-import ssl
-import os
-
-class Query:
-    def __init__(self):
-        self._query = {}
-
-    def __getattr__(self, item):
-        self._current_key = item
-        return self
-
-    def __eq__(self, other):
-        self._query[self._current_key] = other
-        return self
-
 class TinyRedisDB:
     _redis_connection = None  
 
@@ -79,3 +62,9 @@ class TinyRedisDB:
         if keys:
             self.redis.delete(*keys)
         self.redis.set(f"{self.db_name}:next_id", 0)
+
+    def contains(self, query):
+        for record in self.all():
+            if self._matches(record, query._query):
+                return True
+        return False
