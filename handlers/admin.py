@@ -66,7 +66,7 @@ async def cmd_ban(message: Message):
             )
         user_id = int(args[1])
 
-    if user_id == ADMIN_ID:
+    if str(user_id) == ADMIN_ID:
         return await message.answer("⛔ Вы не можете забанить самого себя!")
 
     if is_banned(user_id):

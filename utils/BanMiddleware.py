@@ -1,4 +1,4 @@
-import time
+import time, os
 from aiogram import BaseMiddleware, Bot
 from aiogram.types import TelegramObject, Update
 from typing import Callable, Dict, Awaitable, Any
@@ -9,6 +9,8 @@ from localization import get_localization, DEFAULT_LANGUAGE
 ban_db, BanQuery = DB('db/banned_users.json').get_db()
 
 def is_banned(user_id: int) -> bool:
+    if str(user_id) == os.getenv("ADMIN_ID"):
+        return False
     return ban_db.get(BanQuery().uid == user_id) is not None
 
 def ban_user(user_id: int, username: str = None) -> None:
