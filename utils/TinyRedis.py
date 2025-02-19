@@ -1,3 +1,20 @@
+import redis
+import re
+import ssl
+import os
+
+class Query:
+    def __init__(self):
+        self._query = {}
+
+    def __getattr__(self, item):
+        self._current_key = item
+        return self
+
+    def __eq__(self, other):
+        self._query[self._current_key] = other
+        return self
+
 class TinyRedisDB:
     _redis_connection = None  
 
