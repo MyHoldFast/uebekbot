@@ -46,11 +46,16 @@ async def send_request(user_request):
 async def neuro(message: Message, command: CommandObject, bot: Bot):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
-    messagetext = message.reply_to_message.text if message.reply_to_message else command.args 
+    if message.reply_to_message:
+        user_input = message.reply_to_message.text or message.reply_to_message.caption or ""
+        if command.args:
+            user_input += '\n' + command.args
+    else:
+        user_input = command.args if command.args else ""
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE    
     await message.bot.send_chat_action(chat_id=message.chat.id, action='typing')
-    if messagetext:
-        result = (await send_request(messagetext))
+    if user_input:
+        result = (await send_request(user_input))
         #if user_language and user_language != "ru" and user_language in LANGUAGES:
             #result = await translate_text([result], "ru", user_language) or result
         await message.reply(telegram_format(result), parse_mode="HTML")

@@ -55,10 +55,11 @@ async def enable_command(command: str, chat_id: int = None):
     if chat_id is None:
         global_disabled_commands.pop(command, None)
     else:
-        chat_id = str(chat_id)
-        chat_disabled_commands.get(chat_id, {}).pop(command, None)
-        if not chat_disabled_commands.get(chat_id):
-            chat_disabled_commands.pop(chat_id)
+        chat_id = str(chat_id) 
+        if chat_id in chat_disabled_commands and command in chat_disabled_commands[chat_id]:
+            chat_disabled_commands[chat_id].pop(command, None)
+            if not chat_disabled_commands[chat_id]:
+                chat_disabled_commands.pop(chat_id, None)
 
     save_disabled_commands()
 

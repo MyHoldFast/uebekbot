@@ -72,10 +72,17 @@ async def cmd_enable(message: Message):
 @router.message(Command("commands"))
 @admin_only
 async def cmd_list_disabled(message: Message):
+    chat_id = str(message.chat.id)
+
     global_disabled = "\n".join([f"🌍 /{cmd}" for cmd in global_disabled_commands.keys()]) or "Нет"
-    chat_disabled = "\n".join([f"💬 /{cmd}" for cmd in chat_disabled_commands.get(message.chat.id, {}).keys()]) or "Нет"
+    chat_disabled_dict = chat_disabled_commands.get(chat_id, {})
+    chat_disabled = "\n".join([f"💬 /{cmd}" for cmd in chat_disabled_dict.keys()]) or "Нет"
     
-    await message.answer(f"🚫 Отключенные команды:\n\nГлобально:\n{global_disabled}\n\nВ этом чате:\n{chat_disabled}")
+    await message.answer(
+        f"🚫 Отключенные команды:\n\n"
+        f"Глобально:\n{global_disabled}\n\n"
+        f"В этом чате:\n{chat_disabled}"
+    )
 
 @router.message(Command("stop", ignore_case=True))
 @admin_only
