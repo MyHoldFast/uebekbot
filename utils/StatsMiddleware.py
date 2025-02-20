@@ -8,6 +8,8 @@ from utils.dbmanager import DB
 from utils.cmd_list import cmds
 
 db, Query = DB('db/stats.json').get_db()
+chats_db, ChatsQuery = DB('db/chats.json').get_db()
+
 moscow_tz = pytz.timezone('Europe/Moscow')
 
 class StatsMiddleware(BaseMiddleware):
@@ -28,7 +30,18 @@ class StatsMiddleware(BaseMiddleware):
         if cmd:
             if cmd.lower() in cmds:
                 save_stats(cmd.lower())
+        if event.message:
+            chat_id = str(event.message.chat.id)
+            chat_title = event.message.chat.title or event.message.chat.username or f"Chat {chat_id}"
+            save_chat(chat_id, chat_title)
         return await handler(event, data)
+
+def save_chat(chat_id: str, chat_title: str):
+    if not chats_db.search(ChatsQuery().chat_id == chat_id):
+        chats_db.insert({'chat_id': chat_id, 'chat_title': chat_title})
+
+def get_all_chats():
+    return chats_db.all()
 
 def save_stats(cmd: str):
     current_datetime = datetime.now(moscow_tz)

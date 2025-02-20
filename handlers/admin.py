@@ -7,7 +7,7 @@ from aiogram.filters.command import CommandObject
 from aiogram.types import Message
 from utils.dbmanager import DB
 from utils.cmd_list import cmds
-from utils.StatsMiddleware import get_stats
+from utils.StatsMiddleware import get_stats, get_all_chats
 from utils.command_states import get_disabled_commands, disable_command, enable_command
 from utils.BanMiddleware import (
     ban_user,
@@ -203,6 +203,16 @@ async def cmd_trunc(message: Message, command: CommandObject):
         await message.reply(f"База {command.args} очищена")
     else:
         await message.reply("Неверное название базы данных.")
+
+
+@router.message(Command("chats", ignore_case=True))
+@admin_only
+async def cmd_chats(message: Message, command: CommandObject):
+    message_text = ""
+    all_chats = get_all_chats()
+    for chat in all_chats:
+        message_text+="\n"+(f"Chat ID: {chat['chat_id']}, Title: {chat['chat_title']}")
+    if message_text: await message.reply(message_text)
 
 
 @router.message(Command("stats", ignore_case=True))
