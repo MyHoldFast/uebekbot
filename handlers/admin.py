@@ -44,7 +44,7 @@ def format_uptime():
 @router.message(Command("uptime", ignore_case=True))
 @admin_only
 async def cmd_uptime(message: Message):
-    await message.answer(format_uptime())
+    await message.reply(format_uptime())
 
 
 @router.message(Command("ban"))
@@ -55,19 +55,19 @@ async def cmd_ban(message: Message):
     else:
         args = message.text.split()
         if len(args) < 2 or not args[1].isdigit():
-            return await message.answer(
+            return await message.reply(
                 "⚠ Укажите ID пользователя или ответьте на его сообщение."
             )
         user_id = int(args[1])
 
     if str(user_id) == ADMIN_ID:
-        return await message.answer("⛔ Вы не можете забанить самого себя!")
+        return await message.reply("⛔ Вы не можете забанить самого себя!")
 
     if is_banned(user_id):
-        return await message.answer("⚠ Этот пользователь уже в бане.")
+        return await message.reply("⚠ Этот пользователь уже в бане.")
 
     ban_user(user_id, message.reply_to_message.from_user.full_name)
-    await message.answer(f"🚫 Пользователь {user_id} забанен!")
+    await message.reply(f"🚫 Пользователь {user_id} забанен!")
 
 
 @router.message(Command("unban"))
@@ -78,21 +78,21 @@ async def cmd_unban(message: Message):
         if message.reply_to_message:
             user_id = message.reply_to_message.from_user.id
         else:
-            return await message.answer(
+            return await message.reply(
                 "⚠ Укажите ID пользователя для разблокировки."
             )
     else:
         if not args[1].isdigit():
-            return await message.answer(
+            return await message.reply(
                 "⚠ Укажите валидный ID пользователя для разблокировки."
             )
         user_id = int(args[1])
 
     if not is_banned(user_id):
-        return await message.answer("⚠ Этот пользователь не в бане.")
+        return await message.reply("⚠ Этот пользователь не в бане.")
 
     unban_user(user_id)
-    await message.answer(f"✅ Пользователь {user_id} разбанен!")
+    await message.reply(f"✅ Пользователь {user_id} разбанен!")
 
 
 @router.message(Command("ban_list"))
@@ -101,13 +101,13 @@ async def cmd_ban_list(message: Message):
     banned_users = get_banned_users()
 
     if not banned_users:
-        return await message.answer("✅ В бане нет пользователей.")
+        return await message.reply("✅ В бане нет пользователей.")
 
     banned_text = "\n".join(
         f"🔴 {user['username']} ({user['uid']})" for user in banned_users
     )
 
-    await message.answer(f"🚫 Забаненные пользователи:\n{banned_text}")
+    await message.reply(f"🚫 Забаненные пользователи:\n{banned_text}")
 
 
 @router.message(Command("disable", ignore_case=True))
@@ -115,12 +115,12 @@ async def cmd_ban_list(message: Message):
 async def cmd_disable(message: Message):
     args = message.text.split()
     if len(args) < 2:
-        await message.answer("⚠ Укажите команду для отключения. Пример: /disable start или /disable start global")
+        await message.reply("⚠ Укажите команду для отключения. Пример: /disable start или /disable start global")
         return
 
     command = args[1].lstrip("/")
     if f"/{command}" not in cmds:
-        await message.answer(f"⚠ Команда /{command} не существует.")
+        await message.reply(f"⚠ Команда /{command} не существует.")
         return
 
     is_global = len(args) > 2 and args[2] == "global"
@@ -132,19 +132,19 @@ async def cmd_disable(message: Message):
         await disable_command(command, message.chat.id)
         scope = "в этом чате"
 
-    await message.answer(f"🚫 Команда /{command} отключена {scope}.")
+    await message.reply(f"🚫 Команда /{command} отключена {scope}.")
 
 @router.message(Command("enable", ignore_case=True))
 @admin_only
 async def cmd_enable(message: Message):
     args = message.text.split()
     if len(args) < 2:
-        await message.answer("⚠ Укажите команду для включения. Пример: /enable start или /enable start global")
+        await message.reply("⚠ Укажите команду для включения. Пример: /enable start или /enable start global")
         return
 
     command = args[1].lstrip("/")
     if f"/{command}" not in cmds:
-        await message.answer(f"⚠ Команда /{command} не существует.")
+        await message.reply(f"⚠ Команда /{command} не существует.")
         return
 
     is_global = len(args) > 2 and args[2] == "global"
@@ -156,7 +156,7 @@ async def cmd_enable(message: Message):
         await enable_command(command, message.chat.id)
         scope = "в этом чате"
 
-    await message.answer(f"✅ Команда /{command} включена {scope}.")
+    await message.reply(f"✅ Команда /{command} включена {scope}.")
 
 @router.message(Command("commands"))
 @admin_only
@@ -168,7 +168,7 @@ async def cmd_list_disabled(message: Message):
     chat_disabled_dict = disabled_commands["chat"].get(chat_id, {})
     chat_disabled = "\n".join([f"💬 /{cmd}" for cmd in chat_disabled_dict]) or "Нет"
 
-    await message.answer(
+    await message.reply(
         f"🚫 Отключенные команды:\n\n"
         f"Глобально:\n{global_disabled}\n\n"
         f"В этом чате:\n{chat_disabled}"
@@ -194,15 +194,15 @@ async def cmd_trunc(message: Message, command: CommandObject):
     ]
 
     if not command.args:
-        await message.answer(", ".join(db_list))
+        await message.reply(", ".join(db_list))
         return
 
     if command.args in db_list:
         database = DB(f"db/{command.args}.json").get_db()[0]
         database.truncate()
-        await message.answer(f"База {command.args} очищена")
+        await message.reply(f"База {command.args} очищена")
     else:
-        await message.answer("Неверное название базы данных.")
+        await message.reply("Неверное название базы данных.")
 
 
 @router.message(Command("stats", ignore_case=True))
@@ -240,7 +240,7 @@ async def cmd_stats(message: Message, command: CommandObject):
         f"{total_stats_text}"
     )
 
-    await message.answer(message_text)
+    await message.reply(message_text)
 
 
 @router.message(Command("proxy", ignore_case=True))
@@ -250,7 +250,7 @@ async def cmd_proxy(message: Message):
 
     if len(command_args) == 1:
         proxy_value = os.getenv("PROXY")
-        await message.answer(
+        await message.reply(
             f"Текущее значение PROXY: {proxy_value}"
             if proxy_value
             else "Переменная PROXY не установлена."
@@ -258,4 +258,4 @@ async def cmd_proxy(message: Message):
     else:
         new_proxy = command_args[1]
         os.environ["PROXY"] = new_proxy
-        await message.answer(f"Новое значение PROXY установлено: {new_proxy}")
+        await message.reply(f"Новое значение PROXY установлено: {new_proxy}")
