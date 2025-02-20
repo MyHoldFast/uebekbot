@@ -8,13 +8,7 @@ from aiogram.types import Message
 from utils.dbmanager import DB
 from utils.cmd_list import cmds
 from utils.StatsMiddleware import get_stats
-from utils.command_states import (
-    disable_command,
-    enable_command,
-    update,
-    global_disabled_commands,
-    chat_disabled_commands,
-)
+from utils.command_states import get_disabled_commands, disable_command, enable_command
 from utils.BanMiddleware import (
     ban_user,
     unban_user,
@@ -121,18 +115,16 @@ async def cmd_ban_list(message: Message):
 async def cmd_disable(message: Message):
     args = message.text.split()
     if len(args) < 2:
-        await message.answer(
-            "⚠ Укажите команду для отключения. Пример: /disable start или /disable start global"
-        )
+        await message.answer("⚠ Укажите команду для отключения. Пример: /disable start или /disable start global")
         return
 
     command = args[1].lstrip("/")
-
     if f"/{command}" not in cmds:
         await message.answer(f"⚠ Команда /{command} не существует.")
         return
 
     is_global = len(args) > 2 and args[2] == "global"
+
     if is_global:
         await disable_command(command)
         scope = "глобально"
@@ -142,24 +134,21 @@ async def cmd_disable(message: Message):
 
     await message.answer(f"🚫 Команда /{command} отключена {scope}.")
 
-
 @router.message(Command("enable", ignore_case=True))
 @admin_only
 async def cmd_enable(message: Message):
     args = message.text.split()
     if len(args) < 2:
-        await message.answer(
-            "⚠ Укажите команду для включения. Пример: /enable start или /enable start global"
-        )
+        await message.answer("⚠ Укажите команду для включения. Пример: /enable start или /enable start global")
         return
 
     command = args[1].lstrip("/")
-
     if f"/{command}" not in cmds:
         await message.answer(f"⚠ Команда /{command} не существует.")
         return
 
     is_global = len(args) > 2 and args[2] == "global"
+
     if is_global:
         await enable_command(command)
         scope = "глобально"
@@ -169,21 +158,15 @@ async def cmd_enable(message: Message):
 
     await message.answer(f"✅ Команда /{command} включена {scope}.")
 
-
 @router.message(Command("commands"))
 @admin_only
 async def cmd_list_disabled(message: Message):
+    disabled_commands = get_disabled_commands()
     chat_id = str(message.chat.id)
-    global global_disabled_commands, chat_disabled_commands
 
-    global_disabled = (
-        "\n".join([f"🌍 /{cmd}" for cmd in global_disabled_commands.keys()])
-        or "Нет"
-    )
-    chat_disabled_dict = chat_disabled_commands.get(chat_id, {})
-    chat_disabled = (
-        "\n".join([f"💬 /{cmd}" for cmd in chat_disabled_dict.keys()]) or "Нет"
-    )
+    global_disabled = "\n".join([f"🌍 /{cmd}" for cmd in disabled_commands["global"]]) or "Нет"
+    chat_disabled_dict = disabled_commands["chat"].get(chat_id, {})
+    chat_disabled = "\n".join([f"💬 /{cmd}" for cmd in chat_disabled_dict]) or "Нет"
 
     await message.answer(
         f"🚫 Отключенные команды:\n\n"
@@ -217,8 +200,6 @@ async def cmd_trunc(message: Message, command: CommandObject):
     if command.args in db_list:
         database = DB(f"db/{command.args}.json").get_db()[0]
         database.truncate()
-        global global_disabled_commands, chat_disabled_commands
-        global_disabled_commands, chat_disabled_commands = update()
         await message.answer(f"База {command.args} очищена")
     else:
         await message.answer("Неверное название базы данных.")
