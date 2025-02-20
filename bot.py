@@ -1,4 +1,4 @@
-import asyncio, os
+import asyncio, os, sys
 from aiogram import Bot, Dispatcher
 from dotenv import load_dotenv
 from handlers import callbacks, ya_ocr, summary, gpt, admin, stt, neuro, qwen
@@ -6,11 +6,15 @@ from utils.StatsMiddleware import StatsMiddleware
 from utils.BanMiddleware import BanMiddleware
 
 async def main():
+    if sys.version_info < (3, 10):
+        print("python >= 3.10 needed")
+        sys.exit(1)
+        
     load_dotenv()
     bot = Bot(token=os.getenv("TG_BOT_TOKEN"))
     dp = Dispatcher()
 
-    dp.update.middleware(BanMiddleware())
+    dp.update.middleware(BanMiddleware(bot))
     dp.update.middleware(StatsMiddleware(bot)) 
 
     dp.include_router(callbacks.router)

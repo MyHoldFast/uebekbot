@@ -1,5 +1,4 @@
-import asyncio
-import os
+import asyncio, os, sys
 #import logging
 from quart import Quart # type: ignore
 from aiogram import Bot, Dispatcher
@@ -24,10 +23,13 @@ async def index():
     return "Главная страница"
 
 async def main():
+    if sys.version_info < (3, 10):
+        print("python >= 3.10 needed")
+        sys.exit(1)
     bot = Bot(token=os.getenv("TG_BOT_TOKEN"))
     dp = Dispatcher()
 
-    dp.update.middleware(BanMiddleware())
+    dp.update.middleware(BanMiddleware(bot))
     dp.update.middleware(StatsMiddleware(bot)) 
 
     dp.include_router(callbacks.router)

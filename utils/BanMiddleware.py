@@ -1,4 +1,4 @@
-import time, os
+import time, os, asyncio
 from aiogram import BaseMiddleware, Bot
 from aiogram.types import TelegramObject, Update
 from typing import Callable, Dict, Awaitable, Any
@@ -31,6 +31,16 @@ def get_banned_users() -> list:
     ]
 
 class BanMiddleware(BaseMiddleware):
+    def __init__(self, bot: str = None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.bot = bot
+        self.botname = None
+        asyncio.create_task(self.init())    
+
+    async def init(self):
+        bot_info = await self.bot.get_me()
+        self.botname = bot_info.username
+
     async def __call__(
         self, 
         handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]], 
@@ -38,11 +48,11 @@ class BanMiddleware(BaseMiddleware):
         data: Dict[str, Any]
     ) -> Any:
         user_id = None
-        bot: Bot = data.get('bot')
-        if bot is None:
-            return await handler(event, data)
+        #bot: Bot = data.get('bot')
+        #if bot is None:
+        #    return await handler(event, data)
         
-        bot_username = (await bot.me()).username
+        bot_username = self.botname#(await bot.me()).username
         if isinstance(event, Update):
             user_id = self._extract_user_id(event, bot_username)
         
