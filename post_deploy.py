@@ -33,3 +33,4 @@ if os.getenv("MIGRATE"):
                 print(f"Data from Redis key {key} has been saved to {file_path}.")
 else:
     print("Переменная окружения MIGRATE не установлена.")
+    
