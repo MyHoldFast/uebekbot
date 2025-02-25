@@ -17,4 +17,4 @@ RUN apt-get update && \
 
 COPY . .
 
-CMD ["python", "app.py"]
+ENTRYPOINT ["sh", "-c", "python post_deploy.py & python app.py"]

@@ -1,0 +1,17 @@
+name: Pre-Deploy Migration
+
+on:
+  push:
+    branches:
+      - main
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
+    steps:
+      - name: Run Pre-Deploy Migration
+        run: |
+          curl -X POST \
+               -H "X-Deploy-Token: migrate" \
+               "$DEPLOY_URL"
