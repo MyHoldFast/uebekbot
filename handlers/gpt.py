@@ -25,8 +25,8 @@ context_db, ContextQuery = DB('db/gpt_context.json').get_db()
 models = {
     "gpt-4o-mini": "gpt-4o-mini",
     "o3-mini": "o3-mini",
-    "claude-3-haiku": "claude-3-haiku-20240307",    
-    "mixtral-8x7b": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+    "Mistral Small 3": "mistralai/Mistral-Small-24B-Instruct-2501",
+    "claude-3-haiku": "claude-3-haiku-20240307",        
     "llama 3.3 70B": "meta-llama/Llama-3.3-70B-Instruct-Turbo"
 }
 

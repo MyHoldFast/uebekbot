@@ -19,7 +19,7 @@
 - `gpt-4o-mini`
 - `o3-mini`
 - `claude-3-haiku`
-- `mixtral-8x7b`
+- `mistral-small-3`
 - `llama 3.3 70B`
 
 Для работы некоторых функций требуются следующие сервисы:
