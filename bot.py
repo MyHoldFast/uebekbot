@@ -1,5 +1,6 @@
 import asyncio, os, sys
 from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
 from dotenv import load_dotenv
 from handlers import callbacks, ya_ocr, summary, gpt, admin, stt, neuro, qwen
 from utils.StatsMiddleware import StatsMiddleware
@@ -11,7 +12,8 @@ async def main():
         sys.exit(1)
         
     load_dotenv()
-    bot = Bot(token=os.getenv("TG_BOT_TOKEN"))
+    bot = Bot(token=os.getenv("TG_BOT_TOKEN"),
+              default=DefaultBotProperties(allow_sending_without_reply = True))
     dp = Dispatcher()
 
     dp.update.middleware(BanMiddleware(bot))

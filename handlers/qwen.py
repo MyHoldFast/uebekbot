@@ -2,6 +2,7 @@
 from aiogram import Router, Bot, html
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
+from aiogram.exceptions import TelegramBadRequest
 import aiohttp, asyncio, json, os, time, uuid
 from chatgpt_md_converter import telegram_format
 from utils.dbmanager import DB
@@ -16,6 +17,7 @@ router = Router()
 
 qwen_accs_str = os.getenv('QWEN_ACCS')
 qwen_accs = json.loads(qwen_accs_str)
+
 acc_index = 0
 last_update_time = None
 
@@ -197,19 +199,26 @@ async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
                         try:
                             await make_request(new_session, url, headers, data, message, sent_message)
                         except Exception:
-                            await sent_message.delete()
+                            await safe_delete(sent_message)
                             await message.reply(_("qwenimg_err"))
                 else:
-                    await sent_message.delete()
+                    await safe_delete(sent_message)
                     await message.reply(_("qwenimg_err"))
             else:
-                await sent_message.delete()
+                await safe_delete(sent_message)
                 await message.reply(_("qwenimg_err"))
     
     sent_message = await message.reply(_("qwenimg_gen"))    
     
     async with aiohttp.ClientSession() as session:
         await make_request(session, url, headers, data, message, sent_message)
+
+
+async def safe_delete(message):
+    try:
+        await message.delete()
+    except TelegramBadRequest:
+        pass
 
 async def check_task_status(session, task_id, message, sent_message):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
@@ -222,16 +231,16 @@ async def check_task_status(session, task_id, message, sent_message):
                 task_status = result.get("task_status", "")
                 if task_status == "success":
                     image_url = result.get("content", "")
-                    await sent_message.delete()
+                    await safe_delete(sent_message)
                     await message.reply_photo(photo=image_url)
                     break
                 elif task_status in ["failed", "error"]:
-                    await sent_message.delete()
+                    await safe_delete(sent_message)
                     await message.reply(_("qwenimg_err"))
                     break
                 else:
                     await asyncio.sleep(5)
             else:
-                await sent_message.delete()
+                await safe_delete(sent_message)
                 await message.reply(_("qwenimg_err"))
                 break
