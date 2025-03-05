@@ -1,4 +1,5 @@
 import asyncio
+import aiocron
 import os
 import sys
 import json
@@ -51,6 +52,12 @@ async def load_json_to_redis():
                         print(f"Error decoding JSON from {filename}: {e}")
             else:
                 print(f"File {filename} is empty or does not exist.")
+
+
+@aiocron.crontab("0 */3 * * *")
+async def scheduled_pre_deploy():
+    await load_json_to_redis()
+    print("Data reloaded to Redis every 3 hours (MSK)")
 
 @app.route("/")
 async def index():
