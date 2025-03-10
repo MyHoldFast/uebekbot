@@ -22,6 +22,8 @@ last_update_time = None
 
 MESSAGE_EXPIRY = 3 * 60 * 60
 
+proxy = os.getenv("PROXY")
+
 
 def load_messages(user_id):
     context_item = context_db.get(ContextQuery().uid == user_id)
@@ -143,7 +145,7 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot):
 
     async with aiohttp.ClientSession(cookies=cookies) as session:
         try:
-            async with session.post(url, headers=headers, json=data, timeout=120) as r:
+            async with session.post(url, headers=headers, json=data, timeout=120, proxy=proxy) as r:
                 if r.status == 200:
                     result = await r.json()
                     assistant_reply = (
@@ -218,7 +220,7 @@ async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
         headers["Authorization"] = "Bearer " + qwen_accs[acc_index]["bearer"]
         headers["x-request-id"] = qwen_accs[acc_index]["x"]
 
-        async with session.post(url, headers=headers, json=data, timeout=120) as r:
+        async with session.post(url, headers=headers, json=data, timeout=120, proxy=proxy) as r:
             try:
                 if r.status == 200:
                     result = await r.json()
@@ -275,7 +277,7 @@ async def check_task_status(session, task_id, message, sent_message):
     _ = get_localization(user_language)
     status_url = f"https://chat.qwen.ai/api/v1/tasks/status/{task_id}"
     while True:
-        async with session.get(status_url, headers=headers, timeout=180) as r:
+        async with session.get(status_url, headers=headers, timeout=180, proxy=proxy) as r:
             try:
                 if r.status == 200:
                     result = await r.json()
