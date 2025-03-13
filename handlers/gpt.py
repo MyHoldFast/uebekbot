@@ -4,9 +4,11 @@ import json
 import os
 import re
 import time
+import html
 
+from bs4 import BeautifulSoup
 from utils.duckduckgo_chat import DuckDuckGoChat
-from aiogram import Bot, Router, html
+from aiogram import Bot, Router
 from aiogram.filters import Command, CommandObject
 from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, InlineKeyboardMarkup
 import google.generativeai as genai
@@ -100,6 +102,9 @@ async def callback_query_handler(callback_query: CallbackQuery):
         f"{callback_query.from_user.first_name}, {_('you_choose_model')} {callback_query.data}"
     )
 
+def split_message(text: str, max_length: int = 4000):
+    return [text[i:i + max_length] for i in range(0, len(text), max_length)]
+
 async def process_gemini(message: Message, command: CommandObject, bot: Bot, photo):
     text = command.args or "опиши изображение на русском языке"
     genai.configure(api_key=os.environ["GEMINI_API_KEY"])
@@ -118,12 +123,13 @@ async def process_gemini(message: Message, command: CommandObject, bot: Bot, pho
         result = await asyncio.to_thread(model.generate_content, [myfile, "\n\n", text])
 
         if result.text:
-            result = telegram_format(result.text)
-            for x in range(0, len(result), 4000):
+            result = telegram_format(html.escape(result.text))
+            chunks = split_message(result) 
+            for chunk in chunks:
                 try:
-                    await message.reply(result[x:x + 4000], parse_mode="HTML")
+                    await message.reply(html.unescape(chunk), parse_mode="HTML")
                 except TelegramBadRequest:
-                    await message.reply(html.quote(result[x:x + 4000]))
+                    await message.reply(BeautifulSoup(html.unescape(chunk), "html.parser").get_text())
     except Exception:
         user_language = message.from_user.language_code or DEFAULT_LANGUAGE
         _ = get_localization(user_language)
@@ -162,13 +168,14 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
 
         answer = await asyncio.to_thread(d.chat, messagetext)
         save_user_context(user_id, d.messages, d.vqd)
-        answer = process_latex(telegram_format(answer))
+        answer = process_latex(html.escape(telegram_format(answer)))
 
-        for x in range(0, len(answer), 4000):
+        chunks = split_message(answer) 
+        for chunk in chunks:
             try:
-                await message.reply(answer[x:x + 4000], parse_mode="HTML")
+                await message.reply(html.unescape(chunk), parse_mode="HTML")
             except TelegramBadRequest:
-                await message.reply(html.quote(answer[x:x + 4000]))
+                await message.reply(BeautifulSoup(html.unescape(chunk), "html.parser").get_text())
     except Exception:
         user_language = message.from_user.language_code or DEFAULT_LANGUAGE
         _ = get_localization(user_language)

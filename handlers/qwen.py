@@ -1,4 +1,6 @@
-from aiogram import Router, Bot, html
+import html
+from bs4 import BeautifulSoup
+from aiogram import Router, Bot
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 from aiogram.exceptions import TelegramBadRequest
@@ -155,13 +157,13 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot):
                     )
 
                     formatted_reply = process_latex(telegram_format(assistant_reply))
-                    chunks = split_message(formatted_reply)
+                    chunks = split_message(html.escape(formatted_reply))
 
                     for chunk in chunks:
                         try:
-                            await message.reply(chunk, parse_mode="HTML")
+                            await message.reply(html.unescape(chunk), parse_mode="HTML")
                         except Exception:
-                            await message.reply(html.quote(chunk))
+                            await message.reply(BeautifulSoup(html.unescape(chunk), "html.parser").get_text())
 
                     messages.append({"role": "assistant", "content": assistant_reply})
                     save_messages(user_id, messages)
