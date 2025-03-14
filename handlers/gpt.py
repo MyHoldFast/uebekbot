@@ -6,7 +6,7 @@ import re
 import time
 import html
 
-from bs4 import BeautifulSoup
+from utils.text_utils import split_html
 from utils.typing_indicator import TypingIndicator
 from utils.duckduckgo_chat import DuckDuckGoChat
 from aiogram import Bot, Router
@@ -127,14 +127,14 @@ async def process_gemini(message: Message, command: CommandObject, bot: Bot, pho
 
         if result.text:
             result = telegram_format(html.escape(result.text))
-            chunks = split_message(result) 
+            chunks = chunk(result) 
             for chunk in chunks:
-                soup = BeautifulSoup(html.unescape(chunk), "html.parser")
-                fixed = soup.encode(formatter="minimal").decode("utf-8")   
-                try:
-                    await message.reply(fixed, parse_mode="HTML")
-                except TelegramBadRequest:
-                    await message.reply(soup.get_text())
+                #soup = BeautifulSoup(html.unescape(chunk), "html.parser")
+                #fixed = soup.encode(formatter="minimal").decode("utf-8")   
+                #try:
+                await message.reply(chunk, parse_mode="HTML")
+                #except TelegramBadRequest:
+                #    await message.reply(soup.get_text())
     except Exception:
         user_language = message.from_user.language_code or DEFAULT_LANGUAGE
         _ = get_localization(user_language)
@@ -176,15 +176,15 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
 
         save_user_context(user_id, d.messages, d.vqd)
         answer = html.escape(process_latex(telegram_format(answer)))
-        chunks = split_message(answer) 
+        chunks = split_html(answer) 
         
         for chunk in chunks:
-            soup = BeautifulSoup(html.unescape(chunk), "html.parser")
-            fixed = soup.encode(formatter="minimal").decode("utf-8")   
-            try:
-                await message.reply(fixed, parse_mode="HTML")
-            except TelegramBadRequest:
-                await message.reply(soup.get_text())
+            #soup = BeautifulSoup(html.unescape(chunk), "html.parser")
+            #fixed = soup.encode(formatter="minimal").decode("utf-8")   
+            #try:
+            await message.reply(chunk, parse_mode="HTML")
+            #except TelegramBadRequest:
+                #await message.reply(soup.get_text())
     except Exception as e:
         user_language = message.from_user.language_code or DEFAULT_LANGUAGE
         _ = get_localization(user_language)

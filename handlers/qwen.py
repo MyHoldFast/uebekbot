@@ -1,5 +1,6 @@
 import html
 from utils.typing_indicator import TypingIndicator
+from utils.text_utils import split_html
 from bs4 import BeautifulSoup
 from aiogram import Router, Bot
 from aiogram.filters import Command, CommandObject
@@ -158,15 +159,15 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot):
                         )
 
                         formatted_reply = process_latex(telegram_format(assistant_reply))
-                        chunks = split_message(html.escape(formatted_reply))
+                        chunks = split_html(html.escape(formatted_reply))
 
                         for chunk in chunks:
-                            soup = BeautifulSoup(html.unescape(chunk), "html.parser")
-                            fixed = soup.encode(formatter="minimal").decode("utf-8")                        
-                            try:
-                                await message.reply(fixed, parse_mode="HTML")
-                            except Exception:
-                                await message.reply(soup.get_text())
+                            #soup = BeautifulSoup(html.unescape(chunk), "html.parser")
+                            #fixed = soup.encode(formatter="minimal").decode("utf-8")                        
+                            #try:
+                            await message.reply(chunk, parse_mode="HTML")
+                            #except Exception:
+                            #    await message.reply(soup.get_text())
 
                         messages.append({"role": "assistant", "content": assistant_reply})
                         save_messages(user_id, messages)

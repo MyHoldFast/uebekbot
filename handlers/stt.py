@@ -63,11 +63,9 @@ async def process_audio(wav_buffer: BytesIO, message, api=0):
                 if 'error' in response_json:
                     if 'estimated_time' in response_json:
                         #print(f"Ошибка: {response_json['error']}. Ожидание {response_json['estimated_time']} секунд.")
-                        await message.bot.send_chat_action(chat_id=message.chat.id, action='typing')
                         await asyncio.sleep(3)
                     elif response_json.get('error') == "Internal Server Error" and api!=2:
                         api = 2
-                        await message.bot.send_chat_action(chat_id=message.chat.id, action='typing')
                         #await asyncio.sleep(1)
                     else: break
                 else:
