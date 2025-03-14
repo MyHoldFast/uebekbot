@@ -3,7 +3,8 @@ import asyncio
 import os
 import re
 
-from aiogram import Router
+from utils.typing_indicator import TypingIndicator
+from aiogram import Router, Bot
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -220,7 +221,7 @@ async def fetch_detailed_summary(final_url: str):
 
 @router.message(Command("summary", ignore_case=True))
 @check_command_enabled("summary")
-async def summary(message: Message, command: CommandObject):
+async def summary(message: Message, command: CommandObject, bot: Bot):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
 
@@ -231,21 +232,22 @@ async def summary(message: Message, command: CommandObject):
         link_preview = message.reply_to_message.link_preview_options
         text = message.reply_to_message.caption or message.reply_to_message.text
 
-    await message.bot.send_chat_action(chat_id=message.chat.id, action='typing')
     if link_preview and link_preview.url:
         text = link_preview.url
-    result, button_callback = await process_url(text)
 
-    if result:
-        #if user_language and user_language != "ru" and user_language in LANGUAGES:
-        #    result = await translate_text([result], "ru", user_language) or result 
+    async with TypingIndicator(bot=bot, chat_id=message.chat.id):
+        result, button_callback = await process_url(text)
 
-        keyboard = None
-        if button_callback:
-            details_button = InlineKeyboardButton(text=_("summary_detail"), callback_data='link:'+button_callback)
-            keyboard = InlineKeyboardMarkup(inline_keyboard=[[details_button]])
+        if result:
+            #if user_language and user_language != "ru" and user_language in LANGUAGES:
+            #    result = await translate_text([result], "ru", user_language) or result 
 
-        for x in range(0, len(result), 4096):
-            await message.reply(result[x:x + 4096], reply_markup=keyboard if x == 0 else None)
-    else:
-        await message.reply(_("summary_failed"))
+            keyboard = None
+            if button_callback:
+                details_button = InlineKeyboardButton(text=_("summary_detail"), callback_data='link:'+button_callback)
+                keyboard = InlineKeyboardMarkup(inline_keyboard=[[details_button]])
+
+            for x in range(0, len(result), 4096):
+                await message.reply(result[x:x + 4096], reply_markup=keyboard if x == 0 else None)
+        else:
+            await message.reply(_("summary_failed"))

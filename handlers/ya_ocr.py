@@ -6,6 +6,7 @@ import os
 import re
 import time
 
+from utils.typing_indicator import TypingIndicator
 from aiogram import Bot, Router
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
@@ -83,12 +84,12 @@ async def ocr_handle(message: Message, bot: Bot):
         photo = message.photo[-1]
 
     if photo:
-        await message.bot.send_chat_action(chat_id=message.chat.id, action='typing')
-        result = await do_ocr_request(photo.file_id, bot)
-        if result:
-            for x in range(0, len(result), 4096):
-                await message.reply((result[x:x + 4096]), reply_markup=keyboard)
-        else:
-            await message.reply(_("recognition_failed"))
+        async with TypingIndicator(bot=bot, chat_id=message.chat.id):
+            result = await do_ocr_request(photo.file_id, bot)
+            if result:
+                for x in range(0, len(result), 4096):
+                    await message.reply((result[x:x + 4096]), reply_markup=keyboard)
+            else:
+                await message.reply(_("recognition_failed"))
     else:
         await message.reply(_("use_reply_or_attach_image"))

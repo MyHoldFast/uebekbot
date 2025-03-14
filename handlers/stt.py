@@ -6,6 +6,7 @@ import subprocess
 import time
 from io import BytesIO
 
+from utils.typing_indicator import TypingIndicator
 from aiogram import Bot, Router, types
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -86,43 +87,43 @@ router = Router()
 async def stt_command(message: types.Message, bot: Bot):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
+
     if not message.reply_to_message or (not message.reply_to_message.voice and not message.reply_to_message.video and not message.reply_to_message.video_note):
         await message.reply(_("voice_help"))
         return
 
-    await message.bot.send_chat_action(chat_id=message.chat.id, action='typing')
-    if message.reply_to_message.voice:
-        voice = message.reply_to_message.voice
-        file_id = voice.file_id
-        duration = voice.duration
-    if message.reply_to_message.video:
-        video = message.reply_to_message.video
-        file_id = video.file_id
-        duration = video.duration
-    if message.reply_to_message.video_note:
-        video = message.reply_to_message.video_note
-        file_id = video.file_id
-        duration = video.duration
-    
-    file = await bot.get_file(file_id)
-    file_path = file.file_path
+    async with TypingIndicator(bot=bot, chat_id=message.chat.id):
+        if message.reply_to_message.voice:
+            voice = message.reply_to_message.voice
+            file_id = voice.file_id
+            duration = voice.duration
+        if message.reply_to_message.video:
+            video = message.reply_to_message.video
+            file_id = video.file_id
+            duration = video.duration
+        if message.reply_to_message.video_note:
+            video = message.reply_to_message.video_note
+            file_id = video.file_id
+            duration = video.duration
 
-    content = await download_as_audio(file_path, f"tmp/{file_id}.ogg")
-    audio_bytes = BytesIO(content)
-    api = 0
-    #if duration > 180:
-    #    api = 2
-    #elif duration > 120:
-    #    api = 1
-    #print(API_URLS[api])
-    transcription = await process_audio(audio_bytes, message, api)
-    
-    # Create an inline button for translation
-    translate_button = InlineKeyboardButton(
-        text=_("translate_button"), 
-        callback_data='translate'
-    )
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[[translate_button]])
-    
-    await message.reply(transcription, reply_markup=keyboard)
-    os.remove(f"tmp/{file_id}.ogg")
+        file = await bot.get_file(file_id)
+        file_path = file.file_path
+
+        content = await download_as_audio(file_path, f"tmp/{file_id}.ogg")
+        audio_bytes = BytesIO(content)
+        api = 0
+        #if duration > 180:
+        #    api = 2
+        #elif duration > 120:
+        #    api = 1
+        #print(API_URLS[api])
+        transcription = await process_audio(audio_bytes, message, api)
+
+        translate_button = InlineKeyboardButton(
+            text=_("translate_button"), 
+            callback_data='translate'
+        )
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[[translate_button]])
+
+        await message.reply(transcription, reply_markup=keyboard)
+        os.remove(f"tmp/{file_id}.ogg")

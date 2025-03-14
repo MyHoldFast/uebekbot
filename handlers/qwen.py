@@ -1,4 +1,5 @@
 import html
+from utils.typing_indicator import TypingIndicator
 from bs4 import BeautifulSoup
 from aiogram import Router, Bot
 from aiogram.filters import Command, CommandObject
@@ -131,8 +132,7 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot):
             "feature_config": {"thinking_enabled": False},
         }
     )
-    await bot.send_chat_action(chat_id=message.chat.id, action="typing")
-
+    
     url = "https://chat.qwen.ai/api/chat/completions"
     data = {
         "stream": False,
@@ -145,36 +145,39 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot):
         "id": str(uuid.uuid4()),
     }
 
-    async with aiohttp.ClientSession(cookies=cookies) as session:
-        try:
-            async with session.post(url, headers=headers, json=data, timeout=120, proxy=proxy) as r:
-                if r.status == 200:
-                    result = await r.json()
-                    assistant_reply = (
-                        result.get("choices", [{}])[0]
-                        .get("message", {})
-                        .get("content", "Ошибка")
-                    )
+    async with TypingIndicator(bot=bot, chat_id=message.chat.id):
+        async with aiohttp.ClientSession(cookies=cookies) as session:
+            try:
+                async with session.post(url, headers=headers, json=data, timeout=120, proxy=proxy) as r:
+                    if r.status == 200:
+                        result = await r.json()
+                        assistant_reply = (
+                            result.get("choices", [{}])[0]
+                            .get("message", {})
+                            .get("content", "Ошибка")
+                        )
 
-                    formatted_reply = process_latex(telegram_format(assistant_reply))
-                    chunks = split_message(html.escape(formatted_reply))
+                        formatted_reply = process_latex(telegram_format(assistant_reply))
+                        chunks = split_message(html.escape(formatted_reply))
 
-                    for chunk in chunks:
-                        try:
-                            await message.reply(html.unescape(chunk), parse_mode="HTML")
-                        except Exception:
-                            await message.reply(BeautifulSoup(html.unescape(chunk), "html.parser").get_text())
+                        for chunk in chunks:
+                            soup = BeautifulSoup(html.unescape(chunk), "html.parser")
+                            fixed = soup.encode(formatter="minimal").decode("utf-8")                        
+                            try:
+                                await message.reply(fixed, parse_mode="HTML")
+                            except Exception:
+                                await message.reply(soup.get_text())
 
-                    messages.append({"role": "assistant", "content": assistant_reply})
-                    save_messages(user_id, messages)
-                else:
-                    await message.reply(_("qwen_server_error"))
-        except aiohttp.ClientError:
-            await message.reply(_("qwen_network"))
-        except asyncio.TimeoutError:
-            await message.reply(_("qwen_timeout"))
-        except Exception as e:
-            await message.reply(_("qwen_error") + f" ({e})")
+                        messages.append({"role": "assistant", "content": assistant_reply})
+                        save_messages(user_id, messages)
+                    else:
+                        await message.reply(_("qwen_server_error"))
+            except aiohttp.ClientError:
+                await message.reply(_("qwen_network"))
+            except asyncio.TimeoutError:
+                await message.reply(_("qwen_timeout"))
+            except Exception as e:
+                await message.reply(_("qwen_error") + f" ({e})")
 
 
 @router.message(Command("qwenrm", ignore_case=True))
@@ -261,10 +264,11 @@ async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
                 await safe_delete(sent_message)
                 await message.reply(_("qwenimg_err"))
 
-    sent_message = await message.reply(_("qwenimg_gen"))
+    async with TypingIndicator(bot=bot, chat_id=message.chat.id):
+        sent_message = await message.reply(_("qwenimg_gen"))
 
-    async with aiohttp.ClientSession(cookies=cookies) as session:
-        await make_request(session, url, headers, data, message, sent_message)
+        async with aiohttp.ClientSession(cookies=cookies) as session:
+            await make_request(session, url, headers, data, message, sent_message)
 
 
 async def safe_delete(message):

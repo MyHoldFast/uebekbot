@@ -7,6 +7,7 @@ import time
 import html
 
 from bs4 import BeautifulSoup
+from utils.typing_indicator import TypingIndicator
 from utils.duckduckgo_chat import DuckDuckGoChat
 from aiogram import Bot, Router
 from aiogram.filters import Command, CommandObject
@@ -120,16 +121,20 @@ async def process_gemini(message: Message, command: CommandObject, bot: Bot, pho
     try:
         myfile = await asyncio.to_thread(genai.upload_file, tmp_file)
         model = genai.GenerativeModel("gemini-2.0-flash")
-        result = await asyncio.to_thread(model.generate_content, [myfile, "\n\n", text])
+
+        async with TypingIndicator(bot=bot, chat_id=message.chat.id):
+            result = await asyncio.to_thread(model.generate_content, [myfile, "\n\n", text])
 
         if result.text:
             result = telegram_format(html.escape(result.text))
             chunks = split_message(result) 
             for chunk in chunks:
+                soup = BeautifulSoup(html.unescape(chunk), "html.parser")
+                fixed = soup.encode(formatter="minimal").decode("utf-8")   
                 try:
-                    await message.reply(html.unescape(chunk), parse_mode="HTML")
+                    await message.reply(fixed, parse_mode="HTML")
                 except TelegramBadRequest:
-                    await message.reply(BeautifulSoup(html.unescape(chunk), "html.parser").get_text())
+                    await message.reply(soup.get_text())
     except Exception:
         user_language = message.from_user.language_code or DEFAULT_LANGUAGE
         _ = get_localization(user_language)
@@ -166,25 +171,29 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
             d.messages = chat_messages
             d.vqd = chat_vqd
 
-        answer = await asyncio.to_thread(d.chat, messagetext)
-        save_user_context(user_id, d.messages, d.vqd)
-        answer = process_latex(html.escape(telegram_format(answer)))
+        async with TypingIndicator(bot=message.bot, chat_id=message.chat.id):
+            answer = await asyncio.to_thread(d.chat, messagetext)
 
+        save_user_context(user_id, d.messages, d.vqd)
+        answer = html.escape(process_latex(telegram_format(answer)))
         chunks = split_message(answer) 
+        
         for chunk in chunks:
+            soup = BeautifulSoup(html.unescape(chunk), "html.parser")
+            fixed = soup.encode(formatter="minimal").decode("utf-8")   
             try:
-                await message.reply(html.unescape(chunk), parse_mode="HTML")
+                await message.reply(fixed, parse_mode="HTML")
             except TelegramBadRequest:
-                await message.reply(BeautifulSoup(html.unescape(chunk), "html.parser").get_text())
-    except Exception:
+                await message.reply(soup.get_text())
+    except Exception as e:
         user_language = message.from_user.language_code or DEFAULT_LANGUAGE
         _ = get_localization(user_language)
         await message.reply(_("gpt_error"), parse_mode="html")
 
+
 @router.message(Command("gpt", ignore_case=True))
 @check_command_enabled("gpt")
 async def cmd_gpt(message: Message, command: CommandObject, bot: Bot):
-    await message.bot.send_chat_action(chat_id=message.chat.id, action='typing')
     user_id = message.from_user.id
 
     photo = message.reply_to_message.photo[-1] if message.reply_to_message and message.reply_to_message.photo else None

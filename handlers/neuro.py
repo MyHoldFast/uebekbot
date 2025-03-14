@@ -3,6 +3,7 @@ import asyncio
 import os
 import re
 
+from utils.typing_indicator import TypingIndicator
 from aiogram import Bot, Router
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
@@ -46,18 +47,19 @@ async def send_request(user_request):
 async def neuro(message: Message, command: CommandObject, bot: Bot):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
+
     if message.reply_to_message:
         user_input = message.reply_to_message.text or message.reply_to_message.caption or ""
         if command.args:
             user_input += '\n' + command.args
     else:
         user_input = command.args if command.args else ""
-    user_language = message.from_user.language_code or DEFAULT_LANGUAGE    
-    await message.bot.send_chat_action(chat_id=message.chat.id, action='typing')
+
     if user_input:
-        result = (await send_request(user_input))
-        #if user_language and user_language != "ru" and user_language in LANGUAGES:
-            #result = await translate_text([result], "ru", user_language) or result
-        await message.reply(telegram_format(result), parse_mode="HTML")
+        async with TypingIndicator(bot=bot, chat_id=message.chat.id):
+            result = await send_request(user_input)
+            #if user_language and user_language != "ru" and user_language in LANGUAGES:
+                #result = await translate_text([result], "ru", user_language) or result
+            await message.reply(telegram_format(result), parse_mode="HTML")
     else:
-         await message.reply(_('neuro_help'))
+        await message.reply(_('neuro_help'))
