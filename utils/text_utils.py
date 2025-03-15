@@ -15,7 +15,7 @@ def close_open_tags(stack: list[tuple[str, dict]]) -> str:
 def reopen_tags(stack: list[tuple[str, dict]]) -> str:
     """Открывает теги из стека с их атрибутами."""
     return ''.join(
-        f'<{tag}{" " + " ".join(f"{k}=\"{v}\"" for k, v in attrs.items()) if attrs else ""}>'
+        f'<{tag} ' + " ".join(f'{k}="{v}"' for k, v in attrs.items()) + '>' if attrs else f'<{tag}>'
         for tag, attrs in stack
     )
 
