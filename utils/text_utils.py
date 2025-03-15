@@ -9,8 +9,11 @@ def close_open_tags(stack):
     return ''.join(f'</{tag}>' for tag, _ in reversed(stack))
 
 def reopen_tags(stack):
-    return ''.join(f'<{tag}{" " + " ".join(f"{k}=\"{v}\"" for k, v in attrs.items()) if attrs else ""}>'
-                   for tag, attrs in stack)
+    return ''.join(
+        f'<{tag}{" " + " ".join(f"{k}=\"{v}\"" for k, v in attrs.items()) if attrs else ""}>'
+        for tag, attrs in stack
+    )
+
 
 def split_html(text, max_length=4096):
     soup, parts, current_part, stack = BeautifulSoup(text, 'html.parser'), [], '', []
