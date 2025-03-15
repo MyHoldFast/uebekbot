@@ -2,24 +2,33 @@ from bs4 import BeautifulSoup, Tag
 
 SUPPORTED_TAGS = {"b", "strong", "i", "em", "u", "ins", "s", "strike", "del", "a", "code", "pre"}
 
-def remove_unsupported_tags(soup):
-    [tag.unwrap() for tag in soup.find_all(True) if tag.name not in SUPPORTED_TAGS]
+def remove_unsupported_tags(soup: BeautifulSoup) -> None:
+    """Удаляет неподдерживаемые теги из HTML-документа."""
+    for tag in soup.find_all(True):
+        if tag.name not in SUPPORTED_TAGS:
+            tag.unwrap()
 
-def close_open_tags(stack):
+def close_open_tags(stack: list[tuple[str, dict]]) -> str:
+    """Закрывает все открытые теги в стеке."""
     return ''.join(f'</{tag}>' for tag, _ in reversed(stack))
 
-def reopen_tags(stack):
+def reopen_tags(stack: list[tuple[str, dict]]) -> str:
+    """Открывает теги из стека с их атрибутами."""
     return ''.join(
         f'<{tag}{" " + " ".join(f"{k}=\"{v}\"" for k, v in attrs.items()) if attrs else ""}>'
         for tag, attrs in stack
     )
 
-
-def split_html(text, max_length=4096):
-    soup, parts, current_part, stack = BeautifulSoup(text, 'html.parser'), [], '', []
+def split_html(text: str, max_length: int = 4096) -> list[str]:
+    """Разбивает HTML-текст на части, не превышающие max_length, сохраняя структуру тегов."""
+    soup = BeautifulSoup(text, 'html.parser')
     remove_unsupported_tags(soup)
+    
+    parts: list[str] = []
+    current_part: str = ''
+    stack: list[tuple[str, dict]] = []
 
-    def recursive_split(element):
+    def recursive_split(element: Tag | str) -> None:
         nonlocal current_part, stack
         if isinstance(element, Tag):
             attrs = ' '.join(f'{k}="{v}"' for k, v in element.attrs.items())
