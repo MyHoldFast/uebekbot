@@ -1,7 +1,6 @@
 import html
 from utils.typing_indicator import TypingIndicator
 from utils.text_utils import split_html
-from bs4 import BeautifulSoup
 from aiogram import Router, Bot
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message

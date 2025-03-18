@@ -3,24 +3,20 @@ from bs4 import BeautifulSoup, Tag
 SUPPORTED_TAGS = {"b", "strong", "i", "em", "u", "ins", "s", "strike", "del", "a", "code", "pre"}
 
 def remove_unsupported_tags(soup: BeautifulSoup) -> None:
-    """Удаляет неподдерживаемые теги из HTML-документа."""
     for tag in soup.find_all(True):
         if tag.name not in SUPPORTED_TAGS:
             tag.unwrap()
 
 def close_open_tags(stack: list[tuple[str, dict]]) -> str:
-    """Закрывает все открытые теги в стеке."""
     return ''.join(f'</{tag}>' for tag, _ in reversed(stack))
 
 def reopen_tags(stack: list[tuple[str, dict]]) -> str:
-    """Открывает теги из стека с их атрибутами."""
     return ''.join(
         f'<{tag} ' + " ".join(f'{k}="{v}"' for k, v in attrs.items()) + '>' if attrs else f'<{tag}>'
         for tag, attrs in stack
     )
 
 def split_html(text: str, max_length: int = 4096) -> list[str]:
-    """Разбивает HTML-текст на части, не превышающие max_length, сохраняя структуру тегов."""
     soup = BeautifulSoup(text, 'html.parser')
     remove_unsupported_tags(soup)
     
