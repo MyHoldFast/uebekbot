@@ -1,4 +1,3 @@
-import html
 from utils.typing_indicator import TypingIndicator
 from utils.text_utils import split_html
 from aiogram import Router, Bot
@@ -158,7 +157,7 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot):
                         )
 
                         formatted_reply = process_latex(telegram_format(assistant_reply))
-                        chunks = split_html(html.escape(formatted_reply))
+                        chunks = split_html(formatted_reply)
 
                         for chunk in chunks:
                             #soup = BeautifulSoup(html.unescape(chunk), "html.parser")

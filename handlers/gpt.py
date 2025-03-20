@@ -4,7 +4,6 @@ import json
 import os
 import re
 import time
-import html
 
 from utils.text_utils import split_html
 from utils.typing_indicator import TypingIndicator
@@ -14,7 +13,6 @@ from aiogram.filters import Command, CommandObject
 from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, InlineKeyboardMarkup
 import google.generativeai as genai
 from pylatexenc.latex2text import LatexNodes2Text
-from aiogram.exceptions import TelegramBadRequest
 
 from localization import get_localization, DEFAULT_LANGUAGE
 from utils.dbmanager import DB
@@ -184,6 +182,7 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
     except Exception as e:
         user_language = message.from_user.language_code or DEFAULT_LANGUAGE
         _ = get_localization(user_language)
+        print(e)
         await message.reply(_("gpt_error"), parse_mode="html")
 
 
