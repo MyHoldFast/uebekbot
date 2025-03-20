@@ -50,10 +50,10 @@ def load_user_context(user_id):
         last_modified_time = float(context_item.get('last_modified_time', 0))
         current_time = time.time()
         if current_time - last_modified_time < 3 * 3600:
-            return json.loads(base64.b64decode(context_item.get('chat_messages')).decode('utf-8')), context_item.get('chat_vqd')
-    return None, None
+            return json.loads(base64.b64decode(context_item.get('chat_messages')).decode('utf-8')), context_item.get('chat_vqd'), context_item.get('chat_vqd_hash')
+    return None, None, None
 
-def save_user_context(user_id, chat_messages, chat_vqd):
+def save_user_context(user_id, chat_messages, chat_vqd, chat_vqd_hash):
     getcontext = ContextQuery()
     encoded_chat_messages = base64.b64encode(json.dumps(chat_messages, ensure_ascii=False).encode('utf-8')).decode('utf-8')
     current_time = time.time()
@@ -63,6 +63,7 @@ def save_user_context(user_id, chat_messages, chat_vqd):
         'uid': user_id,
         'chat_messages': encoded_chat_messages,
         'chat_vqd': chat_vqd,
+        'chat_vqd_hash': chat_vqd_hash,
         'last_modified_time': current_time
     }
 
@@ -166,15 +167,16 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
 
         d = DuckDuckGoChat(model=models[model], proxy=proxy)
 
-        chat_messages, chat_vqd = load_user_context(user_id)
-        if chat_messages is not None and chat_vqd is not None:
+        chat_messages, chat_vqd, chat_vqd_hash = load_user_context(user_id)
+        if chat_messages is not None and chat_vqd is not None and chat_vqd_hash is not None:
             d.messages = chat_messages
             d.vqd = chat_vqd
+            d.vqd_hash = chat_vqd_hash
 
         async with TypingIndicator(bot=message.bot, chat_id=message.chat.id):
             answer = await asyncio.to_thread(d.chat, messagetext)
 
-        save_user_context(user_id, d.messages, d.vqd)
+        save_user_context(user_id, d.messages, d.vqd, d.vqd_hash)
         answer = html.escape(process_latex(telegram_format(answer)))
         chunks = split_html(answer) 
         
