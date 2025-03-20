@@ -120,17 +120,16 @@ async def process_gemini(message: Message, command: CommandObject, bot: Bot, pho
         temp_file.write(image_data)
 
     try:
-        myfile = await asyncio.to_thread(genai.upload_file, tmp_file)
-        model = genai.GenerativeModel("gemini-2.0-flash")
-        result = await asyncio.to_thread(model.generate_content, [myfile, "\n\n", text])
+        async with TypingIndicator(bot=bot, chat_id=message.chat.id):
+            myfile = await asyncio.to_thread(genai.upload_file, tmp_file)
+            model = genai.GenerativeModel("gemini-2.0-flash")
+            result = await asyncio.to_thread(model.generate_content, [myfile, "\n\n", text])
 
-        if result.text:
-            result = telegram_format(result.text)
-            for x in range(0, len(result), 4000):
-                try:
-                    await message.reply(result[x:x + 4000], parse_mode="HTML")
-                except TelegramBadRequest:
-                    await message.reply(html.quote(result[x:x + 4000]))
+            if result.text:
+                chunks = split_html(telegram_format(result.text))
+                for chunk in chunks:
+                    await message.reply(chunk, parse_mode="HTML")
+                
     except Exception:
         user_language = message.from_user.language_code or DEFAULT_LANGUAGE
         _ = get_localization(user_language)
@@ -172,7 +171,7 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
             answer = await asyncio.to_thread(d.chat, messagetext)
 
         save_user_context(user_id, d.messages, d.vqd, d.vqd_hash)
-        answer = html.escape(process_latex(telegram_format(answer)))
+        answer = process_latex(telegram_format(answer))
         chunks = split_html(answer) 
         
         for chunk in chunks:
