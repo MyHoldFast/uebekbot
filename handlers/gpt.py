@@ -122,20 +122,15 @@ async def process_gemini(message: Message, command: CommandObject, bot: Bot, pho
     try:
         myfile = await asyncio.to_thread(genai.upload_file, tmp_file)
         model = genai.GenerativeModel("gemini-2.0-flash")
-
-        async with TypingIndicator(bot=bot, chat_id=message.chat.id):
-            result = await asyncio.to_thread(model.generate_content, [myfile, "\n\n", text])
+        result = await asyncio.to_thread(model.generate_content, [myfile, "\n\n", text])
 
         if result.text:
-            result = telegram_format(html.escape(result.text))
-            chunks = chunk(result) 
-            for chunk in chunks:
-                #soup = BeautifulSoup(html.unescape(chunk), "html.parser")
-                #fixed = soup.encode(formatter="minimal").decode("utf-8")   
-                #try:
-                await message.reply(chunk, parse_mode="HTML")
-                #except TelegramBadRequest:
-                #    await message.reply(soup.get_text())
+            result = telegram_format(result.text)
+            for x in range(0, len(result), 4000):
+                try:
+                    await message.reply(result[x:x + 4000], parse_mode="HTML")
+                except TelegramBadRequest:
+                    await message.reply(html.quote(result[x:x + 4000]))
     except Exception:
         user_language = message.from_user.language_code or DEFAULT_LANGUAGE
         _ = get_localization(user_language)
