@@ -1,4 +1,4 @@
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup, Tag, NavigableString
 import html
 
 SUPPORTED_TAGS = {"b", "strong", "i", "em", "u", "ins", "s", "strike", "del", "a", "code", "pre", "blockquote"}
@@ -11,78 +11,93 @@ def remove_unsupported_tags(soup: BeautifulSoup) -> None:
 def sanitize_attributes(attrs: dict) -> dict:
     sanitized = {}
     for key, value in attrs.items():
-        sanitized[key] = html.escape(str(value))
+        if key == 'href':
+            sanitized[key] = html.escape(str(value), quote=True)
+        else:
+            sanitized[key] = html.escape(str(value))
     return sanitized
+
+def build_open_tags(tag_stack: list[tuple[str, dict]]) -> str:
+    result = ""
+    for tag, attrs in tag_stack:
+        if attrs:
+            attr_str = " " + " ".join(f'{k}="{v}"' for k, v in attrs.items())
+        else:
+            attr_str = ""
+        result += f"<{tag}{attr_str}>"
+    return result
+
+def build_close_tags(tag_stack: list[tuple[str, dict]]) -> str:
+    result = ""
+    for tag, _ in reversed(tag_stack):
+        result += f"</{tag}>"
+    return result
 
 def split_html(text: str, max_length: int = 4096) -> list[str]:
     soup = BeautifulSoup(text, 'html.parser')
     remove_unsupported_tags(soup)
-
     parts = []
     current_part = ""
-    tag_stack = []
+    tag_stack: list[tuple[str, dict]] = []
 
-    def add_tag_to_stack(tag_name: str, attrs: dict) -> str:
-        tag_stack.append((tag_name, attrs))
-        attrs_str = ' '.join(f'{k}="{v}"' for k, v in attrs.items())
-        return f"<{tag_name}{' ' + attrs_str if attrs_str else ''}>"
-
-    def close_tags_from_stack() -> str:
-        return ''.join(f"</{tag}>" for tag, _ in reversed(tag_stack))
-
-    def reopen_tags_from_stack() -> str:
-        return ''.join(f"<{tag}{' ' + ' '.join(f'{k}="{v}"' for k, v in attrs.items())}>" for tag, attrs in tag_stack)
-
-    def process_element(element) -> None:
-        nonlocal current_part
-
-        if isinstance(element, Tag):
-            tag_name = element.name
-            attrs = sanitize_attributes(element.attrs)
-            tag_start = add_tag_to_stack(tag_name, attrs)
-
-            if len(current_part) + len(tag_start) > max_length:
-                parts.append(current_part + close_tags_from_stack())
-                current_part = reopen_tags_from_stack() + tag_start
+    def add_text(text_fragment: str):
+        nonlocal current_part, parts
+        esc_text = html.escape(text_fragment)
+        while esc_text:
+            available = max_length - len(current_part)
+            if available <= 0:
+                current_part += build_close_tags(tag_stack)
+                parts.append(current_part)
+                current_part = build_open_tags(tag_stack)
+                available = max_length - len(current_part)
+            chunk = esc_text[:available]
+            current_part += chunk
+            esc_text = esc_text[available:]
+    
+    def process_node(node):
+        nonlocal current_part, parts, tag_stack
+        if isinstance(node, NavigableString):
+            add_text(str(node))
+        elif isinstance(node, Tag):
+            tag_name = node.name
+            if tag_name == 'a':
+                attrs = sanitize_attributes(node.attrs)
+                if "href" not in attrs:
+                    for child in node.contents:
+                        process_node(child)
+                    return
             else:
-                current_part += tag_start
-
-            for child in element.contents:
-                process_element(child)
-
-            tag_end = f"</{tag_name}>"
-            if len(current_part) + len(tag_end) > max_length:
-                parts.append(current_part + close_tags_from_stack())
-                current_part = reopen_tags_from_stack() + tag_end
+                attrs = sanitize_attributes(node.attrs)
+            if attrs:
+                attr_str = " " + " ".join(f'{k}="{v}"' for k, v in attrs.items())
             else:
-                current_part += tag_end
-
+                attr_str = ""
+            open_tag = f"<{tag_name}{attr_str}>"
+            if len(current_part) + len(open_tag) > max_length:
+                current_part += build_close_tags(tag_stack)
+                parts.append(current_part)
+                current_part = build_open_tags(tag_stack)
+            current_part += open_tag
+            tag_stack.append((tag_name, attrs))
+            for child in node.contents:
+                process_node(child)
+            close_tag = f"</{tag_name}>"
+            if len(current_part) + len(close_tag) > max_length:
+                current_part += build_close_tags(tag_stack)
+                parts.append(current_part)
+                tag_stack.pop()
+                current_part = build_open_tags(tag_stack)
+                current_part += close_tag
+                tag_stack.append((tag_name, attrs))
+            else:
+                current_part += close_tag
             tag_stack.pop()
-
-        elif isinstance(element, str):
-            text = element
-            while text:
-                available_space = max_length - len(current_part)
-                if available_space <= 0:
-                    parts.append(current_part + close_tags_from_stack())
-                    current_part = reopen_tags_from_stack()
-                    available_space = max_length - len(current_part)
-
-                chunk = text[:available_space]
-                current_part += html.escape(chunk)
-                text = text[available_space:]
-
-    for element in soup.contents:
-        process_element(element)
-
+    
+    for node in soup.contents:
+        process_node(node)
+    
     if current_part:
-        parts.append(current_part + close_tags_from_stack())
-
-    for i in range(len(parts) - 1):
-        open_tags = [tag for tag, _ in tag_stack]
-        for tag in reversed(open_tags):
-            if f'<{tag}' in parts[i] and f'</{tag}>' not in parts[i]:
-                parts[i] += f'</{tag}>'
-                parts[i + 1] = f'<{tag}>' + parts[i + 1]
-
+        current_part += build_close_tags(tag_stack)
+        parts.append(current_part)
+    
     return parts
