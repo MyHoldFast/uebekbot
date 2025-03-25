@@ -1,1 +1,1 @@
-cmds = ['/summary', '/ocr', '/gpt', '/stt', '/neuro', '/qwen', '/qwenimg']
+cmds = ['/summary', '/ocr', '/gpt', '/stt', '/neuro', '/qwen', '/qwenimg', '/gemimg']
