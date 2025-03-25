@@ -67,7 +67,7 @@ async def cmd_gemimg(message: Message, command: CommandObject, bot: Bot):
                 if image_bytes:
                     photo = BufferedInputFile(image_bytes, filename="image.png")
                     await safe_delete(sent_message)
-                    await message.answer_photo(photo=photo)
+                    await message.reply_photo(photo=photo)
                 else:
                     await safe_delete(sent_message)
                     await message.reply(_("qwenimg_err"))
