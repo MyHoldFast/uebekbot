@@ -1,5 +1,6 @@
 import requests
 import json
+import threading
 
 class DuckDuckGoChat:
     chat_url = "https://duckduckgo.com/duckchat/v1/chat"
@@ -29,6 +30,8 @@ class DuckDuckGoChat:
         self.vqd = None
         self.vqd_hash = None
         self.cookies = {"dcs": "1", "dcm": "3"}
+        self._status_task_started = False
+        self._status_task_lock = threading.Lock()
 
     def chat(self, user_input, timeout=30):
         if not self.vqd or not self.vqd_hash:
@@ -41,7 +44,7 @@ class DuckDuckGoChat:
         }
         headers = self.common_headers.copy()
         headers["x-vqd-4"] = self.vqd
-        headers["x-vqd-hash-1"] = "" #self.vqd_hash
+        headers["x-vqd-hash-1"] = ""  # self.vqd_hash
         
         proxies = {"http": self.proxy, "https": self.proxy} if self.proxy else None
         response = requests.post(
@@ -67,6 +70,9 @@ class DuckDuckGoChat:
         
         result = "".join(results)
         self.messages.append({"role": "assistant", "content": result})
+
+        self._start_status_task()
+
         return result
 
     @staticmethod
@@ -80,3 +86,23 @@ class DuckDuckGoChat:
             return response.headers.get("x-vqd-4"), response.headers.get("x-vqd-hash-1")
         
         raise Exception(f"Failed to initialize chat: {response.status_code}")
+
+    def _start_status_task(self):
+        with self._status_task_lock:
+            if not self._status_task_started:
+                self._status_task_started = True
+                threading.Thread(target=self._periodic_status_check, daemon=True).start()
+
+    def _periodic_status_check(self):
+        while True:
+            try:
+                headers = self.common_headers.copy()
+                proxies = {"http": self.proxy, "https": self.proxy} if self.proxy else None
+                response = requests.get("https://duckduckgo.com/duckchat/v1/status", headers=headers, proxies=proxies)                
+                #if response.status_code == 200:
+                #    print("Status check successful")
+                #else:
+                #   print(f"Status check failed: {response.status_code}")
+            except Exception as e:
+                print(f"Error during status check: {e}")           
+            threading.Event().wait(60)
