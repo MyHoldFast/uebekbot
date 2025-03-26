@@ -11,6 +11,7 @@
 - **/neuro**: Запрос к Yandex Neuro.
 - **/qwen**: Запрос к нейросети сhat.qwenlm.ai.
 - **/qwenimg**: Генерация изображения через нейросеть сhat.qwenlm.ai.
+- **/qwenimg**: Генерация изображения через Google Gemini.
 
 ## Модели
 
