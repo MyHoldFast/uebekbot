@@ -7,7 +7,7 @@ import time
 
 from utils.text_utils import split_html
 from utils.typing_indicator import TypingIndicator
-from utils.duckduckgo_chat import DuckDuckGoChat
+from duckduckgo_search import DDGS
 from aiogram import Bot, Router
 from aiogram.filters import Command, CommandObject
 from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, InlineKeyboardMarkup
@@ -157,18 +157,20 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
         user_model = db.get(Query().uid == user_id)
         model = user_model["model"] if user_model and user_model["model"] in models else "gpt-4o-mini"
 
-        d = DuckDuckGoChat(model=models[model], proxy=proxy)
+        #d = DuckDuckGoChat(model=models[model], proxy=proxy)
+        d = DDGS()
 
         chat_messages, chat_vqd, chat_vqd_hash = load_user_context(user_id)
         if chat_messages is not None and chat_vqd is not None and chat_vqd_hash is not None:
-            d.messages = chat_messages
-            d.vqd = chat_vqd
-            d.vqd_hash = chat_vqd_hash
+            
+            d._chat_messages = chat_messages
+            d._chat_vqd = chat_vqd
+            d._chat_vqd_hash = chat_vqd_hash
 
         async with TypingIndicator(bot=message.bot, chat_id=message.chat.id):
             answer = await asyncio.to_thread(d.chat, messagetext)
 
-        save_user_context(user_id, d.messages, d.vqd, d.vqd_hash)
+        save_user_context(user_id, d._chat_messages, d._chat_vqd, d._chat_vqd_hash)
         answer = process_latex(telegram_format(answer))
         chunks = split_html(answer) 
         
