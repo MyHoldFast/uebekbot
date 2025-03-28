@@ -214,7 +214,6 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
                 ),
                 timeout=60
             )
-
         answer = response.choices[0].message.content
 
         if answer:
