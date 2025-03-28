@@ -39,7 +39,7 @@ def split_html(text: str, max_length: int = 4096) -> list[str]:
     # Если тегов не найдено, считаем что это обычный текст
     if not soup.find(True):
         parts = []
-        esc_text = html.escape(text)
+        esc_text = html.escape(text, False)
         while esc_text:
             parts.append(esc_text[:max_length])
             esc_text = esc_text[max_length:]
@@ -52,7 +52,7 @@ def split_html(text: str, max_length: int = 4096) -> list[str]:
 
     def add_text(text_fragment: str):
         nonlocal current_part, parts
-        esc_text = html.escape(text_fragment)
+        esc_text = html.escape(text_fragment, False)
         while esc_text:
             available = max_length - len(current_part)
             if available <= 0:
