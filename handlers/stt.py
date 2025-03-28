@@ -8,6 +8,7 @@ from io import BytesIO
 
 from utils.typing_indicator import TypingIndicator
 from aiogram import Bot, Router, types
+from aiogram.enums import ChatType
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from utils.command_states import check_command_enabled
@@ -85,24 +86,41 @@ router = Router()
 async def stt_command(message: types.Message, bot: Bot):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
-
-    if not message.reply_to_message or (not message.reply_to_message.voice and not message.reply_to_message.video and not message.reply_to_message.video_note):
+    if not (
+        (message.reply_to_message and (message.reply_to_message.voice or message.reply_to_message.video or message.reply_to_message.video_note)) or 
+        (message.voice or message.video or message.video_note)
+    ):
         await message.reply(_("voice_help"))
         return
 
     async with TypingIndicator(bot=bot, chat_id=message.chat.id):
-        if message.reply_to_message.voice:
-            voice = message.reply_to_message.voice
-            file_id = voice.file_id
-            duration = voice.duration
-        if message.reply_to_message.video:
-            video = message.reply_to_message.video
-            file_id = video.file_id
-            duration = video.duration
-        if message.reply_to_message.video_note:
-            video = message.reply_to_message.video_note
-            file_id = video.file_id
-            duration = video.duration
+        if message.reply_to_message:
+            if message.reply_to_message.voice:
+                voice = message.reply_to_message.voice
+                file_id = voice.file_id
+                duration = voice.duration
+            elif message.reply_to_message.video:
+                video = message.reply_to_message.video
+                file_id = video.file_id
+                duration = video.duration
+            elif message.reply_to_message.video_note:
+                video = message.reply_to_message.video_note
+                file_id = video.file_id
+                duration = video.duration
+        # Обработка самого message
+        else:
+            if message.voice:
+                voice = message.voice
+                file_id = voice.file_id
+                duration = voice.duration
+            elif message.video:
+                video = message.video
+                file_id = video.file_id
+                duration = video.duration
+            elif message.video_note:
+                video = message.video_note
+                file_id = video.file_id
+                duration = video.duration
 
         file = await bot.get_file(file_id)
         file_path = file.file_path
@@ -120,8 +138,16 @@ async def stt_command(message: types.Message, bot: Bot):
         translate_button = InlineKeyboardButton(
             text=_("translate_button"), 
             callback_data='translate'
-        )
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[[translate_button]])
+        )        
+
+        if message.chat.type == ChatType.PRIVATE:
+            query_button = InlineKeyboardButton(
+                text=_("query_button"),
+                callback_data='query'
+            )
+            keyboard = InlineKeyboardMarkup(inline_keyboard=[[translate_button], [query_button]])
+        else:
+            keyboard = InlineKeyboardMarkup(inline_keyboard=[[translate_button]])        
 
         await message.reply(transcription, reply_markup=keyboard)
         os.remove(f"tmp/{file_id}.ogg")

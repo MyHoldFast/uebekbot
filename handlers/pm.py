@@ -2,11 +2,15 @@ from aiogram import Router, Bot, F
 from aiogram.enums import ChatType, ContentType
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
-from localization import get_localization, DEFAULT_LANGUAGE
 from handlers.gpt import process_gpt, process_gemini
+from handlers.stt import stt_command
 from handlers.qwen import cmd_qwen
+from localization import get_localization, DEFAULT_LANGUAGE
+from utils.ThrottlingMiddleware import ThrottlingMiddleware
 
 router = Router()
+
+router.message.middleware(ThrottlingMiddleware(default_rate_limit=2.0))
 
 @router.message(Command("start"), F.chat.type == ChatType.PRIVATE)
 async def cmd_start(message: Message):
@@ -42,7 +46,16 @@ async def handle_photo(message: Message, bot: Bot):
 
 @router.message(
     F.chat.type == ChatType.PRIVATE,
-    F.content_type.not_in({ContentType.TEXT, ContentType.PHOTO}),
+    F.content_type == ContentType.VOICE,
+    F.forward_from == None,  
+    F.forward_from_chat == None 
+)
+async def handle_voice(message: Message, bot: Bot):
+    await stt_command(message, bot)
+
+@router.message(
+    F.chat.type == ChatType.PRIVATE,
+    F.content_type.not_in({ContentType.TEXT, ContentType.PHOTO, ContentType.VOICE}),
     F.forward_from == None,
     F.forward_from_chat == None
 )
