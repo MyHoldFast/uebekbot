@@ -12,6 +12,10 @@ def remove_unsupported_tags(soup: BeautifulSoup) -> None:
         if tag.name not in SUPPORTED_TAGS:
             tag.unwrap()
 
+async def remove_think_tag(text):
+    pattern = r'^&lt;think&gt;.*?&lt;/think&gt;\s*'
+    return re.sub(pattern, '', text, flags=re.DOTALL).strip()
+
 def sanitize_attributes(attrs: dict) -> dict:
     sanitized = {}
     for key, value in attrs.items():
@@ -46,6 +50,7 @@ def adjust_chunk(chunk: str) -> str:
     return chunk
 
 def split_html(text: str, max_length: int = 4096) -> list[str]:
+    text = remove_think_tag(text)
     soup = BeautifulSoup(text, 'html.parser')
     
     if not soup.find(True):
