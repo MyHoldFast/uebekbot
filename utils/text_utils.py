@@ -12,7 +12,7 @@ def remove_unsupported_tags(soup: BeautifulSoup) -> None:
         if tag.name not in SUPPORTED_TAGS:
             tag.unwrap()
 
-async def remove_think_tag(text):
+def remove_think_tag(text):
     pattern = r'^&lt;think&gt;.*?&lt;/think&gt;\s*'
     return re.sub(pattern, '', text, flags=re.DOTALL).strip()
 
