@@ -1,5 +1,5 @@
 from bs4 import BeautifulSoup, Tag, NavigableString
-import html
+import html, re
 
 SUPPORTED_TAGS = {"b", "strong", "i", "em", "u", "ins", "s", "strike", "del", "a", "code", "pre", "blockquote"}
 
@@ -7,6 +7,10 @@ def remove_unsupported_tags(soup: BeautifulSoup) -> None:
     for tag in soup.find_all(True):
         if tag.name not in SUPPORTED_TAGS:
             tag.unwrap()
+
+def remove_think_tag(text):
+    pattern = r'^&lt;think&gt;.*?&lt;/think&gt;\s*'
+    return re.sub(pattern, '', text, flags=re.DOTALL).strip()
 
 def sanitize_attributes(attrs: dict) -> dict:
     sanitized = {}
@@ -34,6 +38,8 @@ def build_close_tags(tag_stack: list[tuple[str, dict]]) -> str:
     return result
 
 def split_html(text: str, max_length: int = 4096) -> list[str]:
+    text = remove_think_tag(text)
+    print(text)
     soup = BeautifulSoup(text, 'html.parser')
     
     # Если тегов не найдено, считаем что это обычный текст
