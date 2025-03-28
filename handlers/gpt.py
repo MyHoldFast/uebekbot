@@ -147,7 +147,8 @@ async def process_gemini(
     try:
         async with TypingIndicator(bot=bot, chat_id=message.chat.id):
             myfile = await asyncio.to_thread(genai.upload_file, tmp_file)
-            model = genai.GenerativeModel("gemini-2.5-pro-exp-03-25")
+            #model = genai.GenerativeModel("gemini-2.5-pro-exp-03-25") 50 request per day
+            model = genai.GenerativeModel("gemini-2.0-flash")
             result = await asyncio.to_thread(
                 model.generate_content, [myfile, "\n\n", text]
             )

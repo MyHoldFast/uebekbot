@@ -1,5 +1,12 @@
 import aiohttp, os
 
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://translate.google.com/",
+}
+
 async def translate_text(text, source_lang='auto', target_lang='ru'):
     url = "https://translate.googleapis.com/translate_a/single"
     params = {
@@ -10,8 +17,11 @@ async def translate_text(text, source_lang='auto', target_lang='ru'):
         "q": text
     }
 
+    proxy = os.getenv("PROXY")
+    headers = HEADERS.copy()
+
     async with aiohttp.ClientSession() as session:
-        async with session.post(url, data=params) as response:
+        async with session.post(url, data=params, proxy=proxy, headers=headers) as response:
             data = await response.json()
             if data and data[0]:
                 return ''.join(item[0] for item in data[0])
