@@ -157,7 +157,7 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot):
                         )
 
                         formatted_reply = process_latex(telegram_format(assistant_reply))
-                        chunks = split_html(formatted_reply)
+                        chunks = await split_html(formatted_reply)
 
                         for chunk in chunks:
                             #soup = BeautifulSoup(html.unescape(chunk), "html.parser")
