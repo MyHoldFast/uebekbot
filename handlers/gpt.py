@@ -153,7 +153,7 @@ async def process_gemini(
             )
 
             if result.text:
-                chunks = await split_html(telegram_format(result.text))
+                chunks = split_html(telegram_format(result.text))
                 for chunk in chunks:
                     await message.reply(chunk, parse_mode="HTML")
 
@@ -221,7 +221,7 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
             chat_messages.append({"role": "assistant", "content": answer})
             save_user_context(user_id, chat_messages)
             answer = process_latex(telegram_format(answer))
-            chunks = await split_html(answer)
+            chunks = split_html(answer)
             for chunk in chunks:
                 await message.reply(chunk, parse_mode="HTML")
 
