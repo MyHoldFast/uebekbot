@@ -7,7 +7,28 @@ HEADERS = {
     "Referer": "https://translate.google.com/",
 }
 
+
 async def translate_text(text, source_lang='auto', target_lang='ru'):
+    url = "https://translate.flossboxin.org.in/translate"
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "q": text, 
+        "source": source_lang, 
+        "target": target_lang,  
+        "format": "text", 
+        "alternatives": 3,  
+        "api_key": ""  
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, json=payload, headers=headers) as response:
+            if response.status == 200:
+                data = await response.json()
+                return data.get("translatedText") 
+            else:
+                return ""
+
+async def translate_text_google(text, source_lang='auto', target_lang='ru'):
     url = "https://translate.googleapis.com/translate_a/single"
     params = {
         "client": "gtx",
