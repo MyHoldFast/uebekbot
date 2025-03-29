@@ -16,7 +16,7 @@ async def translate_text(text, source_lang='auto', target_lang='ru'):
         "source": source_lang, 
         "target": target_lang,  
         "format": "text", 
-        "alternatives": 3,  
+        "alternatives": 0,  
         "api_key": ""  
     }
 
