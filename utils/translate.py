@@ -26,7 +26,8 @@ async def translate_text(text, source_lang='auto', target_lang='ru'):
                 data = await response.json()
                 return data.get("translatedText") 
             else:
-                return ""
+                error_message = await response.text()
+                raise Exception(f"Error {response.status}: {error_message}")
 
 async def translate_text_google(text, source_lang='auto', target_lang='ru'):
     url = "https://translate.googleapis.com/translate_a/single"
