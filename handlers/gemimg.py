@@ -24,7 +24,7 @@ async def safe_delete(message):
 async def generate_image(session, user_input):
     headers = {"Content-Type": "application/json"}
     data = {
-        "contents": [{"parts": [{"text": await translate_text(user_input, "auto", "en")}]}],
+        "contents": [{"parts": [{"text": user_input}]}],
         "generationConfig": {"responseModalities": ["Text", "Image"]}
     }
     try:
