@@ -1,23 +1,23 @@
 # UebekBot
 
-Для запуска требуется **python3.10**
+**python3.10** is required to run
 
-Этот проект представляет собой бота, который выполняет несколько функций, включая:
+This project is a bot that performs several functions, including:
 
-- **/summary**: Краткая выжимка из видео на YouTube, статей из Википедии или материалов с Habr, а так же просто длинного сообщения через реплай
-- **/ocr**: Распознавание текста на изображениях.
-- **/stt**: Перевод голосовых сообщений в текст.
-- **/gpt**: Чат с AI на базе GPT, а так же в сочетании с изображением и запросом - запрос к Google Gemini
-- **/neuro**: Запрос к Yandex Neuro.
-- **/qwen**: Запрос к нейросети сhat.qwenlm.ai.
-- **/qwenimg**: Генерация изображения через нейросеть сhat.qwenlm.ai.
-- **/gemimg**: Генерация изображения через Google Gemini.
+- **/summary**: A short summary of a YouTube video, Wikipedia article, or Habr material, as well as just a long message via replay
+- **/ocr**: Text recognition in images.
+- **/stt**: Translation of voice messages into text.
+- **/gpt**: Chat with AI based on GPT, as well as in combination with an image and a request - a request to Google Gemini
+- **/neuro**: A request to Yandex Neuro.
+- **/qwen**: A request to the neural network chat.qwenlm.ai.
+- **/qwenimg**: Image generation via the neural network chat.qwenlm.ai.
+- **/gemimg**: Image generation via Google Gemini.
 
-## Модели
+## Models
 
-В проекте используются некоторые модели, предоставляемые [gpt4free](https://github.com/xtekky/gpt4free)
+The project uses some models provided by [gpt4free](https://github.com/xtekky/gpt4free)
 
-Для работы некоторых функций требуются следующие сервисы:
+Some features require the following services:
 
-- **/summary**: Для этой функции требуется Yandex OAuth Token (он бесплатный).
-- **/ocr**: Для этой функции необходим доступ к Yandex Cloud.
+- **/summary**: This feature requires Yandex OAuth Token (it's free).
+- **/ocr**: This feature requires access to Yandex Cloud.
