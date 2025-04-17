@@ -30,8 +30,8 @@ db, Query = DB("db/gpt_models.json").get_db()
 context_db, ContextQuery = DB("db/gpt_context.json").get_db()
 
 models = {
-    "gpt-4": "gpt-4",
     "gpt-4o": "gpt-4o",
+    "gpt-4": "gpt-4",
     "o3-mini": "o3-mini",
     "deepseek-r1": "deepseek-r1"
 }
@@ -176,7 +176,7 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
     messagetext = messagetext.strip()
 
     if not messagetext:
-        model = "gpt-4"
+        model = "gpt-4o"
         user_model = db.get(Query().uid == user_id)
         if user_model and user_model["model"] in models:
             model = user_model["model"]
