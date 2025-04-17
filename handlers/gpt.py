@@ -190,7 +190,7 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
         return
 
     try:
-        #proxy = os.getenv("PROXY")
+        proxy = os.getenv("PROXY")
         user_model = db.get(Query().uid == user_id)
         model = (
             user_model["model"]
@@ -204,7 +204,7 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
         else:
             chat_messages = [{"role": "user", "content": messagetext}]
 
-        client = AsyncClient()
+        client = AsyncClient(proxies=proxy)
 
         async with TypingIndicator(bot=message.bot, chat_id=message.chat.id):
             response = await asyncio.wait_for(
