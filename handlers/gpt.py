@@ -195,7 +195,7 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
         model = (
             user_model["model"]
             if user_model and user_model["model"] in models
-            else "gpt-4"
+            else "gpt-4o"
         )
 
         chat_messages= load_user_context(user_id)
