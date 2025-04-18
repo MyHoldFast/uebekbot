@@ -7,6 +7,7 @@ from handlers.stt import stt_command
 from handlers.qwen import cmd_qwen
 from localization import get_localization, DEFAULT_LANGUAGE
 from utils.ThrottlingMiddleware import ThrottlingMiddleware
+from utils.StatsMiddleware import save_stats
 
 router = Router()
 
@@ -34,6 +35,7 @@ async def cmd_start(message: Message):
 async def pm(message: Message, bot: Bot):
     command = CommandObject(command=None, args=message.text)
     await cmd_qwen(message, command, bot)
+    save_stats('/qwen')
     #await process_gpt(message, command, message.from_user.id)
 
 @router.message(
@@ -46,6 +48,7 @@ async def handle_photo(message: Message, bot: Bot):
     photo = message.reply_to_message.photo[-1] if message.reply_to_message and message.reply_to_message.photo else None
     photo = photo or (message.photo[-1] if message.photo else None)
     await process_gemini(message, command, bot, photo)
+    save_stats('/gpt')
 
 @router.message(
     F.chat.type == ChatType.PRIVATE,
@@ -54,6 +57,7 @@ async def handle_photo(message: Message, bot: Bot):
 )
 async def handle_voice(message: Message, bot: Bot):
     await stt_command(message, bot)
+    save_stats('/stt')
 
 @router.message(
     F.chat.type == ChatType.PRIVATE,
