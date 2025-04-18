@@ -37,8 +37,12 @@ class StatsMiddleware(BaseMiddleware):
         return await handler(event, data)
 
 def save_chat(chat_id: str, chat_title: str):
+    global chats_db, ChatsQuery
+    chats_db, ChatsQuery = DB('db/chats.json').get_db()
+
     if not chats_db.search(ChatsQuery().chat_id == chat_id):
         chats_db.insert({'chat_id': chat_id, 'chat_title': chat_title})
+
 
 def get_all_chats():
     return chats_db.all()
