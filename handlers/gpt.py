@@ -171,13 +171,13 @@ async def process_gemini(message: Message, command: CommandObject, bot: Bot, pho
         os.remove(tmp_file)
 
 
-def chat_with_duckai(message, chat_messages, chat_vqd, chat_vqd_hash):
+def chat_with_duckai(model, message, chat_messages, chat_vqd, chat_vqd_hash):
     duck_ai = DuckAI(proxy=os.getenv("PROXY"))
     if chat_messages is not None and chat_vqd is not None and chat_vqd_hash is not None:
         duck_ai._chat_messages = chat_messages
         duck_ai._chat_vqd = chat_vqd
         duck_ai._chat_vqd_hash = chat_vqd_hash
-    answer = duck_ai.chat(message)
+    answer = duck_ai.chat(message, model=model)
     return answer, duck_ai._chat_messages, duck_ai._chat_vqd, duck_ai._chat_vqd_hash
 
 
@@ -215,6 +215,7 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
                 answer, messages, vqd, vqdhash = await loop.run_in_executor(
                     executor,
                     chat_with_duckai,
+                    model,
                     messagetext,
                     chat_messages,
                     chat_vqd,
