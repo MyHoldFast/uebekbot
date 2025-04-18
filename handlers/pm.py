@@ -12,6 +12,11 @@ router = Router()
 
 router.message.middleware(ThrottlingMiddleware(default_rate_limit=2.0))
 
+is_not_forwarded = (
+    F.forward_from == None,
+    F.forward_from_chat == None,
+)
+
 @router.message(Command("start"), F.chat.type == ChatType.PRIVATE)
 async def cmd_start(message: Message):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
@@ -24,8 +29,7 @@ async def cmd_start(message: Message):
     F.chat.type == ChatType.PRIVATE,
     lambda message: message.text and not message.text.startswith("/"),
     F.content_type == ContentType.TEXT,
-    F.forward_from == None,
-    F.forward_from_chat == None 
+    *is_not_forwarded
 )
 async def pm(message: Message, bot: Bot):
     command = CommandObject(command=None, args=message.text)
@@ -35,8 +39,7 @@ async def pm(message: Message, bot: Bot):
 @router.message(
     F.chat.type == ChatType.PRIVATE,
     F.content_type == ContentType.PHOTO,
-    F.forward_from == None,  
-    F.forward_from_chat == None 
+    *is_not_forwarded 
 )
 async def handle_photo(message: Message, bot: Bot):
     command = CommandObject(command=None, args=message.caption) 
@@ -47,8 +50,7 @@ async def handle_photo(message: Message, bot: Bot):
 @router.message(
     F.chat.type == ChatType.PRIVATE,
     F.content_type == ContentType.VOICE,
-    F.forward_from == None,  
-    F.forward_from_chat == None 
+    *is_not_forwarded
 )
 async def handle_voice(message: Message, bot: Bot):
     await stt_command(message, bot)
@@ -56,8 +58,7 @@ async def handle_voice(message: Message, bot: Bot):
 @router.message(
     F.chat.type == ChatType.PRIVATE,
     F.content_type.not_in({ContentType.TEXT, ContentType.PHOTO, ContentType.VOICE}),
-    F.forward_from == None,
-    F.forward_from_chat == None
+    *is_not_forwarded
 )
 async def handle_other_content(message: Message, bot: Bot):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE

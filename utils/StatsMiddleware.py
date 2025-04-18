@@ -48,6 +48,9 @@ def get_all_chats():
     return chats_db.all()
 
 def save_stats(cmd: str):
+    global db, Query
+    db, Query = DB('db/stats.json').get_db()
+
     current_datetime = datetime.now(moscow_tz)
     stats_query = Query()
     result = db.search(stats_query.date == str(current_datetime.date()))
@@ -60,6 +63,7 @@ def save_stats(cmd: str):
         stats_data = result[0]
         stats_data[cmd] = int(stats_data.get(cmd, 0)) + 1
         db.update(stats_data, stats_query.date == str(current_datetime.date()))
+
         
 def get_stats(start_date: Optional[str] = None, end_date: Optional[str] = None) -> Tuple[Optional[str], Dict[str, int], Dict[str, int], Optional[str]]:
     total_stats = {cmd: 0 for cmd in cmds}  
