@@ -1,6 +1,6 @@
 # UebekBot
 
-**python3.10** is required to run
+![Python >= 3.10](https://img.shields.io/badge/python->=3.10-red.svg)
 
 This project is a bot that performs several functions, including:
 
