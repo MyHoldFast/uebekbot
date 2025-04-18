@@ -182,17 +182,21 @@ def chat_with_duckai(model, message, chat_messages, chat_vqd, chat_vqd_hash):
 
 
 async def process_gpt(message: Message, command: CommandObject, user_id):
-    messagetext = message.reply_to_message.text if message.reply_to_message else ""
-    if command.args:
-        messagetext += "\n" + command.args
-    messagetext = messagetext.strip()
+    if message.reply_to_message:
+        user_input = (
+            message.reply_to_message.text or message.reply_to_message.caption or ""
+        )
+        if command.args:
+            user_input += "\n" + command.args
+    else:
+        user_input = command.args if command.args else ""
 
-    if not messagetext:
-        model = "gpt-4o-mini"
-        user_model = db.get(Query().uid == user_id)
-        if user_model and user_model["model"] in models:
-            model = user_model["model"]
+    model = "gpt-4o-mini"
+    user_model = db.get(Query().uid == user_id)
+    if user_model and user_model["model"] in models:
+        model = user_model["model"]
 
+    if not user_input:        
         keyboard = get_gpt_keyboard(model)
         user_language = message.from_user.language_code or DEFAULT_LANGUAGE
         _ = get_localization(user_language)
@@ -200,13 +204,6 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
         return
 
     try:
-        user_model = db.get(Query().uid == user_id)
-        model = (
-            user_model["model"]
-            if user_model and user_model["model"] in models
-            else "gpt-4o-mini"
-        )
-
         chat_messages, chat_vqd, chat_vqd_hash = load_user_context(user_id)
 
         async with TypingIndicator(bot=message.bot, chat_id=message.chat.id):
@@ -216,7 +213,7 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
                     executor,
                     chat_with_duckai,
                     model,
-                    messagetext,
+                    user_input,
                     chat_messages,
                     chat_vqd,
                     chat_vqd_hash,
