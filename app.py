@@ -4,7 +4,7 @@ import sys
 import json
 import redis
 from urllib.parse import urlparse
-from quart import Quart, request
+from quart import Quart, render_template, request
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from dotenv import load_dotenv
@@ -54,7 +54,7 @@ async def load_json_to_redis():
 
 @app.route("/")
 async def index():
-    return "Главная страница"
+    return await render_template('index.html')
 
 @app.route("/pre-deploy", methods=["POST"])
 async def pre_deploy():

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UebekBot</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=EB+Garamond&family=Inter:wght@400;600&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #020b16;
+            color: #e0e6f0;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            margin-top: 16px;
+            margin-bottom: 60px;
+            padding: 24px 32px;
+            background-color: rgba(5, 10, 20, 0.95);
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+            border-radius: 16px;
+            border: 2px solid #0d1a2b;
+        }
+
+
+        h1 {
+            font-family: 'EB Garamond', serif;
+            font-size: 2.6rem;
+            font-weight: 600;
+            color: #dbe6f5;
+            margin: 0 0 0.5em 0;
+        }
+
+
+        h2 {
+            font-size: 1.4rem;
+            font-weight: 500;
+            color: #b6c9dd;
+            margin-top: 2em;
+            margin-bottom: 0.6em;
+        }
+
+        p {
+            line-height: 1.7;
+            font-size: 1rem;
+            color: #c5d2e0;
+            margin-bottom: 1em;
+        }
+
+        ul {
+            padding-left: 1.2em;
+            color: #cbd8eb;
+            margin-bottom: 1.5em;
+        }
+
+        li {
+            margin-bottom: 0.5em;
+        }
+
+        code {
+            background-color: #1a2330;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        pre code {
+            display: block;
+            padding: 1em;
+            overflow-x: auto;
+        }
+
+        pre {
+            background-color: #111a24;
+            border-radius: 8px;
+            margin-bottom: 1.5em;
+        }
+
+        a {
+            color: #88aaff;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .github-link {
+            display: inline-block;
+            margin-top: 40px;
+            padding: 10px 20px;
+            background-color: #1c2d45;
+            color: #a5c8ff;
+            text-decoration: none;
+            border: 1px solid #2e4d74;
+            border-radius: 8px;
+            transition: background-color 0.2s;
+        }
+
+        .github-link:hover {
+            background-color: #2a3d5f;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" id="content">Загрузка...</div>
+
+    <script>
+        fetch("https://raw.githubusercontent.com/MyHoldFast/uebekbot/refs/heads/main/README_RU.md")
+            .then(res => res.text())
+            .then(md => {
+                const html = marked.parse(md);
+                document.getElementById("content").innerHTML = html + `
+          <a class="github-link" href="https://github.com/MyHoldFast/uebekbot" target="_blank">
+            🔗 GitHub: MyHoldFast/uebekbot
+          </a>`;
+            })
+            .catch(err => {
+                document.getElementById("content").innerHTML = "Не удалось загрузить README 😢";
+                console.error(err);
+            });
+    </script>
+</body>
+
+</html>
