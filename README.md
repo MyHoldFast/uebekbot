@@ -13,10 +13,6 @@ This project is a bot that performs several functions, including:
 - **/qwenimg**: Image generation via the neural network chat.qwenlm.ai.
 - **/gemimg**: Image generation via Google Gemini.
 
-## Models
-
-The project uses some models provided by [gpt4free](https://github.com/xtekky/gpt4free)
-
 Some features require the following services:
 
 - **/summary**: This feature requires Yandex OAuth Token (it's free).

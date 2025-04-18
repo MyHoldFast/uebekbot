@@ -1,9 +1,13 @@
 import requests
 import json
-import threading
+import re
+from duckai.libs.utils_chat import HashBuilder
 
 class DuckDuckGoChat:
     chat_url = "https://duckduckgo.com/duckchat/v1/chat"
+    init_url = "https://duckduckgo.com/?q=DuckDuckGo&ia=chat"
+    status_url = "https://duckduckgo.com/duckchat/v1/status"
+
     common_headers = {
         "accept": "text/event-stream",
         "accept-language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7,zh-CN;q=0.6,zh;q=0.5,ja;q=0.4,de;q=0.3",
@@ -29,80 +33,91 @@ class DuckDuckGoChat:
         self.messages = []
         self.vqd = None
         self.vqd_hash = None
+        self.fe_version = None
         self.cookies = {"dcs": "1", "dcm": "3"}
-        self._status_task_started = False
-        self._status_task_lock = threading.Lock()
+        self._hashbuilder = HashBuilder()
+
 
     def chat(self, user_input, timeout=30):
+        if not self.fe_version and not self.vqd and not self.vqd_hash:
+            self.fe_version = self._fetch_fe_version()
+
         if not self.vqd or not self.vqd_hash:
-            self.vqd, self.vqd_hash = self.fetch_vqd(self.proxy)
-        
+            self.vqd, self.vqd_hash = self._fetch_vqd()
+
         self.messages.append({"role": "user", "content": user_input})
         payload = {
             "model": self.model,
             "messages": self.messages,
         }
+
         headers = self.common_headers.copy()
+        headers["x-fe-version"] = self.fe_version
         headers["x-vqd-4"] = self.vqd
-        headers["x-vqd-hash-1"] = ""  # self.vqd_hash
-        
+        headers["x-vqd-hash-1"] = self._hashbuilder.build_hash(self.vqd_hash, headers)
+
+        #print("HEADERS:", headers)
+        #print("VQD HASH BEFORE:", self.vqd_hash)
+        #print("BUILT HASH:", self._hashbuilder.build_hash(self.vqd_hash, headers))
+
+
         proxies = {"http": self.proxy, "https": self.proxy} if self.proxy else None
+
         response = requests.post(
-            self.chat_url, headers=headers, cookies=self.cookies, json=payload, stream=True, proxies=proxies, timeout=timeout
+            self.chat_url,
+            headers=headers,
+            cookies=self.cookies,
+            json=payload,
+            stream=True,
+            proxies=proxies,
+            timeout=timeout
         )
-        
+
         if response.status_code != 200:
             raise Exception(f"Failed to send message: {response.status_code}")
-        
+
         self.vqd = response.headers.get("x-vqd-4", self.vqd)
         self.vqd_hash = response.headers.get("x-vqd-hash-1", self.vqd_hash)
-        
+
         results = []
-        for line in response.iter_lines(decode_unicode=False):
-            if line.startswith(b"data: ") and b"data: [DONE]" not in line:
+        for line in response.iter_lines():
+            if line.startswith(b"data: ") and b"[DONE]" not in line:
                 try:
-                    decoded_line = line.decode("utf-8")
-                    message_data = json.loads(decoded_line[6:].strip())
-                    if message := message_data.get("message"):
+                    decoded = line.decode("utf-8")[6:]
+                    data = json.loads(decoded)
+                    if message := data.get("message"):
                         results.append(message)
-                except (UnicodeDecodeError, json.JSONDecodeError):
-                    pass
-        
+                except Exception:
+                    continue
+
         result = "".join(results)
         self.messages.append({"role": "assistant", "content": result})
+        return result, self.messages, self.vqd, self.vqd_hash
 
-        self._start_status_task()
+    def _fetch_fe_version(self):
+        proxies = {"http": self.proxy, "https": self.proxy} if self.proxy else None
+        resp = requests.get(self.init_url, proxies=proxies, timeout=10)
+        if resp.status_code != 200:
+            raise Exception("Failed to fetch x-fe-version")
 
-        return result
+        match1 = re.search(r'__DDG_BE_VERSION__="([^"]+)"', resp.text)
+        match2 = re.search(r'__DDG_FE_CHAT_HASH__="([^"]+)"', resp.text)
 
-    @staticmethod
-    def fetch_vqd(proxy=None):
-        headers = DuckDuckGoChat.common_headers.copy()
+        if not match1 or not match2:
+            raise Exception("x-fe-version not found")
+
+        return f"{match1.group(1)}-{match2.group(1)}"
+
+    def _fetch_vqd(self):
+        headers = self.common_headers.copy()
         headers["x-vqd-accept"] = "1"
-        proxies = {"http": proxy, "https": proxy} if proxy else None
-        response = requests.get("https://duckduckgo.com/duckchat/v1/status", headers=headers, proxies=proxies)
-        
-        if response.status_code == 200:
-            return response.headers.get("x-vqd-4"), response.headers.get("x-vqd-hash-1")
-        
-        raise Exception(f"Failed to initialize chat: {response.status_code}")
+        proxies = {"http": self.proxy, "https": self.proxy} if self.proxy else None
 
-    def _start_status_task(self):
-        with self._status_task_lock:
-            if not self._status_task_started:
-                self._status_task_started = True
-                threading.Thread(target=self._periodic_status_check, daemon=True).start()
+        resp = requests.get(self.status_url, headers=headers, proxies=proxies, timeout=10)
+        if resp.status_code != 200:
+            raise Exception("Failed to fetch vqd")
 
-    def _periodic_status_check(self):
-        while True:
-            try:
-                headers = self.common_headers.copy()
-                proxies = {"http": self.proxy, "https": self.proxy} if self.proxy else None
-                response = requests.get("https://duckduckgo.com/duckchat/v1/status", headers=headers, proxies=proxies)                
-                #if response.status_code == 200:
-                #    print("Status check successful")
-                #else:
-                #   print(f"Status check failed: {response.status_code}")
-            except Exception as e:
-                print(f"Error during status check: {e}")           
-            threading.Event().wait(60)
+        return (
+            resp.headers.get("x-vqd-4", ""),
+            resp.headers.get("x-vqd-hash-1", ""),
+        )

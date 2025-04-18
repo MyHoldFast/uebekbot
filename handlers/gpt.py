@@ -5,9 +5,10 @@ import os
 import re
 import time
 
+from concurrent.futures import ProcessPoolExecutor
 from utils.text_utils import split_html
 from utils.typing_indicator import TypingIndicator
-from g4f.client import AsyncClient
+from duckai import DuckAI
 from aiogram import Bot, Router
 from aiogram.filters import Command, CommandObject
 from aiogram.types import (
@@ -30,11 +31,13 @@ db, Query = DB("db/gpt_models.json").get_db()
 context_db, ContextQuery = DB("db/gpt_context.json").get_db()
 
 models = {
-    "gpt-4o": "gpt-4o",
-    "gpt-4": "gpt-4",
+    "gpt-4o-mini": "gpt-4o-mini",
     "o3-mini": "o3-mini",
-    "deepseek-r1": "deepseek-r1"
+    "Mistral Small 3": "mistralai/Mistral-Small-24B-Instruct-2501",
+    "claude-3-haiku": "claude-3-haiku-20240307",
+    "llama 3.3 70B": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
 }
+
 
 def get_gpt_keyboard(selected_model: str):
     keyboard = [
@@ -65,14 +68,15 @@ def load_user_context(user_id):
         if current_time - last_modified_time < 3 * 3600:
             return (
                 json.loads(
-                    base64.b64decode(context_item.get("chat_messages")).decode(
-                        "utf-8"
-                    )
-                )
+                    base64.b64decode(context_item.get("chat_messages")).decode("utf-8")
+                ),
+                context_item.get("chat_vqd"),
+                context_item.get("chat_vqd_hash"),
             )
-    return None
+    return None, None, None
 
-def save_user_context(user_id, chat_messages):
+
+def save_user_context(user_id, chat_messages, chat_vqd, chat_vqd_hash):
     getcontext = ContextQuery()
     encoded_chat_messages = base64.b64encode(
         json.dumps(chat_messages, ensure_ascii=False).encode("utf-8")
@@ -83,6 +87,8 @@ def save_user_context(user_id, chat_messages):
     context_data = {
         "uid": user_id,
         "chat_messages": encoded_chat_messages,
+        "chat_vqd": chat_vqd,
+        "chat_vqd_hash": chat_vqd_hash,
         "last_modified_time": current_time,
     }
 
@@ -131,9 +137,7 @@ def split_message(text: str, max_length: int = 4000):
     return [text[i : i + max_length] for i in range(0, len(text), max_length)]
 
 
-async def process_gemini(
-    message: Message, command: CommandObject, bot: Bot, photo
-):
+async def process_gemini(message: Message, command: CommandObject, bot: Bot, photo):
     text = command.args or "опиши изображение на русском языке"
     genai.configure(api_key=os.environ["GEMINI_API_KEY"])
     file = await bot.get_file(photo.file_id)
@@ -148,7 +152,7 @@ async def process_gemini(
     try:
         async with TypingIndicator(bot=bot, chat_id=message.chat.id):
             myfile = await asyncio.to_thread(genai.upload_file, tmp_file)
-            #model = genai.GenerativeModel("gemini-2.5-pro-exp-03-25") 50 request per day
+            # model = genai.GenerativeModel("gemini-2.5-pro-exp-03-25") 50 request per day
             model = genai.GenerativeModel("gemini-2.0-flash")
             result = await asyncio.to_thread(
                 model.generate_content, [myfile, "\n\n", text]
@@ -167,16 +171,24 @@ async def process_gemini(
         os.remove(tmp_file)
 
 
+def chat_with_duckai(message, chat_messages, chat_vqd, chat_vqd_hash):
+    duck_ai = DuckAI(proxy=os.getenv("PROXY"))
+    if chat_messages is not None and chat_vqd is not None and chat_vqd_hash is not None:
+        duck_ai._chat_messages = chat_messages
+        duck_ai._chat_vqd = chat_vqd
+        duck_ai._chat_vqd_hash = chat_vqd_hash
+    answer = duck_ai.chat(message)
+    return answer, duck_ai._chat_messages, duck_ai._chat_vqd, duck_ai._chat_vqd_hash
+
+
 async def process_gpt(message: Message, command: CommandObject, user_id):
-    messagetext = (
-        message.reply_to_message.text if message.reply_to_message else ""
-    )
+    messagetext = message.reply_to_message.text if message.reply_to_message else ""
     if command.args:
         messagetext += "\n" + command.args
     messagetext = messagetext.strip()
 
     if not messagetext:
-        model = "gpt-4o"
+        model = "gpt-4o-mini"
         user_model = db.get(Query().uid == user_id)
         if user_model and user_model["model"] in models:
             model = user_model["model"]
@@ -184,49 +196,40 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
         keyboard = get_gpt_keyboard(model)
         user_language = message.from_user.language_code or DEFAULT_LANGUAGE
         _ = get_localization(user_language)
-        await message.reply(
-            _("gpt_help"), reply_markup=keyboard, parse_mode="markdown"
-        )
+        await message.reply(_("gpt_help"), reply_markup=keyboard, parse_mode="markdown")
         return
 
     try:
-        proxy = os.getenv("PROXY")
         user_model = db.get(Query().uid == user_id)
         model = (
             user_model["model"]
             if user_model and user_model["model"] in models
-            else "gpt-4o"
+            else "gpt-4o-mini"
         )
 
-        chat_messages= load_user_context(user_id)
-        if chat_messages is not None:
-            chat_messages.append({"role": "user", "content": messagetext})
-        else:
-            chat_messages = [{"role": "user", "content": messagetext}]
-
-        client = AsyncClient(proxies=proxy)
+        chat_messages, chat_vqd, chat_vqd_hash = load_user_context(user_id)
 
         async with TypingIndicator(bot=message.bot, chat_id=message.chat.id):
-            response = await asyncio.wait_for(
-                client.chat.completions.create(
-                    model=model,
-                    messages=chat_messages,
-                    web_search=False,
-                    ignore_working=True,
-                ),
-                timeout=60
-            )
-        answer = response.choices[0].message.content
+            loop = asyncio.get_event_loop()
+            with ProcessPoolExecutor() as executor:
+                answer, messages, vqd, vqdhash = await loop.run_in_executor(
+                    executor,
+                    chat_with_duckai,
+                    messagetext,
+                    chat_messages,
+                    chat_vqd,
+                    chat_vqd_hash,
+                )
 
-        if answer:
-            chat_messages.append({"role": "assistant", "content": answer})
-            save_user_context(user_id, chat_messages)
-            answer = process_latex(telegram_format(answer))
-            chunks = split_html(answer)
-            for chunk in chunks:
-                await message.reply(chunk, parse_mode="HTML")
+                if answer:
+                    save_user_context(user_id, messages, vqd, vqdhash)
+                    answer = process_latex(telegram_format(answer))
+                    chunks = split_html(answer)
+                    for chunk in chunks:
+                        await message.reply(chunk, parse_mode="HTML")
 
-        else: raise Exception("Exception")
+                else:
+                    raise Exception("Exception")
     except Exception as e:
         user_language = message.from_user.language_code or DEFAULT_LANGUAGE
         _ = get_localization(user_language)
