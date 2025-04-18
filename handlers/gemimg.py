@@ -70,7 +70,7 @@ async def cmd_gemimg(message: Message, command: CommandObject, bot: Bot):
                     await message.reply_photo(photo=photo)
                 else:
                     await safe_delete(sent_message)
-                    await message.reply(_("qwenimg_err"))
+                    await message.reply(_("gemimg_err"))
         except Exception:
             await safe_delete(sent_message)
-            await message.reply(_("qwenimg_err"))
+            await message.reply(_("gemimg_err"))

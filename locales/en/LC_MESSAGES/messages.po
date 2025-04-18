@@ -79,6 +79,7 @@ msgstr "❌ Error: Timed out waiting for response"
 msgid "qwen_error"
 msgstr "❌ Error: Failed to complete request"
 
+
 msgid "qwen_history_rm"
 msgstr "ℹ️ Message history deleted"
 
@@ -90,6 +91,9 @@ msgstr "⏳ Generating image... Please wait."
 
 msgid "qwenimg_err"
 msgstr "❌ Error generating image."
+
+msgid "gemimg_err"
+msgstr "❌ Error generating image. ℹ️ If you do not use English for generation - then use."
 
 msgid "disable_in_chat"
 msgstr "🚫 Command /{command_name} is disabled in this chat."
