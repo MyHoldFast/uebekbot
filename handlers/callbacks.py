@@ -1,6 +1,7 @@
 from aiogram import Router, Bot
 from aiogram.types import CallbackQuery
 from aiogram.filters import CommandObject
+from aiogram.exceptions import TelegramBadRequest
 from localization import get_localization, DEFAULT_LANGUAGE
 from utils.translate import translate_text
 from handlers.qwen import cmd_qwen
@@ -43,8 +44,17 @@ async def translate_callback(callback_query: CallbackQuery, bot: Bot):
 @throttle(seconds=5)
 async def query_callback(callback_query: CallbackQuery, bot: Bot):
     await callback_query.answer()
+    message = await callback_query.message.reply("⏳")
     original_text = callback_query.message.text
     command = CommandObject(command=None, args=original_text)    
     await cmd_qwen(callback_query.message, command, bot)
+    await safe_delete(message)
+
+async def safe_delete(message):
+    try:
+        await message.delete()
+    except TelegramBadRequest:
+        pass
+
 
 

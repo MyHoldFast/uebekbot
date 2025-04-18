@@ -1,6 +1,8 @@
 # UebekBot
 
-![Python >= 3.10](https://img.shields.io/badge/python->=3.10-red.svg)
+[![Python >= 3.10](https://raw.githubusercontent.com/MyHoldFast/uebekbot/refs/heads/main/static/python.svg)](#)
+
+[![](https://raw.githubusercontent.com/MyHoldFast/uebekbot/refs/heads/main/static/telegram.svg)](https://t.me/uebekbot)
 
 Этот проект представляет собой бота, который выполняет несколько функций, включая:
 

@@ -133,21 +133,24 @@ async def stt_command(message: types.Message, bot: Bot):
         #elif duration > 120:
         #    api = 1
         #print(API_URLS[api])
-        transcription = await process_audio(audio_bytes, message, api)
+        try:
+            transcription = await process_audio(audio_bytes, message, api)
 
-        translate_button = InlineKeyboardButton(
-            text=_("translate_button"), 
-            callback_data='translate'
-        )        
+            translate_button = InlineKeyboardButton(
+                text=_("translate_button"), 
+                callback_data='translate'
+            )        
 
-        if message.chat.type == ChatType.PRIVATE:
-            query_button = InlineKeyboardButton(
-                text=_("query_button"),
-                callback_data='query'
-            )
-            keyboard = InlineKeyboardMarkup(inline_keyboard=[[translate_button], [query_button]])
-        else:
-            keyboard = InlineKeyboardMarkup(inline_keyboard=[[translate_button]])        
+            if message.chat.type == ChatType.PRIVATE:
+                query_button = InlineKeyboardButton(
+                    text=_("query_button"),
+                    callback_data='query'
+                )
+                keyboard = InlineKeyboardMarkup(inline_keyboard=[[translate_button], [query_button]])
+            else:
+                keyboard = InlineKeyboardMarkup(inline_keyboard=[[translate_button]])        
 
-        await message.reply(transcription, reply_markup=keyboard)
+            await message.reply(transcription, reply_markup=keyboard)
+        except Exception: pass
+        
         os.remove(f"tmp/{file_id}.ogg")
