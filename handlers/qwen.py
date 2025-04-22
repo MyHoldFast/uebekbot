@@ -52,24 +52,42 @@ def save_messages(user_id, messages):
     else:
         context_db.insert(new_data)
 
-
 def remove_messages(user_id):
     getcontext = ContextQuery()
     context_db.remove(getcontext.uid == user_id)
 
-
-def split_message(text, limit=4000):
-    return [text[i : i + limit] for i in range(0, len(text), limit)]
-
-
 def process_latex(text):
-    return re.sub(
-        r"(?m)^\s*(\$\$|\\\[)\s*\n(.*?)\n\s*(\$\$|\\\])\s*$",
-        lambda match: LatexNodes2Text().latex_to_text(match.group(2)),
-        text,
-        flags=re.DOTALL,
-    )
+    code_blocks = {}
+    def extract_code(match):
+        key = f"__CODE_BLOCK_{len(code_blocks)}__"
+        code_blocks[key] = match.group(0)
+        return key
 
+    text = re.sub(r'<code class=".*?">.*?</code>', extract_code, text, flags=re.DOTALL)
+    text = re.sub(
+        r"(?s)\$\$\s*(.*?)\s*\$\$",
+        lambda m: LatexNodes2Text().latex_to_text(m.group(1)),
+        text
+    )
+    text = re.sub(
+        r"(?s)\\\[\s*(.*?)\s*\\\]",
+        lambda m: LatexNodes2Text().latex_to_text(m.group(1)),
+        text
+    )
+    text = re.sub(
+        r'\$\s*\\boxed\{(.*?)\}\s*\$',
+        lambda m: f"<b>{LatexNodes2Text().latex_to_text(m.group(1))}</b>",
+        text
+    )
+    text = re.sub(
+        r'\$(.*?)\$',
+        lambda m: LatexNodes2Text().latex_to_text(m.group(1)),
+        text
+    )
+    for key, block in code_blocks.items():
+        text = text.replace(key, block)
+
+    return text
 
 cookies = {
     "x-ap": "eu-central-1",
