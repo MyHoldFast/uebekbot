@@ -231,6 +231,7 @@ async def cmd_trunc(message: Message, command: CommandObject):
         "stats",
         "command_states",
         "banned_users",
+        "banned_chats"
         "chats"
     ]
 
