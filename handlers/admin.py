@@ -12,7 +12,11 @@ from utils.command_states import get_disabled_commands, disable_command, enable_
 from utils.BanMiddleware import (
     ban_user,
     unban_user,
+    unban_chat,
     get_banned_users,
+    get_banned_chats,
+    is_chat_banned,
+    ban_chat,
     is_banned,
 )
 
@@ -51,23 +55,34 @@ async def cmd_uptime(message: Message):
 @admin_only
 async def cmd_ban(message: Message):
     if message.reply_to_message:
-        user_id = message.reply_to_message.from_user.id
+        user_id = message.reply_to_message.from_user.id if message.reply_to_message.from_user else None
+        chat_id = None
+        chat_title = None
     else:
         args = message.text.split()
-        if len(args) < 2 or not args[1].isdigit():
+        if len(args) < 2 or not args[1].lstrip('-').isdigit():
             return await message.reply(
-                "⚠ Укажите ID пользователя или ответьте на его сообщение."
+                "⚠ Укажите ID пользователя/чата или ответьте на сообщение."
             )
-        user_id = int(args[1])
+        target_id = int(args[1])
+        user_id = target_id if target_id > 0 else None
+        chat_id = target_id if target_id < 0 else None
+        chat_title = message.chat.title
 
     if str(user_id) == ADMIN_ID:
         return await message.reply("⛔ Вы не можете забанить самого себя!")
 
-    if is_banned(user_id):
+    if user_id and is_banned(user_id):
         return await message.reply("⚠ Этот пользователь уже в бане.")
+    if chat_id and is_chat_banned(chat_id):
+        return await message.reply("⚠ Этот чат уже в бане.")
 
-    ban_user(user_id, message.reply_to_message.from_user.full_name)
-    await message.reply(f"🚫 Пользователь {user_id} забанен!")
+    if user_id:
+        ban_user(user_id, message.reply_to_message.from_user.full_name if message.reply_to_message else None)
+        await message.reply(f"🚫 Пользователь {user_id} забанен!")
+    elif chat_id:
+        ban_chat(chat_id, chat_title)
+        await message.reply(f"🚫 Чат {chat_id} ({chat_title}) забанен!")
 
 
 @router.message(Command("unban"))
@@ -77,37 +92,62 @@ async def cmd_unban(message: Message):
     if len(args) < 2:
         if message.reply_to_message:
             user_id = message.reply_to_message.from_user.id
+            chat_id = message.reply_to_message.chat.id
         else:
             return await message.reply(
-                "⚠ Укажите ID пользователя для разблокировки."
+                "⚠ Укажите ID пользователя/чата для разблокировки."
             )
     else:
-        if not args[1].isdigit():
+        target_id = args[1].lstrip('-')
+        if not target_id.isdigit():
             return await message.reply(
-                "⚠ Укажите валидный ID пользователя для разблокировки."
+                "⚠ Укажите валидный ID пользователя/чата для разблокировки."
             )
-        user_id = int(args[1])
+        target_id = int(args[1])
+        user_id = target_id if target_id > 0 else None
+        chat_id = target_id if target_id < 0 else None
 
-    if not is_banned(user_id):
+    if user_id and not is_banned(user_id):
         return await message.reply("⚠ Этот пользователь не в бане.")
 
-    unban_user(user_id)
-    await message.reply(f"✅ Пользователь {user_id} разбанен!")
+    if chat_id and not is_chat_banned(chat_id):
+        return await message.reply("⚠ Этот чат не в бане.")
+
+    if user_id:
+        unban_user(user_id)
+        await message.reply(f"✅ Пользователь {user_id} разбанен!")
+    elif chat_id:
+        unban_chat(chat_id)
+        await message.reply(f"✅ Чат {chat_id} разбанен!")
 
 
 @router.message(Command("ban_list"))
 @admin_only
 async def cmd_ban_list(message: Message):
     banned_users = get_banned_users()
+    banned_chats = get_banned_chats()
 
-    if not banned_users:
-        return await message.reply("✅ В бане нет пользователей.")
-
-    banned_text = "\n".join(
-        f"🔴 {user['username']} ({user['uid']})" for user in banned_users
+    users_text = (
+        "\n".join(
+            f"🔴 Пользователь: {user['username']} ({user['uid']})"
+            for user in banned_users
+        )
+        if banned_users
+        else "✅ В бане нет пользователей."
     )
 
-    await message.reply(f"🚫 Забаненные пользователи:\n{banned_text}")
+    chats_text = (
+        "\n".join(
+            f"🟠 Чат: {chat['title']} ({chat['cid']})" for chat in banned_chats
+        )
+        if banned_chats
+        else "✅ В бане нет чатов."
+    )
+
+    await message.reply(
+        f"🚫 Забаненные пользователи:\n{users_text}\n\n"
+        f"🚫 Забаненные чаты:\n{chats_text}"
+    )
 
 
 @router.message(Command("disable", ignore_case=True))

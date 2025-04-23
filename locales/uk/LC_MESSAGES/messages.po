@@ -104,6 +104,9 @@ msgstr "🚫 Команда /{command_name} відключена в глобал
 msgid "ban_message"
 msgstr "🚫 Ви забанені і не можете взаємодіяти з цим ботом."
 
+msgid "ban_chat_message"
+msgstr "🚫 Цей чат забанен, і ви не можете взаємодіяти з цим ботом."
+
 msgid "query_button"
 msgstr "Запит до нейромережі"
 

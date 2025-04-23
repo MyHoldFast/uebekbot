@@ -104,6 +104,9 @@ msgstr "🚫 Command /{command_name} is disabled globally."
 msgid "ban_message"
 msgstr "🚫 You are banned and cannot interact with this bot."
 
+msgid "ban_chat_message"
+msgstr "🚫 This chat is banned and you cannot interact with this bot."
+
 msgid "query_button"
 msgstr "Query to neural network"
 
