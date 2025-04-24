@@ -1,7 +1,6 @@
 import aiohttp
 import asyncio
 import os
-import random
 import subprocess
 from io import BytesIO
 
@@ -19,7 +18,7 @@ API_URLS = [
     "https://api-inference.huggingface.co/models/openai/whisper-tiny"
 ]
 headers = {
-    "Authorization": "Bearer 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",
+    "Authorization": "Bearer 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",
     'Content-Type': 'audio/ogg'
 }
 
@@ -46,26 +45,16 @@ async def download_as_audio(file_path, output_file):
     return b''
 
 async def process_audio(wav_buffer: BytesIO, message, api=0):
-    wav_buffer.seek(0)
-    async with aiohttp.ClientSession() as session:
-        while True:
-            random_data = BytesIO(bytes([random.randint(0, 255) for _ in range(10)]))
-            random_data.seek(0)
-            async with session.post(API_URLS[api], headers=headers, data=random_data.getvalue()) as response:
+    try:
+        user_language = message.from_user.language_code or DEFAULT_LANGUAGE
+        _ = get_localization(user_language)
+        wav_buffer.seek(0)
+        async with aiohttp.ClientSession() as session:
+            async with session.post(API_URLS[api], headers=headers, data=wav_buffer.getvalue()) as response:
                 response_json = await response.json()
-                if 'error' in response_json:
-                    if 'estimated_time' in response_json:
-                        await asyncio.sleep(3)
-                    elif response_json.get('error') == "Internal Server Error" and api != 2:
-                        api = 2
-                    else:
-                        break
-                else:
-                    break
-
-        async with session.post(API_URLS[api], headers=headers, data=wav_buffer.getvalue()) as response:
-            response_json = await response.json()
-            return response_json.get('text', _("voice_error")) # type: ignore
+                return response_json.get('text', _("voice_error")) 
+    except Exception:
+        return _("voice_error")
 
 router = Router()
 

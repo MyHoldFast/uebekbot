@@ -9,6 +9,7 @@ This project is a bot that performs several functions, including:
 - **/summary**: A short summary of a YouTube video, Wikipedia article, or Habr material, as well as just a long message via replay
 - **/ocr**: Text recognition in images.
 - **/stt**: Translation of voice messages into text.
+- **/tts**: Translation of text into audio.
 - **/gpt**: Chat with AI based on GPT, as well as in combination with an image and a request - a request to Google Gemini
 - **/neuro**: A request to Yandex Neuro.
 - **/qwen**: A request to the neural network chat.qwenlm.ai.

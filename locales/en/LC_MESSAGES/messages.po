@@ -107,6 +107,12 @@ msgstr "🚫 You are banned and cannot interact with this bot."
 msgid "ban_chat_message"
 msgstr "🚫 This chat is banned and you cannot interact with this bot."
 
+msgid "tts_help"
+msgstr "Please provide text after the command. Example:\n`/tts Hello, how are you?`"
+
+msgid "tts_error"
+msgstr "❌ Error generating audio"
+
 msgid "query_button"
 msgstr "Query to neural network"
 

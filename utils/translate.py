@@ -8,7 +8,7 @@ HEADERS = {
 }
 
 
-async def translate_text(text, source_lang='auto', target_lang='ru'):
+async def translate_text_alt(text, source_lang='auto', target_lang='ru'):
     url = "https://translate.flossboxin.org.in/translate"
     headers = {"Content-Type": "application/json"}
     payload = {
@@ -29,7 +29,7 @@ async def translate_text(text, source_lang='auto', target_lang='ru'):
                 error_message = await response.text()
                 raise Exception(f"Error {response.status}: {error_message}")
 
-async def translate_text_google(text, source_lang='auto', target_lang='ru'):
+async def translate_text(text, source_lang='auto', target_lang='ru'):
     url = "https://translate.googleapis.com/translate_a/single"
     params = {
         "client": "gtx",
