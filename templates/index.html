@@ -2,152 +2,209 @@
 <html lang="ru">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>UebekBot</title>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=EB+Garamond&family=Inter:wght@400;600&display=swap');
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UebekBot</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500&family=Inter:wght@400;600&display=swap');
 
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #020b16;
-            color: #e0e6f0;
-            font-family: 'Inter', sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-        }
+    body {
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(circle at top left, #0d1117, #020b16);
+      color: #e0e6f0;
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
 
-        .container {
-            width: 90%;
-            max-width: 800px;
-            margin-top: 16px;
-            margin-bottom: 60px;
-            padding: 24px 32px;
-            background-color: rgba(5, 10, 20, 0.95);
-            box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
-            border-radius: 16px;
-            border: 2px solid #0d1a2b;
-        }
+    h1.title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 3.2rem;
+      color: #6bc1ff;
+      text-shadow: 0 0 12px #0052ff, 0 0 28px #003080;
+      margin-bottom: 32px;
+      margin-top: 0;
+      /*animation: pulse 2s infinite alternate;*/
+    }
 
-        h1 {
-            font-family: 'EB Garamond', serif;
-            font-size: 2.6rem;
-            font-weight: 600;
-            color: #dbe6f5;
-            margin: 0 0 0.5em 0;
-        }
+    @keyframes pulse {
+      from {
+        text-shadow: 0 0 12px #0052ff, 0 0 28px #003080;
+      }
 
-        h2 {
-            font-size: 1.4rem;
-            font-weight: 500;
-            color: #b6c9dd;
-            margin-top: 2em;
-            margin-bottom: 0.6em;
-        }
+      to {
+        text-shadow: 0 0 20px #00aaff, 0 0 36px #0077cc;
+      }
+    }
 
-        p {
-            line-height: 1.7;
-            font-size: 1rem;
-            color: #c5d2e0;
-            margin-bottom: 1em;
-        }
+    .container {
+      max-width: 860px;
+      width: 100%;
+    }
 
-        ul {
-            padding-left: 1.2em;
-            color: #cbd8eb;
-            margin-bottom: 1.5em;
-        }
+    .commands {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+    }
 
-        li {
-            margin-bottom: 0.5em;
-        }
+    .command-card {
+      background-color: #111a2b;
+      border-left: 4px solid #4fa8ff;
+      border-radius: 8px;
+      padding: 16px 20px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
 
-        code {
-            background-color: #1a2330;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: monospace;
-        }
+    .command-card:hover {
+      background-color: #1b2a3d;
+      transform: translateY(-2px);
+    }
 
-        pre code {
-            display: block;
-            padding: 1em;
-            overflow-x: auto;
-        }
+    .command-card.full-span {
+      grid-column: 1 / -1;
+      border-left: none;
+      box-shadow: 0 0 12px rgba(100, 200, 255, 0.15);
+      border: 1px solid rgba(100, 200, 255, 0.2);
+      cursor: default;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
 
-        pre {
-            background-color: #111a24;
-            border-radius: 8px;
-            margin-bottom: 1.5em;
-        }
+    }
 
-        a {
-            color: #88aaff;
-            text-decoration: none;
-        }
+    .command-card.full-span:hover {
+      background-color: #111a2b;
+      transform: none;
+    }
 
-        a:hover {
-            text-decoration: underline;
-        }
+    .command-name {
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: #7fcfff;
+      margin-bottom: 10px;
+    }
 
-        .github-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 16px;
-            background-color: #0d1117;
-            color: #c9d1d9;
-            border: 1px solid #30363d;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: 500;
-            transition: background-color 0.2s, border-color 0.2s;
-        }
+    .command-desc {
+      font-size: 0.95rem;
+      color: #ccd8ee;
+      line-height: 1.6;
+    }
 
-        .github-link:hover {
-            background-color: #161b22;
-            border-color: #8b949e;
-        }
+    .github-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 40px;
+      gap: 10px;
+      padding: 12px 24px;
+      background: linear-gradient(145deg, #1e2a3c, #141d2b);
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      color: #7db6ff;
+      font-size: 1rem;
+      font-weight: 600;
+      text-decoration: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+    }
 
-        .github-link svg {
-            width: 20px;
-            height: 20px;
-            fill: currentColor;
-        }
-    </style>
+    .github-link:hover {
+      background: linear-gradient(145deg, #2a3a54, #1e2a3c);
+      color: #9ccaff;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25), 0 3px 6px rgba(0, 0, 0, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .github-link svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+  </style>
 </head>
 
 <body>
-    <div class="container" id="content">Загрузка...</div>
+  <h1 class="title">UebekBot</h1>
+  <div class="container">
+    <div class="commands">
+      <div class="command-card full-span">
+        <div class="command-name">Что умеет UebekBot?</div>
+        <div class="command-desc">
+          Многофункциональный Telegram-бот с поддержкой AI, распознавания текста, генерации изображений и анализа аудио.
+          <!--<ul style="margin-top: 10px; padding-left: 20px;">
+            <li><strong>/summary</strong> — выжимка из видео и статей</li>
+            <li><strong>/ocr</strong> — распознавание текста на изображениях</li>
+            <li><strong>/stt</strong> — голос в текст</li>
+            <li><strong>/gpt, /neuro, /qwen</strong> — AI-чат</li>
+            <li><strong>/qwenimg, /gemimg</strong> — генерация изображений</li>
+          </ul>-->
+        </div>
+      </div>
 
-    <script>
-        fetch("https://raw.githubusercontent.com/MyHoldFast/uebekbot/refs/heads/main/README_RU.md")
-            .then(res => res.text())
-            .then(md => {
-                const html = marked.parse(md);
-                document.getElementById("content").innerHTML = html + `
-          <a class="github-link" href="https://github.com/MyHoldFast/uebekbot" target="_blank">
-            <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38
-              0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13
-              -.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66
-              .07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15
-              -.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.62 7.62 0 012-.27c.68 0
-              1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82
-              1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48
-              0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/>
-            </svg>
-            MyHoldFast/uebekbot
-          </a>`;
-            })
-            .catch(err => {
-                document.getElementById("content").innerHTML = "Не удалось загрузить README 😢";
-                console.error(err);
-            });
-    </script>
+      <div class="command-card">
+        <div class="command-name">/summary</div>
+        <div class="command-desc">Краткая выжимка из видео, статей и длинных сообщений.</div>
+      </div>
+
+      <div class="command-card">
+        <div class="command-name">/ocr</div>
+        <div class="command-desc">Распознавание текста на изображениях.</div>
+      </div>
+
+      <div class="command-card">
+        <div class="command-name">/stt</div>
+        <div class="command-desc">Перевод голосовых сообщений в текст.</div>
+      </div>
+
+      <div class="command-card">
+        <div class="command-name">/gpt</div>
+        <div class="command-desc">Чат с AI на базе GPT, либо распознавание изображений через Gemini.</div>
+      </div>
+
+      <div class="command-card">
+        <div class="command-name">/neuro</div>
+        <div class="command-desc">Запрос к Yandex Neuro.</div>
+      </div>
+
+      <div class="command-card">
+        <div class="command-name">/qwen</div>
+        <div class="command-desc">Запрос к нейросети chat.qwenlm.ai.</div>
+      </div>
+
+      <div class="command-card">
+        <div class="command-name">/qwenimg</div>
+        <div class="command-desc">Генерация изображения через Qwen.</div>
+      </div>
+
+      <div class="command-card">
+        <div class="command-name">/gemimg</div>
+        <div class="command-desc">Генерация изображения через Google Gemini.</div>
+      </div>
+
+      <div class="command-card">
+        <div class="command-name">Множество восхитительных функций</div>
+        <div class="command-desc">Будет. Обязательно.</div>
+      </div>
+
+    </div>
+
+    <a class="github-link" href="https://github.com/MyHoldFast/uebekbot" target="_blank">
+      <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38
+        0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13
+        -.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66
+        .07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15
+        -.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.62 7.62 0 012-.27c.68 0
+        1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82
+        1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48
+        0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z" />
+      </svg>
+      MyHoldFast/uebekbot
+    </a>
+  </div>
 </body>
 
 </html>
