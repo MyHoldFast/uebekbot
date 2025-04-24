@@ -71,12 +71,10 @@ class BanMiddleware(BaseMiddleware):
     ) -> Any:
         user_id = None
         chat_id = None
-        chat_title = None
 
-        bot_username = self.botname
         if isinstance(event, Update):
-            user_id = self._extract_user_id(event, bot_username)
-            chat_id, chat_title = self._extract_chat_info(event)
+            user_id = self._extract_user_id(event)
+            chat_id = self._extract_chat_info(event)
 
         if user_id and is_banned(user_id):
             user_language = self._get_user_language_code(event) or DEFAULT_LANGUAGE
@@ -106,14 +104,16 @@ class BanMiddleware(BaseMiddleware):
 
         return await handler(event, data)
 
-    def _extract_user_id(self, event: Update, bot_username: str) -> int | None:
+    def _extract_user_id(self, event: Update) -> int | None:
         if event.message and event.message.from_user:
-            message_text = event.message.text
+            message_text = event.message.text or event.message.caption
+
             if (
-                event.message.chat.type == 'private' or
-                (message_text and any(
-                    message_text.startswith(cmd) and
-                    ('@' not in message_text or message_text.endswith(f"@{bot_username}"))
+                event.message.chat.type == 'private' or 
+                (message_text and any( 
+                    message_text == cmd or
+                    message_text.startswith(cmd + ' ') or 
+                    message_text.startswith(f"{cmd}@{self.botname}")
                 for cmd in cmds))
             ):
                 return event.message.from_user.id
@@ -121,12 +121,20 @@ class BanMiddleware(BaseMiddleware):
             return event.callback_query.from_user.id
         return None
 
-    def _extract_chat_info(self, event: Update) -> tuple[int | None, str | None]:
+    def _extract_chat_info(self, event: Update) -> int | None:
         if event.message and event.message.chat:
-            return event.message.chat.id, event.message.chat.title
+            message_text = event.message.text or event.message.caption
+            if (
+                message_text and any(
+                    message_text == cmd or
+                    message_text.startswith(cmd + ' ') or
+                    message_text.startswith(f"{cmd}@{self.botname}")
+                for cmd in cmds)
+            ):
+                return event.message.chat.id
         elif event.callback_query and event.callback_query.message and event.callback_query.message.chat:
-            return event.callback_query.message.chat.id, event.callback_query.message.chat.title
-        return None, None
+            return event.callback_query.message.chat.id
+        return None
 
     def _get_user_language_code(self, event: Update) -> str | None:
         if event.message and event.message.from_user:

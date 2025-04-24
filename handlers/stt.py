@@ -3,7 +3,6 @@ import asyncio
 import os
 import random
 import subprocess
-import time
 from io import BytesIO
 
 from utils.typing_indicator import TypingIndicator
@@ -12,11 +11,17 @@ from aiogram.enums import ChatType
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from utils.command_states import check_command_enabled
-
 from localization import DEFAULT_LANGUAGE, get_localization
 
-API_URLS = ["https://api-inference.huggingface.co/models/openai/whisper-large-v3-turbo", "https://api-inference.huggingface.co/models/openai/whisper-base", "https://api-inference.huggingface.co/models/openai/whisper-tiny"]
-headers = {"Authorization": "Bearer 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"}
+API_URLS = [
+    "https://api-inference.huggingface.co/models/openai/whisper-large-v3-turbo",
+    "https://api-inference.huggingface.co/models/openai/whisper-base",
+    "https://api-inference.huggingface.co/models/openai/whisper-tiny"
+]
+headers = {
+    "Authorization": "Bearer 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",
+    'Content-Type': 'audio/ogg'
+}
 
 async def download_as_audio(file_path, output_file):
     token = os.getenv("TG_BOT_TOKEN")
@@ -34,50 +39,33 @@ async def download_as_audio(file_path, output_file):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )
-    stdout, stderr = await process.communicate()
-    chunk = []
-    if process.returncode != 0:
-        print(f"Error during conversion: {stderr.decode()}")
-    else:
+    await process.communicate()
+    if os.path.exists(output_file):
         with open(output_file, 'rb') as f:
             return f.read()
-    return chunk
-
-
+    return b''
 
 async def process_audio(wav_buffer: BytesIO, message, api=0):
     wav_buffer.seek(0)
-    
     async with aiohttp.ClientSession() as session:
-        start_time = time.time()
-        
         while True:
-            # Generate a small random chunk of bytes to send as dummy data
             random_data = BytesIO(bytes([random.randint(0, 255) for _ in range(10)]))
             random_data.seek(0)
-            
             async with session.post(API_URLS[api], headers=headers, data=random_data.getvalue()) as response:
                 response_json = await response.json()
-                #print(API_URLS[api])
-                #elapsed_time = time.time() - start_time
-                
                 if 'error' in response_json:
                     if 'estimated_time' in response_json:
-                        #print(f"Ошибка: {response_json['error']}. Ожидание {response_json['estimated_time']} секунд.")
                         await asyncio.sleep(3)
-                    elif response_json.get('error') == "Internal Server Error" and api!=2:
+                    elif response_json.get('error') == "Internal Server Error" and api != 2:
                         api = 2
-                        #await asyncio.sleep(1)
-                    else: break
+                    else:
+                        break
                 else:
                     break
-        
-        # Send the actual wav_buffer after the server is ready
+
         async with session.post(API_URLS[api], headers=headers, data=wav_buffer.getvalue()) as response:
             response_json = await response.json()
-            #print(response_json)
-            text = response_json.get('text', _("voice_error")) # type: ignore
-            return text
+            return response_json.get('text', _("voice_error")) # type: ignore
 
 router = Router()
 
@@ -86,60 +74,33 @@ router = Router()
 async def stt_command(message: types.Message, bot: Bot):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
-    if not (
-        (message.reply_to_message and (message.reply_to_message.voice or message.reply_to_message.video or message.reply_to_message.video_note)) or 
-        (message.voice or message.video or message.video_note)
-    ):
+    
+    media_message = message.reply_to_message if message.reply_to_message else message
+    media = None
+    
+    if media_message.voice:
+        media = media_message.voice
+    elif media_message.video:
+        media = media_message.video
+    elif media_message.video_note:
+        media = media_message.video_note
+    
+    if not media:
         await message.reply(_("voice_help"))
         return
 
     async with TypingIndicator(bot=bot, chat_id=message.chat.id):
-        if message.reply_to_message:
-            if message.reply_to_message.voice:
-                voice = message.reply_to_message.voice
-                file_id = voice.file_id
-                duration = voice.duration
-            elif message.reply_to_message.video:
-                video = message.reply_to_message.video
-                file_id = video.file_id
-                duration = video.duration
-            elif message.reply_to_message.video_note:
-                video = message.reply_to_message.video_note
-                file_id = video.file_id
-                duration = video.duration
-        # Обработка самого message
-        else:
-            if message.voice:
-                voice = message.voice
-                file_id = voice.file_id
-                duration = voice.duration
-            elif message.video:
-                video = message.video
-                file_id = video.file_id
-                duration = video.duration
-            elif message.video_note:
-                video = message.video_note
-                file_id = video.file_id
-                duration = video.duration
-
-        file = await bot.get_file(file_id)
-        file_path = file.file_path
-
-        content = await download_as_audio(file_path, f"tmp/{file_id}.ogg")
+        file = await bot.get_file(media.file_id)
+        content = await download_as_audio(file.file_path, f"tmp/{media.file_id}.ogg")
         audio_bytes = BytesIO(content)
-        api = 0
-        #if duration > 180:
-        #    api = 2
-        #elif duration > 120:
-        #    api = 1
-        #print(API_URLS[api])
-        try:
-            transcription = await process_audio(audio_bytes, message, api)
 
+        try:
+            transcription = await process_audio(audio_bytes, message)
+            
             translate_button = InlineKeyboardButton(
                 text=_("translate_button"), 
                 callback_data='translate'
-            )        
+            )
 
             if message.chat.type == ChatType.PRIVATE:
                 query_button = InlineKeyboardButton(
@@ -148,9 +109,11 @@ async def stt_command(message: types.Message, bot: Bot):
                 )
                 keyboard = InlineKeyboardMarkup(inline_keyboard=[[translate_button], [query_button]])
             else:
-                keyboard = InlineKeyboardMarkup(inline_keyboard=[[translate_button]])        
+                keyboard = InlineKeyboardMarkup(inline_keyboard=[[translate_button]])
 
             await message.reply(transcription, reply_markup=keyboard)
-        except Exception: pass
+        except Exception as e:
+            print(f"Error processing audio: {e}")
         
-        os.remove(f"tmp/{file_id}.ogg")
+        if os.path.exists(f"tmp/{media.file_id}.ogg"):
+            os.remove(f"tmp/{media.file_id}.ogg")

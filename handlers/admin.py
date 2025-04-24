@@ -88,24 +88,28 @@ async def cmd_ban(message: Message):
 @router.message(Command("unban"))
 @admin_only
 async def cmd_unban(message: Message):
+    if message.reply_to_message:
+        user_id = message.reply_to_message.from_user.id
+        if not is_banned(user_id):
+            return await message.reply("⚠ Этот пользователь не в бане.")
+        unban_user(user_id)
+        return await message.reply(f"✅ Пользователь {user_id} разбанен!")
+
     args = message.text.split()
     if len(args) < 2:
-        if message.reply_to_message:
-            user_id = message.reply_to_message.from_user.id
-            chat_id = message.reply_to_message.chat.id
-        else:
-            return await message.reply(
-                "⚠ Укажите ID пользователя/чата для разблокировки."
-            )
-    else:
-        target_id = args[1].lstrip('-')
-        if not target_id.isdigit():
-            return await message.reply(
-                "⚠ Укажите валидный ID пользователя/чата для разблокировки."
-            )
-        target_id = int(args[1])
-        user_id = target_id if target_id > 0 else None
-        chat_id = target_id if target_id < 0 else None
+        return await message.reply(
+            "⚠ Укажите ID пользователя/чата для разблокировки или сделайте реплай на пользователя."
+        )
+
+    target_id = args[1].lstrip('-')
+    if not target_id.isdigit():
+        return await message.reply(
+            "⚠ Укажите валидный ID пользователя/чата для разблокировки."
+        )
+    
+    target_id = int(args[1])
+    user_id = target_id if target_id > 0 else None
+    chat_id = target_id if target_id < 0 else None
 
     if user_id and not is_banned(user_id):
         return await message.reply("⚠ Этот пользователь не в бане.")
