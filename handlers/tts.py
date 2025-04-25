@@ -23,7 +23,26 @@ VOICES = {
     "de": ["de-DE-KatjaNeural"],
     "it": ["it-IT-IsabellaNeural"],
     "zh": ["zh-CN-XiaoxiaoNeural"],
-    "uk": ["uk-UA-PolinaNeural"]
+    "uk": ["uk-UA-PolinaNeural"],
+    "ja": ["ja-JP-NanamiNeural"],
+    "ko": ["ko-KR-SunHiNeural"],
+    "pt": ["pt-BR-FranciscaNeural"],
+    "ar": ["ar-SA-ZariyahNeural"],
+    "hi": ["hi-IN-SwaraNeural"],
+    "tr": ["tr-TR-EmelNeural"],
+    "sv": ["sv-SE-SofieNeural"],
+    "nl": ["nl-NL-ColetteNeural"],
+    "pl": ["pl-PL-ZofiaNeural"],
+    "th": ["th-TH-PremwadeeNeural"],
+    "vi": ["vi-VN-HoaiMyNeural"],
+    "id": ["id-ID-GadisNeural"],
+    "cs": ["cs-CZ-VlastaNeural"],
+    "el": ["el-GR-AthinaNeural"],
+    "hu": ["hu-HU-NoemiNeural"],
+    "ro": ["ro-RO-AlinaNeural"],
+    "da": ["da-DK-ChristelNeural"],
+    "fi": ["fi-FI-SelmaNeural"],
+    "no": ["nb-NO-PernilleNeural"]
 }
 
 DEFAULT_VOICE_LANG = "en"
