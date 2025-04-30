@@ -155,7 +155,7 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot):
         "stream": False,
         "incremental_output": False,
         "chat_type": "t2t",
-        "model": "qwen-max-latest",
+        "model": "qwen3-235b-a22b",
         "messages": messages,
         "session_id": str(uuid.uuid4()),
         "chat_id": str(uuid.uuid4()),
@@ -229,7 +229,7 @@ async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
     data = {
         "stream": False,
         "chat_type": "t2i",
-        "model": "qwen-plus-latest",
+        "model": "qwen3-235b-a22b",
         "size": "1280*720",
         "messages": [{"role": "user", "content": user_input}],
         "id": str(uuid.uuid4()),
