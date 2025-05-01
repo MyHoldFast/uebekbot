@@ -116,6 +116,9 @@ msgstr "❌ Error generating audio"
 msgid "query_button"
 msgstr "Query to neural network"
 
+msgid "slowly"
+msgstr "Not so fast, I'll process one thing 😊"
+
 msgid "start_message"
 msgstr ""
 "**Hello! I am UebekBot, your assistant in working with texts, images and neural networks.**\n\n"

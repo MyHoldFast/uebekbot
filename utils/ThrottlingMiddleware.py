@@ -1,7 +1,8 @@
 from aiogram import BaseMiddleware
 from aiogram.dispatcher.flags import get_flag
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, Update
 import asyncio
+from localization import get_localization, DEFAULT_LANGUAGE
 
 class ThrottlingMiddleware(BaseMiddleware):
     def __init__(self, default_rate_limit: float = 1.0):
@@ -11,6 +12,8 @@ class ThrottlingMiddleware(BaseMiddleware):
 
     async def __call__(self, handler, event, data):
         user_id = event.from_user.id
+        user_language = self._get_user_language_code(event) or DEFAULT_LANGUAGE
+        _ = get_localization(user_language)
         current_time = asyncio.get_event_loop().time()
 
         rate_limit = get_flag(data, "throttling") or self.default_rate_limit
@@ -27,7 +30,7 @@ class ThrottlingMiddleware(BaseMiddleware):
                         message = event.message
                     
                     if message:
-                        await message.answer("Не так быстро, обработаю что-то одно 😊")
+                        await message.answer(_("slowly"))
                 return
             else:
                 if user_id in self.notified_users:
@@ -35,3 +38,6 @@ class ThrottlingMiddleware(BaseMiddleware):
 
         self.user_times[user_id] = current_time
         return await handler(event, data)
+
+    def _get_user_language_code(self, event: Update) -> str | None:
+            return event.from_user.language_code

@@ -11,7 +11,7 @@ from utils.StatsMiddleware import save_stats
 
 router = Router()
 
-router.message.middleware(ThrottlingMiddleware(default_rate_limit=2.0))
+router.message.middleware(ThrottlingMiddleware(default_rate_limit=3.0))
 
 is_not_forwarded = (
     F.forward_from == None,
