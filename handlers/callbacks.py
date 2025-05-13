@@ -4,6 +4,7 @@ from aiogram.filters import CommandObject
 from aiogram.exceptions import TelegramBadRequest
 from localization import get_localization, DEFAULT_LANGUAGE
 from utils.translate import translate_text
+from utils.StatsMiddleware import save_stats
 from handlers.qwen import cmd_qwen
 from datetime import datetime, timedelta
 from functools import wraps
@@ -49,6 +50,7 @@ async def query_callback(callback_query: CallbackQuery, bot: Bot):
     command = CommandObject(command=None, args=original_text)    
     await cmd_qwen(callback_query.message, command, bot)
     await safe_delete(message)
+    save_stats('/qwen')
 
 async def safe_delete(message):
     try:

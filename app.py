@@ -64,6 +64,11 @@ async def pre_deploy():
     await load_json_to_redis()
     return {"status": "success", "message": "Data reloaded to Redis"}
 
+async def periodic_reload_task():
+    while True:
+        await asyncio.sleep(12 * 60 * 60)
+        await load_json_to_redis()
+
 async def main():
     if sys.version_info < (3, 10):
         print("python >= 3.10 needed")
@@ -85,6 +90,7 @@ async def main():
     await bot.delete_webhook(drop_pending_updates=True)
 
     asyncio.create_task(dp.start_polling(bot, polling_timeout=50))
+    asyncio.create_task(periodic_reload_task())
     await app.run_task(host="0.0.0.0", port=80)
 
 if __name__ == "__main__":
