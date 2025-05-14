@@ -4,7 +4,6 @@ from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 from handlers.gpt import process_gpt, process_gemini
 from handlers.stt import stt_command
-from handlers.qwen import cmd_qwen
 from localization import get_localization, DEFAULT_LANGUAGE
 from utils.ThrottlingMiddleware import ThrottlingMiddleware
 from utils.StatsMiddleware import save_stats
@@ -34,7 +33,6 @@ async def cmd_start(message: Message):
 )
 async def pm(message: Message, bot: Bot):
     command = CommandObject(command=None, args=message.text)
-    await cmd_qwen(message, command, bot)
     save_stats('/gpt')
     await process_gpt(message, command, message.from_user.id)
 
