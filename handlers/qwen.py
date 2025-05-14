@@ -90,31 +90,25 @@ def process_latex(text):
     return text
 
 cookies = {
-    "x-ap": "eu-central-1",
-    "ssxmod_itna": "YqIxBGqmqxnD2D4MEDcWx0DUOqeq79DGHDyxWF50CDmxjKidqDUQyj3/Ax6AHrEZD5eCDBMrPrDmqi1XDYPGfeZShxQBD7q5sWQtiw+G5oGpAxj=QFhj8Qe1Mzjxu7r+e0aDbqGkeKZDdrDYYDC4GwDGoD34DiDDPDb8NDAueD7qDF7WR36nrvDYPKh4DmDGYK=QEYDDtDidNDKdp52DDl0YHQ8DdxoiWTudoT+1b4QZh57eDMbxGXf0OQ7mcvwKq==ZBmxpYqxB6XxBQd=OuZ+aI5glbiPOGnGHmLK0Drf0Y4fbhK0GjKz5KB4xlxF4bx8GKK0q0G4QDx0hY4WiU4DG457iQHgxDe4x4CwLCvd1+0zQmY8B=fl3/gx5A4qAz5nmSBxlA4hExOBz3ixArh0Cz4D",
-    "ssxmod_itna2": "YqIxBGqmqxnD2D4MEDcWx0DUOqeq79DGHDyxWF50CDmxjKidqDUQyj3/Ax6AHrEZD5erDGbWPD9iim+K=DjRwKazfDqb=3D05bqNsZG3xQ8olZ2u3enb10T4NnSK3h62zbN/dAgc/RQs9hKKNEmFe/HWc1BOraGsWoKOGhhOFlKbqnGsIrYbSrpHwgyqzoSDmKSkA8D8U=GKHiSOYEiWa7GKQ49kkIYsAUvH=7KxAt0DYbGONGWP8GmsiT7ErPkPAInHKGnk2gP7IEhUXAr8XrKcNO08UOKbmg91=jP8PTKa9X9qqUfF=BP7ZK1ZDQiAxn=wEPUZeyrKwPpn7DKo3ZnEfA5Aj5VhAgA5HZe=jK0n65BiVDPn0Xr96=fGAxKfeTX6duEier5WhYkUKeoIz/PylQ6GIHYogCKZ2YfOPKpi190yWxth58z5hKjp1UrrEv/Ir+LkOc/px++xaStW==PPRBmqggDLSpebUj76XSvNZe4E0VnRTz5MPj/6jOhIKDu4FaBB5eKbgKcqQRf2Ny0NEn7ecj2tG+bX23RXQIy75vlPkto=I0r8t0i5ROIMnHgonog707Ns1kTtibOd3OaO8dU3Xi6p1+U1rvwyYvjdaSwvXUoFWu7Gm0IK=3=RQBrfb37bxxl0yxLhgD7pYcy7DrnpxWxC0yK7t7rpyNa/cLSLwKIs/fKZ4W7D7iKjoS5xeGtDWe13IuiYHDzQt04rhKN78YKVvwDir2vZDdqchFCAWQCmh+=tzxnCdKDfAsA7Yc=O+YGxgb6e5k0hGirT7AdPYKmQTcOaNFDrcO5+xjovc/GDa7SmqeW6YeuBWtD6Htjq3ijADbrKQp70rDI7GDD",
+    'x5sec': qwen_accs[0]["x"],
+    'ssxmod_itna': 'Gu0Q0I4fx+xGxiqYQKYvq7QGODOf3GRDODl4BtiD2DIqGQGcD8hq0p8pFbKGkG9g3WGx5Yq7QGWx4SD05qPmDY5GS+xi3Dar39r5StjurqdtgjLbEvY7tBDev3Fu0=T5chLmZxAixCPGnD064BBdbDYYDC4GwDGoD34DiDDPDb3iDAqeD7qDF+lb=yCbLDYpY24DmDGAYHQ3oDDtDiMNQFhb5DDN5S=+qtjGTHZXADxqQd7aK7YbDjkPD/bhA1YR7pI85/CapOUWIFeGye5Gu9eeiqeq8AQWtdpe+7+Ybl+qmW0ohKA4YCDxiYoMGsQYY3A4Rk55A4AxstYhp75S0zmDDiEq5mIb0xXDx4r+2OtnEt9r4mQvM7vatitCD2CGxCKbDK1nwseesWD5lbbG0dBqtAG4gDxD',
+    'ssxmod_itna2': 'Gu0Q0I4fx+xGxiqYQKYvq7QGODOf3GRDODl4BtiD2DIqGQGcD8hq0p8pFbKGkG9g3WGx5Yq7QGWx4mDDPot5YEAbPDL0hwwfPGFOyxDlPuHcOQ9RrQhRd9UTQmu27W7de2F3NCLq2Dcu2FQGytSEPHBEiOqGI7FPw+PnHQ4E5e=4O1uWv5/27QFPe78rOa2=8OHUukszImGxaa5IK15YMFqDMxQzBGCQGau49rP9d7sCLiGxr15FD7sKA4hpaRE10OKsi244L+45B7=b8G5WxzpP7Pqtu6IdI+HF0kw2oICjyhgtqra2GlE2Q5fiY8tMBQiYiuTQIM3rStwgbV8dhhbH+xNmhHnF3qbFhxU+1TQbMM+kgCWSw74493KeQGCEQh+zBu8BoC3Cb34bkgO+ktQbW6kKxZ=m3NPji2AA0uIp8t/uDBrTCj+MjtND+CMad6Qr3GhwGNTTx=QREtPBtmbr186Zea+LDvMAUxa8E5ygNtqFtid2EU723TLrDgUA6Nq2F57X3g3RuHsL3sh1OwNIZr5hrnhL83iDuN=CK94mmKQ6lDCCbCBfA=GP2bywHyM3I8s94d1qfl7d3Da9bxZKfrbcI3fhrd8O2qdO3YHH4fYfO/uxXEiDCgvrg8oAHkdlxFSrRgbTHvCarxGahx+qMibS7zqr5YeBI44H+OqTdkIr=irN0xe0gDb/Ti0s7WamDgvG0FbbaQDriPmdqAi0GkvOpCa4FW57qeBDnb9phV2UAGqG+BP92LQGp7aC+5m4tP9RHBNP2DlhvyPYzY7WBD7W4OWj5+p7qqS=3422EeZKYxGPEqmm=yAmPYId/Ni0C6qW2AehqqK=Q3qNtpN0uBhv4qjdmiPiemGqAIm09AqZ0Nee/Gmj7SDoWwqiWi5SDeAq4D'
 }
 
 headers = {
-    "accept": "*/*",
-    "accept-language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7,zh-CN;q=0.6,zh;q=0.5,ja;q=0.4,de;q=0.3",
+    'Accept': '*/*',
+    'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7,zh-CN;q=0.6,zh;q=0.5,ja;q=0.4,de;q=0.3',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'DNT': '1',
+    'Origin': 'https://chat.qwen.ai',
+    'Pragma': 'no-cache',
+    'Referer': 'https://chat.qwen.ai/c/a8c98a2d-9910-477e-9499-c0ab26e0bcc2',
+    'Sec-Fetch-Dest': 'empty',
+    'Sec-Fetch-Mode': 'cors',
+    'Sec-Fetch-Site': 'same-origin',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
     "authorization": "Bearer " + qwen_accs[0]["bearer"],
-    "bx-v": "2.5.28",
-    "cache-control": "no-cache",
-    "content-type": "application/json",
-    "dnt": "1",
-    "origin": "https://chat.qwen.ai",
-    "pragma": "no-cache",
-    "priority": "u=1, i",
-    "referer": "https://chat.qwen.ai/",
-    "sec-ch-ua": '"Chromium";v="134", "Not:A-Brand";v="24", "Google Chrome";v="134"',
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": '"Windows"',
-    "sec-fetch-dest": "empty",
-    "sec-fetch-mode": "cors",
-    "sec-fetch-site": "same-origin",
-    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
-    "x-request-id": qwen_accs[0]["x"],
 }
 
 
@@ -240,9 +234,9 @@ async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
         global acc_index, last_update_time
 
         headers["Authorization"] = "Bearer " + qwen_accs[acc_index]["bearer"]
-        headers["x-request-id"] = qwen_accs[acc_index]["x"]
+        cookies["x5sec"] = qwen_accs[acc_index]["x"]
 
-        async with session.post(url, headers=headers, json=data, timeout=120, proxy=proxy) as r:
+        async with session.post(url, headers=headers, cookies=cookies, json=data, timeout=120, proxy=proxy) as r:
             try:
                 if r.status == 200:
                     result = await r.json()
