@@ -35,8 +35,8 @@ async def cmd_start(message: Message):
 async def pm(message: Message, bot: Bot):
     command = CommandObject(command=None, args=message.text)
     await cmd_qwen(message, command, bot)
-    save_stats('/qwen')
-    #await process_gpt(message, command, message.from_user.id)
+    save_stats('/gpt')
+    await process_gpt(message, command, message.from_user.id)
 
 @router.message(
     F.chat.type == ChatType.PRIVATE,
