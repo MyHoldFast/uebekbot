@@ -233,7 +233,6 @@ async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
         global acc_index, last_update_time
 
         headers["Authorization"] = "Bearer " + qwen_accs[acc_index]["bearer"]
-        cookies["x5sec"] = qwen_accs[acc_index]["x"]
 
         async with session.post(url, headers=headers, cookies=cookies, json=data, timeout=120, proxy=proxy) as r:
             try:
