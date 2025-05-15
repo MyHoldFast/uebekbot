@@ -6,6 +6,7 @@ from localization import get_localization, DEFAULT_LANGUAGE
 from utils.translate import translate_text
 from utils.StatsMiddleware import save_stats
 from handlers.gpt import process_gpt
+from handlers.qwen import cmd_qwen
 from datetime import datetime, timedelta
 from functools import wraps
 
@@ -47,8 +48,9 @@ async def query_callback(callback_query: CallbackQuery, bot: Bot):
     await callback_query.answer()
     message = await callback_query.message.reply("⏳")
     original_text = callback_query.message.text
-    command = CommandObject(command=None, args=original_text)    
-    await process_gpt(callback_query.message, command, bot)
+    command = CommandObject(command=None, args=original_text)  
+    await cmd_qwen(callback_query.message, command, bot)  
+    #await process_gpt(callback_query.message, command, callback_query.from_user.id)
     await safe_delete(message)
     save_stats('/qwen')
 

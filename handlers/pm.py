@@ -3,6 +3,7 @@ from aiogram.enums import ChatType, ContentType
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 from handlers.gpt import process_gpt, process_gemini
+from handlers.qwen import cmd_qwen
 from handlers.stt import stt_command
 from localization import get_localization, DEFAULT_LANGUAGE
 from utils.ThrottlingMiddleware import ThrottlingMiddleware
@@ -33,8 +34,9 @@ async def cmd_start(message: Message):
 )
 async def pm(message: Message, bot: Bot):
     command = CommandObject(command=None, args=message.text)
-    save_stats('/gpt')
-    await process_gpt(message, command, message.from_user.id)
+    save_stats('/qwen')
+    await cmd_qwen(message, command, bot)
+    #await process_gpt(message, command, message.from_user.id)
 
 @router.message(
     F.chat.type == ChatType.PRIVATE,
