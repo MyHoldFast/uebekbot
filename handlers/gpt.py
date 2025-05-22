@@ -10,6 +10,7 @@ from utils.text_utils import split_html
 from utils.typing_indicator import TypingIndicator
 #from duckai import DuckAI
 from g4f.client import AsyncClient
+from g4f.Provider import WeWordle
 from aiogram import Bot, Router
 from aiogram.filters import Command, CommandObject
 from aiogram.types import (
@@ -274,7 +275,7 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
         else:
             chat_messages = [{"role": "user", "content": messagetext}]
 
-        client = AsyncClient(proxies=proxy)
+        client = AsyncClient(proxies=proxy, provider=WeWordle)
 
         async with TypingIndicator(bot=message.bot, chat_id=message.chat.id):
             response = await asyncio.wait_for(
