@@ -46,10 +46,11 @@ async def translate_callback(callback_query: CallbackQuery, bot: Bot):
 @throttle(seconds=5)
 async def query_callback(callback_query: CallbackQuery, bot: Bot):
     await callback_query.answer()
+    user_language = callback_query.from_user.language_code or DEFAULT_LANGUAGE
     message = await callback_query.message.reply("⏳")
     original_text = callback_query.message.text
     command = CommandObject(command=None, args=original_text)  
-    await cmd_qwen(callback_query.message, command, bot)  
+    await cmd_qwen(callback_query.message, command, bot, id=callback_query.from_user.id, lang=user_language)  
     #await process_gpt(callback_query.message, command, callback_query.from_user.id)
     await safe_delete(message)
     save_stats('/qwen')

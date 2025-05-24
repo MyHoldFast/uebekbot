@@ -113,7 +113,7 @@ headers = {
 
 @router.message(Command("qwen", ignore_case=True))
 @check_command_enabled("qwen")
-async def cmd_qwen(message: Message, command: CommandObject, bot: Bot):
+async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id: int = None, lang: str = None):
     if message.reply_to_message:
         user_input = (
             message.reply_to_message.text or message.reply_to_message.caption or ""
@@ -123,14 +123,14 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot):
     else:
         user_input = command.args if command.args else ""
 
-    user_language = message.from_user.language_code or DEFAULT_LANGUAGE
+    user_language = lang if lang is not None else message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
 
     if not user_input:
         await message.reply(_("qwen_help"))
         return
 
-    user_id = message.from_user.id
+    user_id = id if id is not None else message.from_user.id
     messages = load_messages(user_id)
 
     messages.append(
