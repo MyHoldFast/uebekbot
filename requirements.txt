@@ -6,14 +6,15 @@ chatgpt_md_converter==0.1.2
 python-dotenv==1.0.1
 tinydb==4.8.0
 httpx
+pillow
 pytz
 pylatexenc==2.10
 requests==2.32.3
 requests[socks]
-google-generativeai
 g4f[all]
 duckai
 fasttext-wheel==0.9.2
 numpy==2.2.2
 edge_tts
 shazamio
+google-genai

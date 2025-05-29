@@ -86,6 +86,9 @@ msgstr "ℹ️ Message history deleted"
 msgid "qwenimghelp"
 msgstr "ℹ️ Enter image description after command."
 
+msgid "gemimghelp"
+msgstr "ℹ️ Enter a description of the image after the command. To edit the image, reply to it with the command and the query"
+
 msgid "qwenimg_gen"
 msgstr "⏳ Generating image... Please wait."
 
@@ -139,8 +142,10 @@ msgstr ""
 "- **/stt** — translation of voice messages or videos into text.\n"
 "- **/tts** — text to audio translation.\n"
 "- **/neuro** — search using Yandex Neuro.\n"
-"- **/qwenimg** — generation of images via chat.qwen.ai.\n"
-"- **/gemimg** — generation of images via Google Gemini\n"
+"- **/shazam** — music recognition in voice/audio/video file via Shazam\n"
+"- **/qwenimg** — image generation via chat.qwen.ai.\n"
+"- **/gemimg** — image generation or editing via Google Gemini\n"
+"To edit an image, reply to it with the /gemimg command and a request for what needs to be changed on it\n"
 "- **/gpt** — chat with AI (GPT, Gemini Vision for images.\n"
 "- **/gptrm** — delete current session with GPT.\n"
 
