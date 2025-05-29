@@ -2,9 +2,9 @@ from aiogram import Router, Bot, F
 from aiogram.enums import ChatType, ContentType
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from handlers.gpt import process_gpt, process_gemini
 from handlers.qwen import cmd_qwen
-from handlers.stt import stt_command
 from localization import get_localization, DEFAULT_LANGUAGE
 from utils.ThrottlingMiddleware import ThrottlingMiddleware
 from utils.StatsMiddleware import save_stats
@@ -56,15 +56,27 @@ async def handle_photo(message: Message, bot: Bot):
     *is_not_forwarded
 )
 async def handle_voice(message: Message, bot: Bot):
-    await stt_command(message, bot)
-    save_stats('/stt')
-
-@router.message(
-    F.chat.type == ChatType.PRIVATE,
-    F.content_type.not_in({ContentType.TEXT, ContentType.PHOTO, ContentType.VOICE}),
-    *is_not_forwarded
-)
-async def handle_other_content(message: Message, bot: Bot):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
-    await message.answer(_("pm_default"))
+    stt_button = InlineKeyboardButton(
+    text=_("stt_button"), 
+    callback_data='stt_button')
+    shazam_button = InlineKeyboardButton(
+    text=_("shazam_button"), 
+    callback_data='shazam_button')
+    # query_button = InlineKeyboardButton(
+    # text=_("query_button"), 
+    # callback_data='query_button')
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[[stt_button], [shazam_button]])
+    await message.reply(_("voice_in_pm"), reply_markup=keyboard)
+
+# @router.message(
+#     F.chat.type == ChatType.PRIVATE,
+#     F.content_type.not_in({ContentType.TEXT, ContentType.PHOTO, ContentType.VOICE}),
+#     *is_not_forwarded
+# )
+# async def handle_other_content(message: Message, bot: Bot):
+#     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
+#     _ = get_localization(user_language)
+#     await message.answer(_("pm_default"))

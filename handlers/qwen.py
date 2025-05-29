@@ -114,7 +114,7 @@ headers = {
 @router.message(Command("qwen", ignore_case=True))
 @check_command_enabled("qwen")
 async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id: int = None, lang: str = None):
-    if message.reply_to_message:
+    if message.reply_to_message and id == None: ###FIX IT FOR CALLBACK
         user_input = (
             message.reply_to_message.text or message.reply_to_message.caption or ""
         )

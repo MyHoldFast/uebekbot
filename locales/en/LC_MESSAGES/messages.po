@@ -116,6 +116,15 @@ msgstr "❌ Error generating audio"
 msgid "query_button"
 msgstr "Query to neural network"
 
+msgid "stt_button"
+msgstr "Voice to text"
+
+msgid "shazam_button"
+msgstr "Recognize music"
+
+msgid "voice_in_pm"
+msgstr "❓ What should I do with this voice message?"
+
 msgid "slowly"
 msgstr "Not so fast, I'll process one thing 😊"
 
@@ -141,3 +150,9 @@ msgstr ""
 
 msgid "pm_default"
 msgstr "Sorry, use content handling commands 😊"
+
+msgid "shazam_help"
+msgstr "ℹ️ To recognize an audio track, reply to the voice/audio/video message with the /shazam command"
+
+msgid "shazam_not_found"
+msgstr "❌ Track not recognized"

@@ -60,8 +60,8 @@ router = Router()
 
 @router.message(Command("stt", ignore_case=True))
 @check_command_enabled("stt")
-async def stt_command(message: types.Message, bot: Bot):
-    user_language = message.from_user.language_code or DEFAULT_LANGUAGE
+async def stt_command(message: types.Message, bot: Bot, lang: str = None):
+    user_language = lang if lang is not None else message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
     
     media_message = message.reply_to_message if message.reply_to_message else message
@@ -91,7 +91,7 @@ async def stt_command(message: types.Message, bot: Bot):
                 callback_data='translate'
             )
 
-            if message.chat.type == ChatType.PRIVATE:
+            if message.chat.type == ChatType.PRIVATE:        
                 query_button = InlineKeyboardButton(
                     text=_("query_button"),
                     callback_data='query'
@@ -99,7 +99,6 @@ async def stt_command(message: types.Message, bot: Bot):
                 keyboard = InlineKeyboardMarkup(inline_keyboard=[[translate_button], [query_button]])
             else:
                 keyboard = InlineKeyboardMarkup(inline_keyboard=[[translate_button]])
-
             await message.reply(transcription, reply_markup=keyboard)
         except Exception as e:
             print(f"Error processing audio: {e}")

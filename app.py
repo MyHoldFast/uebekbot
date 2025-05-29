@@ -8,7 +8,7 @@ from quart import Quart, render_template, request
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from dotenv import load_dotenv
-from handlers import callbacks, ya_ocr, summary, gpt, admin, stt, neuro, qwen, pm, gemimg, tts
+from handlers import callbacks, ya_ocr, summary, gpt, admin, stt, neuro, qwen, pm, gemimg, tts, shazam
 from utils.StatsMiddleware import StatsMiddleware
 from utils.BanMiddleware import BanMiddleware
 
@@ -83,7 +83,8 @@ async def main():
 
     dp.include_routers(
         callbacks.router, ya_ocr.router, summary.router, gpt.router,
-        admin.router, stt.router, neuro.router, qwen.router, pm.router, gemimg.router, tts.router
+        admin.router, stt.router, neuro.router, qwen.router, pm.router, gemimg.router, tts.router,
+        shazam.router
     )
 
     await load_json_to_redis()

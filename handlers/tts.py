@@ -1,7 +1,7 @@
 import os
 import tempfile
 import asyncio
-import fasttext
+import utils.FastText as fasttext
 from utils.typing_indicator import TypingIndicator
 from aiogram import Router, Bot
 from aiogram.filters import Command, CommandObject

@@ -62,7 +62,11 @@ def check_command_enabled(command_name):
         async def wrapper(message: Message, *args, **kwargs):
             disabled_commands = load_disabled_commands()
             chat_id = str(message.chat.id)
-            user_language = message.from_user.language_code or DEFAULT_LANGUAGE
+            lang = None
+            if 'lang' in kwargs:
+                lang = kwargs['lang']
+            user_language = lang if lang is not None else message.from_user.language_code or DEFAULT_LANGUAGE
+            #user_language = message.from_user.language_code or DEFAULT_LANGUAGE
             _ = get_localization(user_language)
 
             if command_name in disabled_commands["global"]:
