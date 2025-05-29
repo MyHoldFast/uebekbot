@@ -94,7 +94,7 @@ async def shazam_command(message: types.Message, bot: Bot, lang: str = None):
         media = media_message.document
 
     if not media:
-        await message.reply(_("shazam_help"))  # Добавьте в локализацию фразу подсказки
+        await message.reply(_("shazam_help"))
         return
 
     async with TypingIndicator(bot=bot, chat_id=message.chat.id):
