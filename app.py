@@ -11,7 +11,9 @@ from dotenv import load_dotenv
 from handlers import callbacks, ya_ocr, summary, gpt, admin, stt, neuro, qwen, pm, gemimg, tts, shazam
 from utils.StatsMiddleware import StatsMiddleware
 from utils.BanMiddleware import BanMiddleware
+import uvloop
 
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 app = Quart(__name__)
 load_dotenv()
 
