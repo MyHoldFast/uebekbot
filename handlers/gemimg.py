@@ -17,13 +17,15 @@ from localization import get_localization, DEFAULT_LANGUAGE
 client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 router = Router()
 
+
 async def safe_delete(message):
     try:
         await message.delete()
     except TelegramBadRequest:
         pass
 
-async def generate_image(user_input, image_path: str = None):
+
+async def generate_image(user_input, image_path: str = None, timeout: int = 30):
     try:
         def sync_generate():
             contents = [user_input]
@@ -47,12 +49,17 @@ async def generate_image(user_input, image_path: str = None):
                     return part.inline_data.data
             return None
 
-        return await asyncio.to_thread(sync_generate)
+        return await asyncio.wait_for(asyncio.to_thread(sync_generate), timeout=timeout)
+
+    except asyncio.TimeoutError:
+        print(f"generate_image timed out after {timeout} seconds")
+        return None
 
     except Exception as e:
         print("generate_image error:", e)
         return None
-    
+
+
 @router.message(Command("gemimg", ignore_case=True))
 @check_command_enabled("gemimg")
 async def cmd_gemimg(message: Message, command: CommandObject, bot: Bot):
@@ -82,6 +89,7 @@ async def cmd_gemimg(message: Message, command: CommandObject, bot: Bot):
 
         image_path = None
         output_path = None
+
         try:
             if photo:
                 file = await bot.get_file(photo.file_id)
@@ -94,11 +102,22 @@ async def cmd_gemimg(message: Message, command: CommandObject, bot: Bot):
             if result:
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as output_file:
                     output_file.write(result)
-                    output_file.flush()
                     output_path = output_file.name
+                
+                await asyncio.sleep(0.1)
 
                 await safe_delete(sent_message)
-                await message.reply_photo(photo=FSInputFile(output_path))
+
+                try:                   
+                    await asyncio.shield(
+                        message.reply_photo(photo=FSInputFile(output_path))
+                    )
+                except asyncio.CancelledError:
+                    print("Upload task was cancelled during file transmission.")
+                    raise
+                except Exception as e:
+                    print("Failed to send image:", e)
+                    await message.reply(_("gemimg_err"))
             else:
                 await safe_delete(sent_message)
                 await message.reply(_("gemimg_err"))
@@ -114,4 +133,4 @@ async def cmd_gemimg(message: Message, command: CommandObject, bot: Bot):
                     try:
                         os.remove(path)
                     except Exception as e:
-                        print(f"Ошибка удаления файла {path}:", e)
+                        print(f"Error deleting file {path}:", e)

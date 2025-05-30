@@ -163,7 +163,6 @@ async def process_gemini(message: Message, command: CommandObject, bot, photo):
     _ = get_localization(user_language)
 
     text = command.args or "опиши изображение на русском языке"
-
     try:
         file = await bot.get_file(photo.file_id)
         file_path = file.file_path
@@ -178,11 +177,18 @@ async def process_gemini(message: Message, command: CommandObject, bot, photo):
                     file=tmp_path
                 )
 
-                response = await asyncio.to_thread(
-                    client.models.generate_content,
-                    model="gemini-2.0-flash",
-                    contents=[uploaded_file, text],
-                )
+                try:
+                    response = await asyncio.wait_for(
+                        asyncio.to_thread(
+                            client.models.generate_content,
+                            model="gemini-2.0-flash",
+                            contents=[uploaded_file, text],
+                        ),
+                        timeout=30
+                    )
+                except asyncio.TimeoutError:
+                    await message.reply(_("gpt_gemini_error"))
+                    return
 
                 if response.text:
                     chunks = split_html(telegram_format(response.text))
