@@ -17,17 +17,12 @@ jobs:
           password: ${{ secrets.VPS_PASSWORD }}
           port: 22
           script: |
-            set -e
             cd /root
             source myenv/bin/activate
             cd /root/uebekbot
-            git pull
+            git reset --hard HEAD || true
+            git fetch --all
+            git reset --hard origin/main
             pip install --no-cache-dir -r requirements.txt
-            mkdir -p trained_models
-            wget -q -O trained_models/lid.176.bin https://github.com/MyHoldFast/uebekbot/raw/main/trained_models/lid.176.bin
-            PIDS=$(pgrep -f "/root/uebekbot/bot.py")
-            if [ -n "$PIDS" ]; then
-              (sleep 1 && kill $PIDS) &
-            fi
-            nohup python bot.py > bot.log 2>&1 < /dev/null &
-            exit 0
+            pkill -f bot.py || true
+            nohup python bot.py > bot.log 2>&1 &
