@@ -25,5 +25,6 @@ jobs:
             git reset --hard origin/main
             pip install --no-cache-dir -r requirements.txt
             mkdir -p trained_models && wget -O trained_models/lid.176.bin https://github.com/MyHoldFast/uebekbot/raw/main/trained_models/lid.176.bin
-            pkill -f bot.py || true
+            pkill -f bot.py > /dev/null 2>&1 || true
+            echo "start bot..."
             nohup python bot.py > bot.log 2>&1 &
