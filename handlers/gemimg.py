@@ -11,7 +11,6 @@ from aiogram.types.input_file import FSInputFile
 from aiogram.exceptions import TelegramBadRequest
 from utils.typing_indicator import TypingIndicator
 from utils.command_states import check_command_enabled
-#from utils.translate import translate_text
 from localization import get_localization, DEFAULT_LANGUAGE
 
 
