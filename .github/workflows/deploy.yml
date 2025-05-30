@@ -25,7 +25,7 @@ jobs:
             pip install --no-cache-dir -r requirements.txt
             mkdir -p trained_models
             wget -q -O trained_models/lid.176.bin https://github.com/MyHoldFast/uebekbot/raw/main/trained_models/lid.176.bin
-            PIDS=$(pgrep -f "/root/uebekbot/bot.py")
+            PIDS=$(pgrep -f "python.*bot.py")
             if [ -n "$PIDS" ]; then
               (sleep 1 && kill $PIDS) &
             fi
