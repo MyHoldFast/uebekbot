@@ -5,6 +5,8 @@ import os
 import re
 import time
 from io import BytesIO
+import tempfile
+from contextlib import asynccontextmanager
 
 #from concurrent.futures import ProcessPoolExecutor
 from utils.text_utils import split_html
@@ -142,6 +144,20 @@ def split_message(text: str, max_length: int = 4000):
     return [text[i : i + max_length] for i in range(0, len(text), max_length)]
 
 
+@asynccontextmanager
+async def temporary_photo_file(photo_stream: BytesIO):
+    try:
+        with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp_file:
+            tmp_file.write(photo_stream.getvalue())
+            tmp_path = tmp_file.name
+        yield tmp_path
+    finally:
+        if os.path.exists(tmp_path):
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
+
 async def process_gemini(message: Message, command: CommandObject, bot, photo):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
@@ -155,33 +171,29 @@ async def process_gemini(message: Message, command: CommandObject, bot, photo):
         await bot.download_file(file_path, destination=photo_stream)
         photo_stream.seek(0)
 
-        tmp_path = f"tmp/{photo.file_unique_id}.jpg"
-        os.makedirs("tmp", exist_ok=True)
-        with open(tmp_path, "wb") as f:
-            f.write(photo_stream.read())
+        async with temporary_photo_file(photo_stream) as tmp_path:
+            async with TypingIndicator(bot=bot, chat_id=message.chat.id): 
+                uploaded_file = await asyncio.to_thread(
+                    client.files.upload, 
+                    file=tmp_path
+                )
 
-        async with TypingIndicator(bot=bot, chat_id=message.chat.id): 
-            uploaded_file = await asyncio.to_thread(client.files.upload, file=tmp_path)
+                response = await asyncio.to_thread(
+                    client.models.generate_content,
+                    model="gemini-2.0-flash",
+                    contents=[uploaded_file, text],
+                )
 
-            response = await asyncio.to_thread(
-                client.models.generate_content,
-                model="gemini-2.0-flash",
-                contents=[uploaded_file, text],
-            )
-
-            if response.text:
-                chunks = split_html(telegram_format(response.text))
-                for chunk in chunks:
-                    await message.reply(chunk, parse_mode="HTML")
-            else:
-                await message.reply(_("gpt_gemini_error"))
+                if response.text:
+                    chunks = split_html(telegram_format(response.text))
+                    for chunk in chunks:
+                        await message.reply(chunk, parse_mode="HTML")
+                else:
+                    await message.reply(_("gpt_gemini_error"))
 
     except Exception as e:
         print("Gemini error:", e)
         await message.reply(_("gpt_gemini_error"))
-    finally:
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
 
 
 #def chat_with_duckai(model, message, chat_messages, chat_vqd, chat_vqd_hash):

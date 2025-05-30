@@ -38,17 +38,17 @@ async def pm(message: Message, bot: Bot):
     await cmd_qwen(message, command, bot)
     #await process_gpt(message, command, message.from_user.id)
 
-@router.message(
-    F.chat.type == ChatType.PRIVATE,
-    F.content_type == ContentType.PHOTO,
-    *is_not_forwarded 
-)
-async def handle_photo(message: Message, bot: Bot):
-    command = CommandObject(command=None, args=message.caption) 
-    photo = message.reply_to_message.photo[-1] if message.reply_to_message and message.reply_to_message.photo else None
-    photo = photo or (message.photo[-1] if message.photo else None)
-    await process_gemini(message, command, bot, photo)
-    save_stats('/gpt')
+# @router.message(
+#     F.chat.type == ChatType.PRIVATE,
+#     F.content_type == ContentType.PHOTO,
+#     *is_not_forwarded 
+# )
+# async def handle_photo(message: Message, bot: Bot):
+#     command = CommandObject(command=None, args=message.caption) 
+#     photo = message.reply_to_message.photo[-1] if message.reply_to_message and message.reply_to_message.photo else None
+#     photo = photo or (message.photo[-1] if message.photo else None)
+#     await process_gemini(message, command, bot, photo)
+#     save_stats('/gpt')
 
 @router.message(
     F.chat.type == ChatType.PRIVATE,
