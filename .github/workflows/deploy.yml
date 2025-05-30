@@ -17,6 +17,7 @@ jobs:
           password: ${{ secrets.VPS_PASSWORD }}
           port: 22
           script: |
+            set +e
             cd /root
             source myenv/bin/activate
             cd /root/uebekbot
