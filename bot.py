@@ -6,6 +6,10 @@ from handlers import callbacks, ya_ocr, summary, gpt, admin, stt, neuro, qwen, p
 from utils.StatsMiddleware import StatsMiddleware
 from utils.BanMiddleware import BanMiddleware
 
+if sys.platform != "win32":
+    import uvloop  # type: ignore
+    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+
 async def main():
     if sys.version_info < (3, 10):
         print("python >= 3.10 needed")

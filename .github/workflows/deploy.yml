@@ -1,0 +1,28 @@
+name: Deploy Bot via SSH
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: 22
+          script: |
+            cd /root
+            source myenv/bin/activate
+            cd /root/uebekbot
+            git reset --hard HEAD || true
+            git fetch --all
+            git reset --hard origin/main
+            pip install --no-cache-dir -r requirements.txt
+            pkill -f bot.py || true
+            nohup python bot.py > bot.log 2>&1 &

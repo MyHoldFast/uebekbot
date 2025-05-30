@@ -11,13 +11,16 @@ from aiogram.types.input_file import FSInputFile
 from aiogram.exceptions import TelegramBadRequest
 from utils.typing_indicator import TypingIndicator
 from utils.command_states import check_command_enabled
-from utils.translate import translate_text
+#from utils.translate import translate_text
 from localization import get_localization, DEFAULT_LANGUAGE
 
 
 API_KEY = os.environ["GEMINI_API_KEY"]
 MODEL_NAME = "gemini-2.0-flash-exp-image-generation"
 BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models" 
+URL_PROXY = os.environ["URL_PROXY"]
+if URL_PROXY:
+    BASE_URL = URL_PROXY + BASE_URL
 
 router = Router()
 
@@ -76,10 +79,16 @@ async def generate_image(user_input, image_path: str = None, timeout: int = 30):
 
 @router.message(Command("gemimg", ignore_case=True))
 @check_command_enabled("gemimg")
-async def cmd_gemimg(message: Message, command: CommandObject, bot: Bot):
+async def cmd_gemimg(message: Message, command: CommandObject, bot: Bot):    
+    photo = (
+        message.reply_to_message.photo[-1]
+        if message.reply_to_message and message.reply_to_message.photo
+        else message.photo[-1] if message.photo
+        else None
+    )
     user_input = (
         message.reply_to_message.text or message.reply_to_message.caption or ""
-        if message.reply_to_message else ""
+        if message.reply_to_message and not photo else ""
     )
     if command.args:
         user_input += ("\n" if user_input else "") + command.args
@@ -90,13 +99,6 @@ async def cmd_gemimg(message: Message, command: CommandObject, bot: Bot):
     if not user_input:
         await message.reply(_("gemimghelp"))
         return
-
-    photo = (
-        message.reply_to_message.photo[-1]
-        if message.reply_to_message and message.reply_to_message.photo
-        else message.photo[-1] if message.photo
-        else None
-    )
 
     async with TypingIndicator(bot=bot, chat_id=message.chat.id):
         sent_message = await message.reply(_("qwenimg_gen"))

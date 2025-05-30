@@ -30,6 +30,10 @@ from utils.command_states import check_command_enabled
 API_KEY = os.environ["GEMINI_API_KEY"]
 MODEL_NAME = "gemini-2.0-flash"
 BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models" 
+URL_PROXY = os.environ["URL_PROXY"]
+if URL_PROXY:
+    BASE_URL = URL_PROXY + BASE_URL
+    
 router = Router()
 
 db, Query = DB("db/gpt_models.json").get_db()

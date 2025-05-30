@@ -17,4 +17,4 @@ RUN git lfs install && \
 
 COPY . .
 
-ENTRYPOINT ["sh", "-c", "python post_deploy.py & python app.py"]
+ENTRYPOINT ["sh", "-c", "python app.py"]

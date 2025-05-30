@@ -72,7 +72,7 @@ def get_process_memory():
         return {
             "rss": mem_info.rss // (1024 ** 2), 
             "vms": mem_info.vms // (1024 ** 2),
-            "shared": mem_info.shared // (1024 ** 2),
+            "shared": mem_info.shared // (1024 ** 2) if hasattr(mem_info, "shared") else 0,
             "percent": process.memory_percent()
         }
 

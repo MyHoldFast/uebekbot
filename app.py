@@ -1,75 +1,24 @@
 import asyncio
 import os
 import sys
-import json
-import redis
-from urllib.parse import urlparse
-from quart import Quart, render_template, request
+from quart import Quart, render_template
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from dotenv import load_dotenv
 from handlers import callbacks, ya_ocr, summary, gpt, admin, stt, neuro, qwen, pm, gemimg, tts, shazam
 from utils.StatsMiddleware import StatsMiddleware
 from utils.BanMiddleware import BanMiddleware
-import uvloop
 
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+if sys.platform != "win32":
+    import uvloop
+    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+
 app = Quart(__name__)
 load_dotenv()
-
-if os.getenv("MIGRATE"):
-    redis_url = os.getenv("REDIS_URL_MIGRATE")
-    url = urlparse(redis_url)
-
-    r = redis.Redis(
-        host=url.hostname,
-        port=url.port,
-        password=url.password if url.password else None,
-        ssl=True if url.scheme == "rediss" else False
-    )
-
-db_dir = "db/"
-
-async def load_json_to_redis():
-    if not os.getenv("MIGRATE"):
-        return
-
-    if not os.path.exists(db_dir):
-        print(f"Directory {db_dir} does not exist.")
-        return
-
-    for filename in os.listdir(db_dir):
-        if filename.endswith(".json"):
-            file_path = os.path.join(db_dir, filename)
-
-            if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-                with open(file_path, "r") as file:
-                    content = file.read()
-                    try:
-                        data = json.loads(content)
-                        r.set(filename, json.dumps(data))
-                        print(f"Data from {filename} has been saved to Redis.")
-                    except json.JSONDecodeError as e:
-                        print(f"Error decoding JSON from {filename}: {e}")
-            else:
-                print(f"File {filename} is empty or does not exist.")
 
 @app.route("/")
 async def index():
     return await render_template('index.html')
-
-@app.route("/pre-deploy", methods=["POST"])
-async def pre_deploy():
-    if request.headers.get("X-Deploy-Token") != "migrate":
-        return {"status": "error", "message": "Unauthorized"}, 401
-
-    await load_json_to_redis()
-    return {"status": "success", "message": "Data reloaded to Redis"}
-
-async def periodic_reload_task():
-    while True:
-        await asyncio.sleep(12 * 60 * 60)
-        await load_json_to_redis()
 
 async def main():
     if sys.version_info < (3, 10):
@@ -89,11 +38,9 @@ async def main():
         shazam.router
     )
 
-    await load_json_to_redis()
     await bot.delete_webhook(drop_pending_updates=True)
 
     asyncio.create_task(dp.start_polling(bot, polling_timeout=50))
-    asyncio.create_task(periodic_reload_task())
     await app.run_task(host="0.0.0.0", port=80)
 
 if __name__ == "__main__":

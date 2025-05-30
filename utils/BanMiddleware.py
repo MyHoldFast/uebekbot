@@ -1,6 +1,6 @@
 import time, os, asyncio
 from aiogram import BaseMiddleware, Bot
-from aiogram.types import TelegramObject, Update, Message
+from aiogram.types import TelegramObject, Update
 from typing import Callable, Dict, Awaitable, Any
 from utils.dbmanager import DB
 from utils.cmd_list import cmds

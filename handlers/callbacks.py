@@ -7,7 +7,7 @@ from utils.translate import translate_text
 from handlers.stt import stt_command
 from handlers.shazam import shazam_command
 from utils.StatsMiddleware import save_stats
-from handlers.gpt import process_gpt
+#from handlers.gpt import process_gpt
 from handlers.qwen import cmd_qwen
 from datetime import datetime, timedelta
 from functools import wraps

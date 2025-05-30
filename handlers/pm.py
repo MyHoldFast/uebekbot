@@ -3,7 +3,7 @@ from aiogram.enums import ChatType, ContentType
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from handlers.gpt import process_gpt, process_gemini
+#from handlers.gpt import process_gpt, process_gemini
 from handlers.qwen import cmd_qwen
 from localization import get_localization, DEFAULT_LANGUAGE
 from utils.ThrottlingMiddleware import ThrottlingMiddleware
