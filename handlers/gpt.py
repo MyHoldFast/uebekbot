@@ -2,12 +2,10 @@ import asyncio
 import base64
 import json
 import os
+import aiohttp
 import re
 import time
 from io import BytesIO
-import tempfile
-from contextlib import asynccontextmanager
-
 #from concurrent.futures import ProcessPoolExecutor
 from utils.text_utils import split_html
 from utils.typing_indicator import TypingIndicator
@@ -22,7 +20,6 @@ from aiogram.types import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
 )
-from google import genai
 from pylatexenc.latex2text import LatexNodes2Text
 
 from localization import get_localization, DEFAULT_LANGUAGE
@@ -30,7 +27,9 @@ from utils.dbmanager import DB
 from chatgpt_md_converter import telegram_format
 from utils.command_states import check_command_enabled
 
-client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+API_KEY = os.environ["GEMINI_API_KEY"]
+MODEL_NAME = "gemini-2.0-flash"
+BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models" 
 router = Router()
 
 db, Query = DB("db/gpt_models.json").get_db()
@@ -143,21 +142,6 @@ async def callback_query_handler(callback_query: CallbackQuery):
 def split_message(text: str, max_length: int = 4000):
     return [text[i : i + max_length] for i in range(0, len(text), max_length)]
 
-
-@asynccontextmanager
-async def temporary_photo_file(photo_stream: BytesIO):
-    try:
-        with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp_file:
-            tmp_file.write(photo_stream.getvalue())
-            tmp_path = tmp_file.name
-        yield tmp_path
-    finally:
-        if os.path.exists(tmp_path):
-            try:
-                os.unlink(tmp_path)
-            except Exception:
-                pass
-
 async def process_gemini(message: Message, command: CommandObject, bot, photo):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
@@ -170,35 +154,71 @@ async def process_gemini(message: Message, command: CommandObject, bot, photo):
         await bot.download_file(file_path, destination=photo_stream)
         photo_stream.seek(0)
 
-        async with temporary_photo_file(photo_stream) as tmp_path:
-            async with TypingIndicator(bot=bot, chat_id=message.chat.id): 
-                uploaded_file = await asyncio.to_thread(
-                    client.files.upload, 
-                    file=tmp_path
-                )
+        image_bytes = photo_stream.getvalue()
+        img_base64 = base64.b64encode(image_bytes).decode('utf-8')
 
-                try:
-                    response = await asyncio.wait_for(
-                        asyncio.to_thread(
-                            client.models.generate_content,
-                            model="gemini-2.0-flash",
-                            contents=[uploaded_file, text],
-                        ),
-                        timeout=30
-                    )
-                except asyncio.TimeoutError:
-                    await message.reply(_("gpt_gemini_error"))
-                    return
+        url = f"{BASE_URL}/{MODEL_NAME}:generateContent?key={API_KEY}"
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {
+                            "text": text
+                        },
+                        {
+                            "inline_data": {
+                                "mime_type": "image/jpeg",
+                                "data": img_base64
+                            }
+                        }
+                    ]
+                }
+            ],
+            "generationConfig": {"responseModalities": ["TEXT"]}
+        }
 
-                if response.text:
-                    chunks = split_html(telegram_format(response.text))
-                    for chunk in chunks:
-                        await message.reply(chunk, parse_mode="HTML")
-                else:
-                    await message.reply(_("gpt_gemini_error"))
+        headers = {
+            "Content-Type": "application/json"
+        }
+
+        async with TypingIndicator(bot=bot, chat_id=message.chat.id):
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json=payload, headers=headers) as response:
+                    response_text = await response.text()
+                    if response.status == 200:
+                        try:
+                            data = await response.json()
+                        except ValueError as e:
+                            print(f"Error parsing JSON: {e}")
+                            await message.reply(_("gpt_gemini_error"))
+                            return
+
+                        candidates = data.get("candidates", [])
+                        if not candidates:
+                            print("No candidates in response")
+                            await message.reply(_("gpt_gemini_error"))
+                            return
+
+                        for candidate in candidates:
+                            content = candidate.get("content", {})
+                            parts = content.get("parts", [])
+                            for part in parts:
+                                if part.get("text"):
+                                    text_response = part.get("text")
+                                    chunks = split_html(telegram_format(text_response))
+                                    for chunk in chunks:
+                                        await message.reply(chunk, parse_mode="HTML")
+                                    break
+                    else:
+                        print(f"HTTP error: {response.status}, {response_text}")
+                        await message.reply(_("gpt_gemini_error"))
+
+    except asyncio.TimeoutError:
+        print(f"process_gemini timed out after 30 seconds")
+        await message.reply(_("gpt_gemini_error"))
 
     except Exception as e:
-        print("Gemini error:", e)
+        print(f"Gemini error: {e}")
         await message.reply(_("gpt_gemini_error"))
 
 

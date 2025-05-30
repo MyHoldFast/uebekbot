@@ -17,4 +17,3 @@ fasttext-wheel==0.9.2
 numpy==2.2.2
 edge_tts
 shazamio
-google-genai

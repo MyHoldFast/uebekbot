@@ -1,22 +1,25 @@
 import os
 import tempfile
 import asyncio
+import base64
+import aiohttp
 
 from aiogram import Router, Bot
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 from aiogram.types.input_file import FSInputFile
 from aiogram.exceptions import TelegramBadRequest
-from google import genai
-from google.genai import types
 from utils.typing_indicator import TypingIndicator
 from utils.command_states import check_command_enabled
 from utils.translate import translate_text
 from localization import get_localization, DEFAULT_LANGUAGE
 
-client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-router = Router()
 
+API_KEY = os.environ["GEMINI_API_KEY"]
+MODEL_NAME = "gemini-2.0-flash-exp-image-generation"
+BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models" 
+
+router = Router()
 
 async def safe_delete(message):
     try:
@@ -24,32 +27,44 @@ async def safe_delete(message):
     except TelegramBadRequest:
         pass
 
-
 async def generate_image(user_input, image_path: str = None, timeout: int = 30):
     try:
-        def sync_generate():
-            contents = [user_input]
+        contents = [{"parts": [{"text": user_input}]}]
 
-            if image_path and os.path.exists(image_path):
-                with open(image_path, "rb") as f:
-                    image_bytes = f.read()
-                    image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
-                    contents.append(image_part)
+        if image_path and os.path.exists(image_path):
+            with open(image_path, "rb") as f:
+                image_bytes = f.read()
+                img_base64 = base64.b64encode(image_bytes).decode('utf-8')
+                contents[0]["parts"].append({
+                    "inline_data": {
+                        "mime_type": "image/jpeg",
+                        "data": img_base64
+                    }
+                })
 
-            response = client.models.generate_content(
-                model="gemini-2.0-flash-preview-image-generation",
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    response_modalities=["TEXT", "IMAGE"]
-                )
-            )
+        url = f"{BASE_URL}/{MODEL_NAME}:generateContent?key={API_KEY}"
+        payload = {
+            "contents": contents,
+            "generationConfig": {"responseModalities": ["TEXT", "IMAGE"]}
+        }
 
-            for part in response.candidates[0].content.parts:
-                if getattr(part, "inline_data", None):
-                    return part.inline_data.data
-            return None
+        headers = {
+            "Content-Type": "application/json"
+        }
 
-        return await asyncio.wait_for(asyncio.to_thread(sync_generate), timeout=timeout)
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload, headers=headers) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    for candidate in data.get("candidates", []):
+                        content = candidate.get("content", {})
+                        for part in content.get("parts", []):
+                            inline_data = part.get("inlineData", {})
+                            if inline_data and inline_data.get("data"):
+                                return base64.b64decode(inline_data["data"])
+                else:
+                    print(f"HTTP error: {response.status}, {await response.text()}")
+                    return None
 
     except asyncio.TimeoutError:
         print(f"generate_image timed out after {timeout} seconds")
@@ -58,7 +73,6 @@ async def generate_image(user_input, image_path: str = None, timeout: int = 30):
     except Exception as e:
         print("generate_image error:", e)
         return None
-
 
 @router.message(Command("gemimg", ignore_case=True))
 @check_command_enabled("gemimg")
