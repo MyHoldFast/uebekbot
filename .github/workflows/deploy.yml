@@ -32,16 +32,15 @@ jobs:
             echo "▶ Устанавливаем зависимости..."
             pip install --no-cache-dir -r requirements.txt
 
-            echo "▶ Загружаем модель (если нужно)..."
+            echo "▶ Загружаем модель..."
             mkdir -p trained_models
             wget -q -O trained_models/lid.176.bin https://github.com/MyHoldFast/uebekbot/raw/main/trained_models/lid.176.bin
 
-            echo "▶ Ищем и останавливаем старый процесс bot.py, если он есть..."
+            echo "▶ Ищем старый процесс bot.py..."
             PIDS=$(pgrep -f "/root/uebekbot/bot.py")
             if [ -n "$PIDS" ]; then
-              echo "Найден старый процесс bot.py, PID: $PIDS. Завершаем..."
-              kill $PIDS
-              sleep 2
+              echo "Найден старый процесс bot.py, PID: $PIDS. Завершаем его в фоне..."
+              (sleep 1 && kill $PIDS) &
             fi
 
             echo "▶ Запускаем нового бота в фоне..."
