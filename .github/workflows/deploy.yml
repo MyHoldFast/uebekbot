@@ -27,7 +27,15 @@ jobs:
             wget -q -O trained_models/lid.176.bin https://github.com/MyHoldFast/uebekbot/raw/main/trained_models/lid.176.bin
             PIDS=$(pgrep -f "python.*bot.py")
             if [ -n "$PIDS" ]; then
-              (sleep 1 && kill $PIDS) &
+              for PID in $PIDS; do
+                if kill -0 $PID 2>/dev/null; then
+                  kill -TERM $PID
+                  sleep 1
+                  if kill -0 $PID 2>/dev/null; then
+                    kill -KILL $PID
+                  fi
+                fi
+              done
             fi
             nohup python bot.py > bot.log 2>&1 < /dev/null &
             exit 0
