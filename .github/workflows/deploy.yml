@@ -25,14 +25,14 @@ jobs:
             pip install --no-cache-dir -r requirements.txt
             mkdir -p trained_models
             wget -q -O trained_models/lid.176.bin https://github.com/MyHoldFast/uebekbot/raw/main/trained_models/lid.176.bin
-            PIDS=$(pgrep -f "python.*bot.py")
+            PIDS=$(pgrep -f "python.*bot.py" || true)
             if [ -n "$PIDS" ]; then
               for PID in $PIDS; do
                 if kill -0 $PID 2>/dev/null; then
-                  kill -TERM $PID
+                  kill -TERM $PID || true
                   sleep 1
                   if kill -0 $PID 2>/dev/null; then
-                    kill -KILL $PID
+                    kill -KILL $PID || true
                   fi
                 fi
               done
