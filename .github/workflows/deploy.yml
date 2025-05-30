@@ -25,20 +25,26 @@ jobs:
             cd /root/uebekbot
 
             echo "▶ Обновляем репозиторий..."
+            git reset --hard HEAD || true
             git fetch --all
             git reset --hard origin/main
 
             echo "▶ Устанавливаем зависимости..."
             pip install --no-cache-dir -r requirements.txt
 
-            echo "▶ Загружаем модель, если нужно..."
+            echo "▶ Загружаем модель (если нужно)..."
             mkdir -p trained_models
             wget -q -O trained_models/lid.176.bin https://github.com/MyHoldFast/uebekbot/raw/main/trained_models/lid.176.bin
 
-            echo "▶ Останавливаем старый процесс бота, если есть..."
-            pkill -f bot.py || true
+            echo "▶ Ищем и останавливаем старый процесс bot.py, если он есть..."
+            PIDS=$(pgrep -f "/root/uebekbot/bot.py")
+            if [ -n "$PIDS" ]; then
+              echo "Найден старый процесс bot.py, PID: $PIDS. Завершаем..."
+              kill $PIDS
+              sleep 2
+            fi
 
-            echo "▶ Запускаем бота в фоне..."
+            echo "▶ Запускаем нового бота в фоне..."
             nohup python bot.py > bot.log 2>&1 < /dev/null &
 
             echo "✅ Деплой завершён. Бот запущен."
