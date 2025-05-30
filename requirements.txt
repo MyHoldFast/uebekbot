@@ -18,3 +18,4 @@ numpy==2.2.2
 edge_tts
 shazamio
 psutil
+uvloop
