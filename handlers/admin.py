@@ -1,3 +1,6 @@
+import platform
+import psutil
+import sys
 import os
 from datetime import datetime
 from functools import wraps
@@ -35,13 +38,76 @@ def admin_only(func):
     return wrapper
 
 
+def get_memory_info():
+    mem = psutil.virtual_memory()
+    return {
+        "total": mem.total // (1024 ** 2),
+        "available": mem.available // (1024 ** 2),
+        "used": mem.used // (1024 ** 2),
+        "percent": mem.percent,
+    }
+
+
+def get_swap_info():
+    swap = psutil.swap_memory()
+    return {
+        "total": swap.total // (1024 ** 2),
+        "used": swap.used // (1024 ** 2),
+        "free": swap.free // (1024 ** 2),
+        "percent": swap.percent,
+    }
+
+
+def get_cpu_info():
+    return {
+        "cpu_percent": psutil.cpu_percent(interval=0.1),
+        "cpu_count": psutil.cpu_count(logical=True),
+    }
+
+
+def get_process_memory():
+    process = psutil.Process()
+    with process.oneshot():
+        mem_info = process.memory_full_info()
+        return {
+            "rss": mem_info.rss // (1024 ** 2), 
+            "vms": mem_info.vms // (1024 ** 2),
+            "shared": mem_info.shared // (1024 ** 2),
+            "percent": process.memory_percent()
+        }
+
+
 def format_uptime():
     uptime = datetime.now() - start_time
     days, remainder = divmod(uptime.total_seconds(), 86400)
     hours, remainder = divmod(remainder, 3600)
     minutes, _ = divmod(remainder, 60)
+
+    mem = get_memory_info()
+    swap = get_swap_info()
+    cpu = get_cpu_info()
+    proc_mem = get_process_memory()
+
     return (
-        f"Uptime: {int(days)} days, {int(hours)} hours, {int(minutes)} minutes"
+        f"🕒 Uptime: {int(days)} days, {int(hours)} hours, {int(minutes)} minutes\n"
+        f"🧠 System Info:\n"
+        f" ├─ OS: {platform.system()} {platform.release()}\n"
+        f" ├─ Python: {sys.version.split(' ')[0]}\n"
+        f" ├─ PID: {psutil.Process().pid}\n"
+        f" ├─ CPU: {cpu['cpu_count']} cores, {cpu['cpu_percent']}% load\n"
+        f"💾 Memory Usage (System):\n"
+        f" ├─ Total: {mem['total']} MB\n"
+        f" ├─ Available: {mem['available']} MB\n"
+        f" ├─ Used: {mem['used']} MB ({mem['percent']}%)\n"
+        f"💾 Swap Usage:\n"
+        f" ├─ Total: {swap['total']} MB\n"
+        f" ├─ Used: {swap['used']} MB ({swap['percent']}%)\n"
+        f" └─ Free: {swap['free']} MB\n"
+        f"🧍 Memory Usage (Python Process):\n"
+        f" ├─ Resident Set Size (RSS): {proc_mem['rss']} MB\n"
+        f" ├─ Virtual Memory Size (VMS): {proc_mem['vms']} MB\n"
+        f" ├─ Shared Memory: {proc_mem['shared']} MB\n"
+        f" └─ Percent of RAM used: {proc_mem['percent']:.2f}%"
     )
 
 
@@ -315,3 +381,4 @@ async def cmd_proxy(message: Message):
         new_proxy = command_args[1]
         os.environ["PROXY"] = new_proxy
         await message.reply(f"Новое значение PROXY установлено: {new_proxy}")
+        
