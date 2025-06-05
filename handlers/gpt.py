@@ -28,7 +28,7 @@ from chatgpt_md_converter import telegram_format
 from utils.command_states import check_command_enabled
 
 API_KEY = os.environ.get("GEMINI_API_KEY")
-MODEL_NAME = "gemini-2.0-flash"
+MODEL_NAME = "gemini-2.5-flash-preview-05-20"
 BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models" 
 URL_PROXY = os.environ.get("URL_PROXY")
 if URL_PROXY:

@@ -158,7 +158,7 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id: int =
     async with TypingIndicator(bot=bot, chat_id=message.chat.id):
         async with aiohttp.ClientSession(cookies=cookies) as session:
             try:
-                async with session.post(url, headers=headers, json=data, timeout=120, proxy=proxy) as r:
+                async with session.post(url, headers=headers, json=data, timeout=180, proxy=proxy) as r:
                     if r.status == 200:
                         result = await r.json()
                         assistant_reply = (
@@ -234,7 +234,7 @@ async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
 
         headers["Authorization"] = "Bearer " + qwen_accs[acc_index]["bearer"]
 
-        async with session.post(url, headers=headers, cookies=cookies, json=data, timeout=120, proxy=proxy) as r:
+        async with session.post(url, headers=headers, cookies=cookies, json=data, timeout=180, proxy=proxy) as r:
             try:
                 if r.status == 200:
                     result = await r.json()
