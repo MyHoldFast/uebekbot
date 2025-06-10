@@ -20,7 +20,7 @@ router = Router()
 gen_url = "https://300.ya.ru/api/generation"
 
 async def fetch_data(session, url, data):
-    async with session.post(url, json=data, headers={
+    async with session.post(url, json=data, timeout=120, headers={
         'Authorization': f'OAuth {os.getenv("YANDEX_OAUTH_TOKEN")}'}, 
         cookies={'Session_id': os.getenv("YANDEX_SESSIONID_COOK"),
         'yp': os.getenv("YANDEX_YP_COOK")}) as response:
@@ -67,7 +67,7 @@ async def generate_summary(input_value: str, is_text=False) -> str:
 async def fetch_sharing_url(link):
     endpoint = "https://300.ya.ru/api/sharing-url"
     async with aiohttp.ClientSession() as session:
-        async with session.post(endpoint, json={"article_url": f"{link}"}, headers={"Authorization": f'OAuth {os.getenv("YANDEX_OAUTH_TOKEN")}'}) as response:
+        async with session.post(endpoint, timeout=120, json={"article_url": f"{link}"}, headers={"Authorization": f'OAuth {os.getenv("YANDEX_OAUTH_TOKEN")}'}) as response:
             data = await response.json()
             return data.get("sharing_url")
 
@@ -180,12 +180,12 @@ async def fetch_detailed_summary(final_url: str):
     }
 
     async with httpx.AsyncClient(follow_redirects=True) as client:
-        toggle_response = await client.post(final_url + "?/toggle", headers=headers, data=data, cookies=cookies)
+        toggle_response = await client.post(final_url + "?/toggle", headers=headers, data=data, cookies=cookies, timeout=120)
 
         if toggle_response.status_code != 200:
             return None
 
-        response = await client.get(final_url, headers=headers, cookies=cookies)
+        response = await client.get(final_url, headers=headers, cookies=cookies, timeout=120)
         if response.status_code == 200:
             response.encoding = 'utf-8'
             soup = BeautifulSoup(response.text, "html.parser")
