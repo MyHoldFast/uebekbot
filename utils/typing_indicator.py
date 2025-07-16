@@ -2,16 +2,21 @@ import asyncio
 from aiogram import Bot
 
 class TypingIndicator:
-    def __init__(self, bot: Bot, chat_id: int):
+    def __init__(self, bot: Bot, chat_id: int, duration: int = 120):
         self.bot = bot
         self.chat_id = chat_id
         self.typing_task = None
+        self.duration = duration
 
     async def start(self):
         async def send_typing_periodically():
-            while True:
-                await self.bot.send_chat_action(chat_id=self.chat_id, action='typing')
-                await asyncio.sleep(3) 
+            try:
+                end_time = asyncio.get_event_loop().time() + self.duration
+                while asyncio.get_event_loop().time() < end_time:
+                    await self.bot.send_chat_action(chat_id=self.chat_id, action='typing')
+                    await asyncio.sleep(3)
+            except asyncio.CancelledError:
+                pass
 
         self.typing_task = asyncio.create_task(send_typing_periodically())
 
