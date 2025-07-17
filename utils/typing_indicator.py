@@ -2,7 +2,7 @@ import asyncio
 from aiogram import Bot
 
 class TypingIndicator:
-    def __init__(self, bot: Bot, chat_id: int, duration: int = 120):
+    def __init__(self, bot: Bot, chat_id: int, duration: int = 180):
         self.bot = bot
         self.chat_id = chat_id
         self.typing_task = None
