@@ -247,7 +247,12 @@ async def summary(message: Message, command: CommandObject, bot: Bot):
                 details_button = InlineKeyboardButton(text=_("summary_detail"), callback_data='link:'+button_callback)
                 keyboard = InlineKeyboardMarkup(inline_keyboard=[[details_button]])
 
-            for x in range(0, len(result), 4096):
-                await message.reply(result[x:x + 4096], reply_markup=keyboard if x == 0 else None)
+            is_long = len(result) >= 1000
+            wrap_start, wrap_end = ("<blockquote expandable>", "</blockquote>") if is_long else ("", "")
+            chunk_length = 4096 - len(wrap_start) - len(wrap_end)
+
+            for i in range(0, len(result), chunk_length):
+                chunk = f"{wrap_start}{result[i:i + chunk_length]}{wrap_end}"
+                await message.reply(chunk, reply_markup=keyboard if i == 0 else None, parse_mode="HTML")
         else:
             await message.reply(_("summary_failed"))

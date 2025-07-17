@@ -1,3 +1,4 @@
+import asyncio
 from aiogram import Router, Bot
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
@@ -39,10 +40,13 @@ async def cmd_sdxl(message: Message, command: CommandObject, bot: Bot):
 
         try:
             client = AsyncClient(image_provider=ImageLabs)
-            response = await client.images.generate(
-            model="sdxl-turbo",
-            prompt=user_input,
-            response_format="url"
+            response = await asyncio.wait_for(
+                client.images.generate(
+                    model="sdxl-turbo",
+                    prompt=user_input,
+                    response_format="url"
+                ),
+                timeout=60
             )
             await safe_delete(sent_message)
             await message.reply_photo(photo=response.data[0].url, has_spoiler=True)
