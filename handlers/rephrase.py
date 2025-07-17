@@ -87,7 +87,7 @@ async def on_action_callback(callback: CallbackQuery, bot: Bot):
         return
 
     src_text = original_msg.text or original_msg.caption
-    src_text = re.sub(r"^\/rephrase(\s+)?", "", src_text, flags=re.IGNORECASE)
+    src_text = re.sub(r"^\/rephrase(@\w+)?(\s+)?", "", src_text, flags=re.IGNORECASE)
 
     async with TypingIndicator(bot=bot, chat_id=chat_id):
         try:
