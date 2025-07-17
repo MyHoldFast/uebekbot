@@ -41,7 +41,7 @@ params = {
 
 @router.message(Command("rephrase", ignore_case=True))
 @check_command_enabled("rephrase")
-async def on_text(message: Message, command: CommandObject, bot: Bot):
+async def cmd_rephrase(message: Message, command: CommandObject, bot: Bot):
     reply_id = message.reply_to_message.message_id if message.reply_to_message else None
     user_input = (
         (message.reply_to_message.text or message.reply_to_message.caption or "")
@@ -83,7 +83,7 @@ async def on_action_callback(callback: CallbackQuery, bot: Bot):
     original_msg = callback.message.reply_to_message
 
     if not original_msg:
-        await callback.message.answer("Оригинальный текст не найден.")
+        await callback.message.reply("Оригинальный текст не найден.")
         return
 
     src_text = original_msg.text or original_msg.caption
@@ -104,7 +104,7 @@ async def on_action_callback(callback: CallbackQuery, bot: Bot):
                     },
                 ) as resp:
                     json_resp = await resp.json()
-                    result = json_resp.get("result_text", "Ошибка")
+                    result = json_resp.get("result_text", "Ошибка при обработке текста.")
         except:
             result = "Ошибка при обработке текста."
 
