@@ -16,6 +16,7 @@ This project is a bot that performs several functions, including:
 - **/qwenimg**: Image generation via the neural network chat.qwenlm.ai.
 - **/gemimg**: Image generation/editing via Google Gemini.
 - **/shazam**: Recognize audio tracks via Shazam
+- **/rephrase**: Various methods of paraphrasing text
 
 Some features require the following services:
 

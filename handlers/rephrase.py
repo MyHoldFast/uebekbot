@@ -11,6 +11,7 @@ from utils.typing_indicator import TypingIndicator
 from localization import get_localization, DEFAULT_LANGUAGE
 from utils.command_states import check_command_enabled
 from aiohttp import ClientSession
+from handlers.callbacks import throttle
 
 router = Router()
 
@@ -64,25 +65,27 @@ async def cmd_rephrase(message: Message, command: CommandObject, bot: Bot):
             for action, label in actions_name.items()
         ]
     )
-
+    
+    text = "Что сделать с текстом?"
     if reply_id:
         await message.answer(
-            "Что сделать с текстом?",
+            text,
             reply_markup=keyboard,
             reply_to_message_id=reply_id,
         )
     else:
-        await message.reply("Что сделать с текстом?", reply_markup=keyboard)
+        await message.reply(text, reply_markup=keyboard)
 
 
 @router.callback_query(F.data.in_(actions))
+@throttle(seconds=5) 
 async def on_action_callback(callback: CallbackQuery, bot: Bot):
-    await callback.answer()
     action = callback.data
     chat_id = callback.message.chat.id
     original_msg = callback.message.reply_to_message
 
     if not original_msg:
+        await callback.answer()
         await callback.message.reply("Оригинальный текст не найден.")
         return
 
@@ -107,7 +110,8 @@ async def on_action_callback(callback: CallbackQuery, bot: Bot):
                     result = json_resp.get("result_text", "Ошибка при обработке текста.")
         except:
             result = "Ошибка при обработке текста."
-
+        
+        await callback.answer()
         await callback.message.answer(
             result, reply_to_message_id=original_msg.message_id
         )
