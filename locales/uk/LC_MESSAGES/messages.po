@@ -165,3 +165,6 @@ msgstr "ℹ️ Для розпізнавання аудіотреку відпо
 
 msgid "shazam_not_found"
 msgstr "❌ Трек не розпізнаний"
+
+msgid "throttle_wait"
+msgstr "Зачекайте {seconds} секунд перед повторним запитом"

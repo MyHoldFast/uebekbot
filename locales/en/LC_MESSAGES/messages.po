@@ -165,3 +165,6 @@ msgstr "ℹ️ To recognize an audio track, reply to the voice/audio/video messa
 
 msgid "shazam_not_found"
 msgstr "❌ Track not recognized"
+
+msgid "throttle_wait"
+msgstr "Wait {seconds} seconds before retrying"

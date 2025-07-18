@@ -21,10 +21,12 @@ def throttle(seconds: int = 5):
         @wraps(func)
         async def wrapper(callback_query: CallbackQuery, *args, **kwargs):
             user_id = callback_query.from_user.id
+            user_language = callback_query.from_user.language_code or DEFAULT_LANGUAGE
+            _ = get_localization(user_language)
             current_time = datetime.now()            
             last_request_time = user_cooldowns.get(user_id)
             if last_request_time and (current_time - last_request_time) < timedelta(seconds=seconds):
-                await callback_query.answer(f"Подождите {seconds} секунд перед повторным запросом", show_alert=True)
+                await callback_query.answer(_("throttle_wait").format(seconds=seconds), show_alert=True)
                 return
             
             user_cooldowns[user_id] = current_time
