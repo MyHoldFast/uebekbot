@@ -41,15 +41,11 @@ params = {
 
 SID_CACHE_FILE = "db/sid_cache.json"
 
-def decode_sid(sid: str, hostname = "translate.yandex.ru") -> str:
+def decode_sid(sid: str) -> str:
     if not sid:
         return ""
     parts = sid.split(".")
-    if "yandex." in hostname:
-        parts = [part[::-1] for part in parts]
-    else:
-        parts = [part[::-1][::-1] for part in parts]
-
+    parts = [part[::-1] for part in parts]
     return ".".join(parts)
 
 async def get_sid():
@@ -145,7 +141,7 @@ async def on_action_callback(callback: CallbackQuery, bot: Bot):
                     params=params,
                     headers=headers,
                     cookies=cookies,
-                    
+
                     data={
                         "action_type": action,
                         "targ_lang": "ru",
