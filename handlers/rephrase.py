@@ -1,4 +1,4 @@
-import re, os
+import re, os, json, time
 from aiogram import Router, Bot, F
 from aiogram.types import (
     Message,
@@ -35,10 +35,53 @@ cookies = {
 headers = {"origin": "https://translate.yandex.ru"}
 
 params = {
-    "sid": "312bc51e.68790e7c.452ffae0.74722d656469746f72-00-0",
+    "sid": "initial-placeholder",
     "srv": "tr-editor",
 }
 
+SID_CACHE_FILE = "db/sid_cache.json"
+
+def decode_sid(sid: str, hostname = "translate.yandex.ru") -> str:
+    if not sid:
+        return ""
+    parts = sid.split(".")
+    if "yandex." in hostname:
+        parts = [part[::-1] for part in parts]
+    else:
+        parts = [part[::-1][::-1] for part in parts]
+
+    return ".".join(parts)
+
+async def get_sid():
+    now = time.time()
+    sid = None
+
+    if os.path.exists(SID_CACHE_FILE):
+        with open(SID_CACHE_FILE, "r", encoding="utf-8") as f:
+            try:
+                cache = json.load(f)
+                if now - cache.get("timestamp", 0) < 2 * 24 * 3600:
+                    sid = cache.get("sid")
+            except Exception:
+                pass
+
+    if not sid:
+        async with ClientSession() as session:
+            async with session.get("https://translate.yandex.ru/editor",
+                    params=params,
+                    headers=headers,
+                    cookies=cookies) as resp:
+                html = await resp.text()
+                match = re.search(r'"SID":"([a-z0-9.]+)"', html)
+                if not match:
+                    raise RuntimeError("SID not found in page.")
+                sid = match.group(1)
+                sid = decode_sid(sid) + "-00-0"
+
+                with open(SID_CACHE_FILE, "w", encoding="utf-8") as f:
+                    json.dump({"sid": sid, "timestamp": now}, f)
+
+    return sid
 
 @router.message(Command("rephrase", ignore_case=True))
 @check_command_enabled("rephrase")
@@ -78,7 +121,7 @@ async def cmd_rephrase(message: Message, command: CommandObject, bot: Bot):
 
 
 @router.callback_query(F.data.in_(actions))
-@throttle(seconds=5) 
+@throttle(seconds=5)
 async def on_action_callback(callback: CallbackQuery, bot: Bot):
     action = callback.data
     chat_id = callback.message.chat.id
@@ -94,6 +137,8 @@ async def on_action_callback(callback: CallbackQuery, bot: Bot):
 
     async with TypingIndicator(bot=bot, chat_id=chat_id):
         try:
+            params["sid"] = await get_sid()
+
             async with ClientSession() as session:
                 async with session.post(
                     "https://translate.yandex.ru/editor/api/v1/transform-text",
@@ -108,8 +153,8 @@ async def on_action_callback(callback: CallbackQuery, bot: Bot):
                 ) as resp:
                     json_resp = await resp.json()
                     result = json_resp.get("result_text", "Ошибка при обработке текста.")
-        except:
-            result = "Ошибка при обработке текста."
+        except Exception as e:
+            result = f"Ошибка при обработке текста.\n{str(e)}"
         
         await callback.answer()
         await callback.message.answer(
