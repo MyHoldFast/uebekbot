@@ -1,0 +1,10 @@
+.env
+.pass
+__pycache__/
+.gitignore
+/utils/TinySQL.py
+/myenv
+duck.py
+db/*
+!db/.gitkeep
+har_and_cookies
