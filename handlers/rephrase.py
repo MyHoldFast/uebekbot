@@ -27,11 +27,6 @@ actions_name = {
 
 actions = list(actions_name.keys())
 
-cookies = {
-    "yp": os.getenv("YANDEX_YP_COOK"),
-    "Session_id": os.getenv("YANDEX_SESSIONID_COOK"),
-}
-
 headers = {"origin": "https://translate.yandex.ru"}
 
 params = {
@@ -65,8 +60,7 @@ async def get_sid():
         async with ClientSession() as session:
             async with session.get("https://translate.yandex.ru/editor",
                     params=params,
-                    headers=headers,
-                    cookies=cookies) as resp:
+                    headers=headers) as resp:
                 html = await resp.text()
                 match = re.search(r'"SID":"([a-z0-9.]+)"', html)
                 if not match:
@@ -140,7 +134,6 @@ async def on_action_callback(callback: CallbackQuery, bot: Bot):
                     "https://translate.yandex.ru/editor/api/v1/transform-text",
                     params=params,
                     headers=headers,
-                    cookies=cookies,
 
                     data={
                         "action_type": action,
