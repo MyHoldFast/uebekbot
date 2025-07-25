@@ -145,6 +145,7 @@ async def on_action_callback(callback: CallbackQuery, bot: Bot):
                     params=params,
                     headers=headers,
                     cookies=cookies,
+                    
                     data={
                         "action_type": action,
                         "targ_lang": "ru",
