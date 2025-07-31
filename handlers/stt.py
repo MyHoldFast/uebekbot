@@ -18,7 +18,7 @@ API_URLS = [
     "https://api-inference.huggingface.co/models/openai/whisper-tiny"
 ]
 headers = {
-    "Authorization": "Bearer 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",
+    "Authorization": "Bearer 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",
     'Content-Type': 'audio/ogg'
 }
 
