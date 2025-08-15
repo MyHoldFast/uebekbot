@@ -1,6 +1,5 @@
 import aiohttp
 import asyncio
-import os
 import re
 
 from utils.typing_indicator import TypingIndicator
