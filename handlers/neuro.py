@@ -20,7 +20,7 @@ async def fetch_fresh_message(session, response_message_id):
     data = {"ResponseMessageId": response_message_id}
 
     while True:
-        async with session.post(url, headers={'cookie': f'Session_id={os.getenv("YANDEXKZ_SESSIONID_COOK")}'}, json=data) as res:
+        async with session.post(url,  json=data) as res:
             result = await res.json()
             if result.get('IsCompleteResults'):
                 return re.sub(r'\[\`\`\`\d+\`\`\`\]\(.*?\)', '', result.get('TargetMarkdownText'))
@@ -31,7 +31,7 @@ async def send_request(user_request):
     data = {"UserRequest": user_request}
 
     async with aiohttp.ClientSession() as session:
-        async with session.post(url, headers={'cookie': f'Session_id={os.getenv("YANDEXKZ_SESSIONID_COOK")}'}, json=data) as res:
+        async with session.post(url,  json=data) as res:
             try:
                 response = await res.json()
                 submissions_left, response_message_id = response['ResponseStatus']['LimitsInfo']['SubmissionsLeft'], response['ResponseMessageId']
