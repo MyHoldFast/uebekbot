@@ -218,66 +218,112 @@ async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
         await message.reply(_("qwenimghelp"))
         return
 
-    url = "https://chat.qwen.ai/api/chat/completions"
-    data = {
-        "stream": False,
-        "chat_type": "t2i",
-        "model": "qwen3-235b-a22b",
-        "size": "1280*720",
-        "messages": [{"role": "user", "content": user_input}],
-        "id": str(uuid.uuid4()),
-        "chat_id": str(uuid.uuid4()),
-    }
-
-    async def make_request(session, url, headers, data, message, sent_message):
-        global acc_index, last_update_time
-
-        headers["Authorization"] = "Bearer " + qwen_accs[acc_index]["bearer"]
-
-        async with session.post(url, headers=headers, cookies=cookies, json=data, timeout=180, proxy=proxy) as r:
-            try:
-                if r.status == 200:
-                    result = await r.json()
-                    task_id = result["messages"][1]["extra"]["wanx"]["task_id"]
-                    await check_task_status(session, task_id, message, sent_message)
-                elif r.status == 429:
-                    if last_update_time is not None:
-                        time_diff = time.time() - last_update_time
-                        if time_diff > 86400:
-                            acc_index = 0
-
-                    if acc_index + 1 < len(qwen_accs):
-                        acc_index += 1
-                        last_update_time = time.time()
-                        await session.close()
-                        async with aiohttp.ClientSession() as new_session:
-                            try:
-                                await make_request(
-                                    new_session,
-                                    url,
-                                    headers,
-                                    data,
-                                    message,
-                                    sent_message,
-                                )
-                            except Exception:
-                                await safe_delete(sent_message)
-                                await message.reply(_("qwenimg_err"))
-                    else:
-                        await safe_delete(sent_message)
-                        await message.reply(_("qwenimg_err"))
-                else:
-                    await safe_delete(sent_message)
-                    await message.reply(_("qwenimg_err"))
-            except Exception:
-                await safe_delete(sent_message)
-                await message.reply(_("qwenimg_err"))
-
     async with TypingIndicator(bot=bot, chat_id=message.chat.id):
         sent_message = await message.reply(_("qwenimg_gen"))
 
-        async with aiohttp.ClientSession(cookies=cookies) as session:
-            await make_request(session, url, headers, data, message, sent_message)
+        acc_index = 0
+        while acc_index < len(qwen_accs):
+            headers["authorization"] = "Bearer " + qwen_accs[acc_index]["bearer"]
+
+            try:
+                async with aiohttp.ClientSession(cookies=cookies, headers=headers) as session:
+                    chat_payload = {
+                        "title": "Qwen Image Chat",
+                        "models": ["qwen3-235b-a22b"],
+                        "chat_mode": "normal",
+                        "chat_type": "t2i",
+                        "timestamp": int(time.time() * 1000)
+                    }
+                    async with session.post(
+                        "https://chat.qwen.ai/api/v2/chats/new",
+                        json=chat_payload,
+                        proxy=proxy
+                    ) as resp:
+                        if resp.status == 429:
+                            acc_index += 1
+                            continue
+                        if resp.status != 200:
+                            raise Exception(f"Chat create failed: {resp.status}")
+                        chat_data = await resp.json()
+                        chat_id = chat_data["data"]["id"]
+
+                    fid = str(uuid.uuid4())
+                    json_data = {
+                        "stream": True,
+                        "incremental_output": True,
+                        "chat_id": chat_id,
+                        "chat_mode": "normal",
+                        "model": "qwen3-235b-a22b",
+                        "parent_id": None,
+                        "messages": [
+                            {
+                                "fid": fid,
+                                "parentId": None,
+                                "childrenIds": [],
+                                "role": "user",
+                                "content": user_input,
+                                "user_action": "chat",
+                                "files": [],
+                                "timestamp": int(time.time()),
+                                "models": ["qwen3-235b-a22b"],
+                                "chat_type": "t2i",
+                                "feature_config": {
+                                    "thinking_enabled": False,
+                                    "output_schema": "phase",
+                                },
+                                "extra": {"meta": {"subChatType": "t2i"}},
+                                "sub_chat_type": "t2i",
+                                "parent_id": None,
+                            }
+                        ],
+                        "timestamp": int(time.time()) + 1,
+                        "size": "1:1",
+                    }
+
+                    async with session.post(
+                        "https://chat.qwen.ai/api/v2/chat/completions",
+                        params={"chat_id": chat_id},
+                        json=json_data,
+                        proxy=proxy
+                    ) as resp:
+                        if resp.status == 429:
+                            acc_index += 1
+                            continue
+                        if resp.status != 200:
+                            raise Exception(f"Completions failed: {resp.status}")
+
+                        async for line in resp.content:
+                            if not line:
+                                continue
+                            line = line.decode("utf-8").strip()
+                            if not line.startswith("data: "):
+                                continue
+                            payload = line[len("data: "):]
+
+                            if payload == "[DONE]":
+                                break
+
+                            try:
+                                data = json.loads(payload)
+                                choices = data.get("choices", [])
+                                if choices:
+                                    delta = choices[0].get("delta", {})
+                                    content = delta.get("content", "")
+                                    phase = delta.get("phase", "")
+                                    if phase == "image_gen" and content.startswith("http"):
+                                        await safe_delete(sent_message)
+                                        await message.reply_photo(photo=content)
+                                        return
+                            except Exception:
+                                continue
+
+            except Exception as e:
+                print(f"Qwen error (acc {acc_index}): {e}")
+                acc_index += 1
+                continue
+
+        await safe_delete(sent_message)
+        await message.reply(_("qwenimg_err"))
 
 
 async def safe_delete(message):
@@ -285,34 +331,3 @@ async def safe_delete(message):
         await message.delete()
     except TelegramBadRequest:
         pass
-
-
-async def check_task_status(session, task_id, message, sent_message):
-    user_language = message.from_user.language_code or DEFAULT_LANGUAGE
-    _ = get_localization(user_language)
-    status_url = f"https://chat.qwen.ai/api/v1/tasks/status/{task_id}"
-    while True:
-        async with session.get(status_url, headers=headers, timeout=180, proxy=proxy) as r:
-            try:
-                if r.status == 200:
-                    result = await r.json()
-                    task_status = result.get("task_status", "")
-                    if task_status == "success":
-                        image_url = result.get("content", "")
-                        await safe_delete(sent_message)
-                        await message.reply_photo(photo=image_url)
-                        break
-                    elif task_status in ["failed", "error"]:
-                        await safe_delete(sent_message)
-                        await message.reply(_("qwenimg_err"))
-                        break
-                    else:
-                        await asyncio.sleep(5)
-                else:
-                    await safe_delete(sent_message)
-                    await message.reply(_("qwenimg_err"))
-                    break
-            except Exception:
-                await safe_delete(sent_message)
-                await message.reply(_("qwenimg_err"))
-                break
