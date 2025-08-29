@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, Awaitable, Optional, Tuple
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
-import pytz, asyncio
+import pytz, asyncio, aiohttp
 from utils.dbmanager import DB
 from utils.cmd_list import cmds
 
@@ -34,6 +34,33 @@ class StatsMiddleware(BaseMiddleware):
             chat_id = str(event.message.chat.id)
             chat_title = event.message.chat.title or event.message.chat.username or f"Chat {chat_id}"
             save_chat(chat_id, chat_title)
+            text_to_check = (event.message.text or "") + " " + (event.message.caption or "")
+
+            norm_text = (text_to_check or "").lower()
+            norm_text = (
+                norm_text.replace("і", "i")
+                        .replace("ї", "i")
+                        .replace("ј", "j")
+                        .replace("0", "o")
+                        .replace("1", "l")
+                        .replace("ß", "ss")
+            )
+
+            keywords = [
+                "гриб", "грiб", "грыб",
+                "grib", "gryb", "hrib",
+                "mushroom", "mashroom", "muschroom",
+                "pilz", "champignon",
+                "champignon", "fungo", "seta", "hongos", "champiñon",
+                "grzyb", "hřib", "huby", "печурка"
+            ]
+
+            if any(re.search(rf"\b{kw}[a-zа-яёіїґäöüß]*\b", norm_text, re.IGNORECASE) for kw in keywords):
+                async with aiohttp.ClientSession() as session:
+                    async with session.get("https://toxicshrooms.vercel.app/api/mushrooms/randompic") as resp:
+                        if resp.status == 200:
+                            image_url = await resp.text()
+                            await self.bot.send_photo(chat_id, image_url.strip())
         return await handler(event, data)
 
 def save_chat(chat_id: str, chat_title: str):
