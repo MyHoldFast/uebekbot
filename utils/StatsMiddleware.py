@@ -55,7 +55,7 @@ class StatsMiddleware(BaseMiddleware):
                 "grzyb", "hřib", "huby", "печурка"
             ]
 
-            if any(re.search(rf"\b{kw}[a-zа-яёіїґäöüß]*\b", norm_text, re.IGNORECASE) for kw in keywords):
+            if any(re.search(rf"{kw}", norm_text, re.IGNORECASE) for kw in keywords):
                 async with aiohttp.ClientSession() as session:
                     async with session.get("https://toxicshrooms.vercel.app/api/mushrooms/randompic") as resp:
                         if resp.status == 200:
