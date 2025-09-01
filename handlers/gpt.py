@@ -40,7 +40,7 @@ db, Query = DB("db/gpt_models.json").get_db()
 context_db, ContextQuery = DB("db/gpt_context.json").get_db()
 
 models = {
-    "gpt-4": "gpt-4"
+    "gpt-5-mini": "gpt-5-mini"
 #        "gpt-4o-mini": "gpt-4o-mini",
 #        "llama-3.3-70b": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
 #        "claude-3-haiku": "claude-3-haiku-20240307",
@@ -289,6 +289,9 @@ async def process_gemini(message: Message, command: CommandObject, bot, photo):
 #         print(e)
 #         await message.reply(_("gpt_error"), parse_mode="html")
 
+API_URL = os.getenv("GPT_API_URL")
+
+
 async def process_gpt(message: Message, command: CommandObject, user_id):
     messagetext = (
         message.reply_to_message.text if message.reply_to_message else ""
@@ -298,7 +301,7 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
     messagetext = messagetext.strip()
 
     if not messagetext:
-        model = "gpt-4"
+        model = "gpt-5-mini"
         user_model = db.get(Query().uid == user_id)
         if user_model and user_model["model"] in models:
             model = user_model["model"]
@@ -312,49 +315,40 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
         return
 
     try:
-        #proxy = os.getenv("PROXY")
-        user_model = db.get(Query().uid == user_id)
-        model = (
-            user_model["model"]
-            if user_model and user_model["model"] in models
-            else "gpt-4"
-        )
-
-        #chat_messages = load_user_context(user_id)
+        # Загружаем контекст
         chat_messages, _, _ = load_user_context(user_id)
         if chat_messages is not None:
             chat_messages.append({"role": "user", "content": messagetext})
         else:
             chat_messages = [{"role": "user", "content": messagetext}]
 
-        client = AsyncClient(provider=Yqcloud)
-
         async with TypingIndicator(bot=message.bot, chat_id=message.chat.id):
-            response = await asyncio.wait_for(
-                client.chat.completions.create(
-                    model=model,
-                    messages=chat_messages,
-                    web_search=False,
-                    ignore_working=True,
-                ),
-                timeout=60
-            )
-        answer = response.choices[0].message.content
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    API_URL,
+                    json={"messages": chat_messages},
+                    timeout=60,
+                ) as resp:
+                    if resp.status != 200:
+                        raise Exception(f"API error {resp.status}")
+                    data = await resp.json()
+
+        answer = data.get("answer")
 
         if answer:
             chat_messages.append({"role": "assistant", "content": answer})
-            #save_user_context(user_id, chat_messages)
             save_user_context(user_id, chat_messages, None, None)
             answer = process_latex(telegram_format(answer))
             chunks = split_html(answer)
             for chunk in chunks:
                 await message.reply(chunk, parse_mode="HTML")
+        else:
+            raise Exception("Empty answer from API")
 
-        else: raise Exception("Exception")
     except Exception as e:
         user_language = message.from_user.language_code or DEFAULT_LANGUAGE
         _ = get_localization(user_language)
-        print(e)
+        print("process_gpt error:", e)
         await message.reply(_("gpt_error"), parse_mode="html")
 
 
