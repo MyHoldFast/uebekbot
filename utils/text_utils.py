@@ -1,6 +1,9 @@
 import re
+import warnings
 from bs4 import BeautifulSoup, Tag, NavigableString
 import html
+
+warnings.filterwarnings("ignore", category=UserWarning, module='bs4')
 
 SUPPORTED_TAGS = {
     "b", "strong", "i", "em", "u", "ins", "s", "strike", "del",

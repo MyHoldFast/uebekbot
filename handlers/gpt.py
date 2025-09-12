@@ -39,13 +39,13 @@ router = Router()
 db, Query = DB("db/gpt_models.json").get_db()
 context_db, ContextQuery = DB("db/gpt_context.json").get_db()
 
+
 models = {
-    "gpt-5-mini": "gpt-5-mini"
-#        "gpt-4o-mini": "gpt-4o-mini",
-#        "llama-3.3-70b": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
-#        "claude-3-haiku": "claude-3-haiku-20240307",
-#       "o3-mini": "o3-mini",
-#       "mistral-small-3": "mistralai/Mistral-Small-24B-Instruct-2501",
+    "gpt-5-mini": "gpt-5-mini",
+    "gpt-4o-mini": "gpt-4o-mini",
+    "llama-4": "meta-llama/Llama-4-Scout-17B-16E-Instruct",
+    "claude-3.5-haiku": "claude-3-5-haiku-latest",
+    "mistral-small-3": "mistralai/Mistral-Small-24B-Instruct-2501",
     }
 
 
@@ -300,12 +300,12 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
         messagetext += "\n" + command.args
     messagetext = messagetext.strip()
 
-    if not messagetext:
-        model = "gpt-5-mini"
-        user_model = db.get(Query().uid == user_id)
-        if user_model and user_model["model"] in models:
-            model = user_model["model"]
+    model = "gpt-5-mini"
+    user_model = db.get(Query().uid == user_id)
+    if user_model and user_model["model"] in models:
+        model = user_model["model"]
 
+    if not messagetext:
         keyboard = get_gpt_keyboard(model)
         user_language = message.from_user.language_code or DEFAULT_LANGUAGE
         _ = get_localization(user_language)
@@ -315,7 +315,6 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
         return
 
     try:
-        # Загружаем контекст
         chat_messages, _, _ = load_user_context(user_id)
         if chat_messages is not None:
             chat_messages.append({"role": "user", "content": messagetext})
@@ -326,7 +325,7 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     API_URL,
-                    json={"messages": chat_messages},
+                    json={"messages": chat_messages, "model": models[model]},
                     timeout=60,
                 ) as resp:
                     if resp.status != 200:
