@@ -23,7 +23,7 @@ jobs:
             git pull
             pip install --no-cache-dir -r requirements.txt
             
-            pkill -f "python.*bot.py" || true
+            pkill -f "python.*bot.py" 2>/dev/null || true
             nohup python bot.py > bot.log 2>&1 < /dev/null &
             exit 0
 #mkdir -p trained_models
