@@ -9,6 +9,7 @@ from chatgpt_md_converter import telegram_format
 from utils.dbmanager import DB
 from localization import get_localization, DEFAULT_LANGUAGE
 from utils.command_states import check_command_enabled
+from dotenv import load_dotenv
 
 from pylatexenc.latex2text import LatexNodes2Text
 import re
@@ -16,15 +17,29 @@ import re
 context_db, ContextQuery = DB("db/qwen_context.json").get_db()
 router = Router()
 
-qwen_accs_str = os.getenv("QWEN_ACCS")
-qwen_accs = json.loads(qwen_accs_str)
-
-acc_index = 0
-last_update_time = None
-
 MESSAGE_EXPIRY = 3 * 60 * 60
 
 proxy = os.getenv("PROXY")
+
+cookies = {
+    'ssxmod_itna': 'Gu0Q0I4fx+xGxiqYQKYvq7QGODOf3GRDODl4BtiD2DIqGQGcD8hq0p8pFbKGkG9g3WGx5Yq7QGWx4SD05qPmDY5GS+xi3Dar39r5StjurqdtgjLbEvY7tBDev3Fu0=T5chLmZxAixCPGnD064BBdbDYYDC4GwDGoD34DiDDPDb3iDAqeD7qDF+lb=yCbLDYpY24DmDGAYHQ3oDDtDiMNQFhb5DDN5S=+qtjGTHZXADxqQd7aK7YbDjkPD/bhA1YR7pI85/CapOUWIFeGye5Gu9eeiqeq8AQWtdpe+7+Ybl+qmW0ohKA4YCDxiYoMGsQYY3A4Rk55A4AxstYhp75S0zmDDiEq5mIb0xXDx4r+2OtnEt9r4mQvM7vatitCD2CGxCKbDK1nwseesWD5lbbG0dBqtAG4gDxD',
+    'ssxmod_itna2': 'Gu0Q0I4fx+xGxiqYQKYvq7QGODOf3GRDODl4BtiD2DIqGQGcD8hq0p8pFbKGkG9g3WGx5Yq7QGWx4mDDPot5YEAbPDL0hwwfPGFOyxDlPuHcOQ9RrQhRd9UTQmu27W7de2F3NCLq2Dcu2FQGytSEPHBEiOqGI7FPw+PnHQ4E5e=4O1uWv5/27QFPe78rOa2=8OHUukszImGxaa5IK15YMFqDMxQzBGCQGau49rP9d7sCLiGxr15FD7sKA4hpaRE10OKsi244L+45B7=b8G5WxzpP7Pqtu6IdI+HF0kw2oICjyhgtqra2GlE2Q5fiY8tMBQiYiuTQIM3rStwgbV8dhhbH+xNmhHnF3qbFhxU+1TQbMM+kgCWSw74493KeQGCEQh+zBu8BoC3Cb34bkgO+ktQbW6kKxZ=m3NPji2AA0uIp8t/uDBrTCj+MjtND+CMad6Qr3GhwGNTTx=QREtPBtmbr186Zea+LDvMAUxa8E5ygNtqFtid2EU723TLrDgUA6Nq2F57X3g3RuHsL3sh1OwNIZr5hrnhL83iDuN=CK94mmKQ6lDCCbCBfA=GP2bywHyM3I8s94d1qfl7d3Da9bxZKfrbcI3fhrd8O2qdO3YHH4fYfO/uxXEiDCgvrg8oAHkdlxFSrRgbTHvCarxGahx+qMibS7zqr5YeBI44H+OqTdkIr=irN0xe0gDb/Ti0s7WamDgvG0FbbaQDriPmdqAi0GkvOpCa4FW57qeBDnb9phV2UAGqG+BP92LQGp7aC+5m4tP9RHBNP2DlhvyPYzY7WBD7W4OWj5+p7qqS=3422EeZKYxGPEqmm=yAmPYId/Ni0C6qW2AehqqK=Q3qNtpN0uBhv4qjdmiPiemGqAIm09AqZ0Nee/Gmj7SDoWwqiWi5SDeAq4D'
+}
+
+headers = {
+    'Accept': '*/*',
+    'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7,zh-CN;q=0.6,zh;q=0.5,ja;q=0.4,de;q=0.3',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'DNT': '1',
+    'Origin': 'https://chat.qwen.ai',
+    'Pragma': 'no-cache',
+    'Referer': 'https://chat.qwen.ai/c/a8c98a2d-9910-477e-9499-c0ab26e0bcc2',
+    'Sec-Fetch-Dest': 'empty',
+    'Sec-Fetch-Mode': 'cors',
+    'Sec-Fetch-Site': 'same-origin',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
+}
 
 
 def load_messages(user_id):
@@ -89,32 +104,15 @@ def process_latex(text):
 
     return text
 
-cookies = {
-    'ssxmod_itna': 'Gu0Q0I4fx+xGxiqYQKYvq7QGODOf3GRDODl4BtiD2DIqGQGcD8hq0p8pFbKGkG9g3WGx5Yq7QGWx4SD05qPmDY5GS+xi3Dar39r5StjurqdtgjLbEvY7tBDev3Fu0=T5chLmZxAixCPGnD064BBdbDYYDC4GwDGoD34DiDDPDb3iDAqeD7qDF+lb=yCbLDYpY24DmDGAYHQ3oDDtDiMNQFhb5DDN5S=+qtjGTHZXADxqQd7aK7YbDjkPD/bhA1YR7pI85/CapOUWIFeGye5Gu9eeiqeq8AQWtdpe+7+Ybl+qmW0ohKA4YCDxiYoMGsQYY3A4Rk55A4AxstYhp75S0zmDDiEq5mIb0xXDx4r+2OtnEt9r4mQvM7vatitCD2CGxCKbDK1nwseesWD5lbbG0dBqtAG4gDxD',
-    'ssxmod_itna2': 'Gu0Q0I4fx+xGxiqYQKYvq7QGODOf3GRDODl4BtiD2DIqGQGcD8hq0p8pFbKGkG9g3WGx5Yq7QGWx4mDDPot5YEAbPDL0hwwfPGFOyxDlPuHcOQ9RrQhRd9UTQmu27W7de2F3NCLq2Dcu2FQGytSEPHBEiOqGI7FPw+PnHQ4E5e=4O1uWv5/27QFPe78rOa2=8OHUukszImGxaa5IK15YMFqDMxQzBGCQGau49rP9d7sCLiGxr15FD7sKA4hpaRE10OKsi244L+45B7=b8G5WxzpP7Pqtu6IdI+HF0kw2oICjyhgtqra2GlE2Q5fiY8tMBQiYiuTQIM3rStwgbV8dhhbH+xNmhHnF3qbFhxU+1TQbMM+kgCWSw74493KeQGCEQh+zBu8BoC3Cb34bkgO+ktQbW6kKxZ=m3NPji2AA0uIp8t/uDBrTCj+MjtND+CMad6Qr3GhwGNTTx=QREtPBtmbr186Zea+LDvMAUxa8E5ygNtqFtid2EU723TLrDgUA6Nq2F57X3g3RuHsL3sh1OwNIZr5hrnhL83iDuN=CK94mmKQ6lDCCbCBfA=GP2bywHyM3I8s94d1qfl7d3Da9bxZKfrbcI3fhrd8O2qdO3YHH4fYfO/uxXEiDCgvrg8oAHkdlxFSrRgbTHvCarxGahx+qMibS7zqr5YeBI44H+OqTdkIr=irN0xe0gDb/Ti0s7WamDgvG0FbbaQDriPmdqAi0GkvOpCa4FW57qeBDnb9phV2UAGqG+BP92LQGp7aC+5m4tP9RHBNP2DlhvyPYzY7WBD7W4OWj5+p7qqS=3422EeZKYxGPEqmm=yAmPYId/Ni0C6qW2AehqqK=Q3qNtpN0uBhv4qjdmiPiemGqAIm09AqZ0Nee/Gmj7SDoWwqiWi5SDeAq4D'
-}
-
-headers = {
-    'Accept': '*/*',
-    'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7,zh-CN;q=0.6,zh;q=0.5,ja;q=0.4,de;q=0.3',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
-    'DNT': '1',
-    'Origin': 'https://chat.qwen.ai',
-    'Pragma': 'no-cache',
-    'Referer': 'https://chat.qwen.ai/c/a8c98a2d-9910-477e-9499-c0ab26e0bcc2',
-    'Sec-Fetch-Dest': 'empty',
-    'Sec-Fetch-Mode': 'cors',
-    'Sec-Fetch-Site': 'same-origin',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
-    "authorization": "Bearer " + qwen_accs[0]["bearer"],
-}
-
 
 @router.message(Command("qwen", ignore_case=True))
 @check_command_enabled("qwen")
 async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id: int = None, lang: str = None):
-    if message.reply_to_message and id == None: ###FIX IT FOR CALLBACK
+    load_dotenv(override=True)
+    qwen_accs = json.loads(os.getenv("QWEN_ACCS") or "[]")
+    headers["authorization"] = "Bearer " + (qwen_accs[0]["bearer"] if qwen_accs else "")
+    
+    if message.reply_to_message and id == None:
         user_input = (
             message.reply_to_message.text or message.reply_to_message.caption or ""
         )
@@ -171,12 +169,7 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id: int =
                         chunks = split_html(formatted_reply)
 
                         for chunk in chunks:
-                            #soup = BeautifulSoup(html.unescape(chunk), "html.parser")
-                            #fixed = soup.encode(formatter="minimal").decode("utf-8")                        
-                            #try:
                             await message.reply(chunk, parse_mode="HTML")
-                            #except Exception:
-                            #    await message.reply(soup.get_text())
 
                         messages.append({"role": "assistant", "content": assistant_reply})
                         save_messages(user_id, messages)
@@ -202,6 +195,9 @@ async def cmd_qwenrm(message: Message, bot: Bot):
 @router.message(Command("qwenimg", ignore_case=True))
 @check_command_enabled("qwenimg")
 async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
+    load_dotenv(override=True)
+    qwen_accs = json.loads(os.getenv("QWEN_ACCS") or "[]")
+    
     if message.reply_to_message:
         user_input = (
             message.reply_to_message.text or message.reply_to_message.caption or ""
