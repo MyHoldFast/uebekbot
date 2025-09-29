@@ -22,8 +22,8 @@ MESSAGE_EXPIRY = 3 * 60 * 60
 proxy = os.getenv("PROXY")
 
 cookies = {
-    'ssxmod_itna': 'Gu0Q0I4fx+xGxiqYQKYvq7QGODOf3GRDODl4BtiD2DIqGQGcD8hq0p8pFbKGkG9g3WGx5Yq7QGWx4SD05qPmDY5GS+xi3Dar39r5StjurqdtgjLbEvY7tBDev3Fu0=T5chLmZxAixCPGnD064BBdbDYYDC4GwDGoD34DiDDPDb3iDAqeD7qDF+lb=yCbLDYpY24DmDGAYHQ3oDDtDiMNQFhb5DDN5S=+qtjGTHZXADxqQd7aK7YbDjkPD/bhA1YR7pI85/CapOUWIFeGye5Gu9eeiqeq8AQWtdpe+7+Ybl+qmW0ohKA4YCDxiYoMGsQYY3A4Rk55A4AxstYhp75S0zmDDiEq5mIb0xXDx4r+2OtnEt9r4mQvM7vatitCD2CGxCKbDK1nwseesWD5lbbG0dBqtAG4gDxD',
-    'ssxmod_itna2': 'Gu0Q0I4fx+xGxiqYQKYvq7QGODOf3GRDODl4BtiD2DIqGQGcD8hq0p8pFbKGkG9g3WGx5Yq7QGWx4mDDPot5YEAbPDL0hwwfPGFOyxDlPuHcOQ9RrQhRd9UTQmu27W7de2F3NCLq2Dcu2FQGytSEPHBEiOqGI7FPw+PnHQ4E5e=4O1uWv5/27QFPe78rOa2=8OHUukszImGxaa5IK15YMFqDMxQzBGCQGau49rP9d7sCLiGxr15FD7sKA4hpaRE10OKsi244L+45B7=b8G5WxzpP7Pqtu6IdI+HF0kw2oICjyhgtqra2GlE2Q5fiY8tMBQiYiuTQIM3rStwgbV8dhhbH+xNmhHnF3qbFhxU+1TQbMM+kgCWSw74493KeQGCEQh+zBu8BoC3Cb34bkgO+ktQbW6kKxZ=m3NPji2AA0uIp8t/uDBrTCj+MjtND+CMad6Qr3GhwGNTTx=QREtPBtmbr186Zea+LDvMAUxa8E5ygNtqFtid2EU723TLrDgUA6Nq2F57X3g3RuHsL3sh1OwNIZr5hrnhL83iDuN=CK94mmKQ6lDCCbCBfA=GP2bywHyM3I8s94d1qfl7d3Da9bxZKfrbcI3fhrd8O2qdO3YHH4fYfO/uxXEiDCgvrg8oAHkdlxFSrRgbTHvCarxGahx+qMibS7zqr5YeBI44H+OqTdkIr=irN0xe0gDb/Ti0s7WamDgvG0FbbaQDriPmdqAi0GkvOpCa4FW57qeBDnb9phV2UAGqG+BP92LQGp7aC+5m4tP9RHBNP2DlhvyPYzY7WBD7W4OWj5+p7qqS=3422EeZKYxGPEqmm=yAmPYId/Ni0C6qW2AehqqK=Q3qNtpN0uBhv4qjdmiPiemGqAIm09AqZ0Nee/Gmj7SDoWwqiWi5SDeAq4D'
+    'ssxmod_itna': '1-QqAxyiGQiQK7Txe94mwqQK0QDtHi=HtoDzxC5iOD_xQ5DODLxnb4Gdqndq6w=zWdzb70044dDDqXhlD050rDmqi12DYPGfKPk2ImdC7BA5GdC3l5NNqC0Cwq4tauUGxI565s0I9tlmvZKshHbtQ4DHxi8DB9DmlcYDeeDtx0rD0eDPxDYDG4DoEYDn14DjxDd84SAmROaDm_IHxDbDimIW4aeDD5DAhBPLngrDGyrKsextDgD0bd_i1RPhtD6djGID7y3Dlp5ksmISR6y5h36Wk6LQroDX2tDvrSoEfBPnnEfpSSYoDHVwmmejhrBvC0P3iGwjK4Q_ebhhQeNGGrQDqBh=im=QDZ0qD92mDDAB2rFDN3O4b_r3WMGvlAvZK2Dk0GKeP=i4CG7CDKEDN77N/ri9i4aqqZhPti44_5TDPeD',
+    'ssxmod_itna2': '1-QqAxyiGQiQK7Txe94mwqQK0QDtHi=HtoDzxC5iOD_xQ5DODLxnb4Gdqndq6w=zWdzb70044dDDqXhwDDcAeq9mnAqDLQ0TaNk87DDs2QW=9_LoDTOQxuGyAUSKq5Zzl8a4uLk10geaHjyOp2DkcpGklrHaeI71EcBsyrG_uWpqYBc82eAHOPKkYZKFzpGvp=04m8a1oUSskQOQqjB1u6OajzKOc28j3GMazDF4UtmHhzfGubF0z=e6qihuFo9DuZ0_osjxO69409o0PBpkjtvsgbSkejx7pO7_Rfca6k7Sc1ihy2o/OxgDu3z/qrSfQPh=2OQoBH=0x5TTo0Ni3KzdYqMtjhO/MQco5OjQzd_WRG52hQLtKiH/rkm2qFE4hnx94oEh_NfGe3QLOCh2=2YYOmNfo1u0Te7wGOOLxNGrTu_Em23a3zDbWCCQp2_cEb78L/xTWWhbCbk1=_YEwOFzGj7ZtZx7Y2xtnNd1tOxEbl3tnweWaVE8Z2=QfNEo_jOhVONq0dFEkbM1yoreqtj2qq_TFzrMlQV42oSkVr_447iGbMoaiWn5LI7g0dLXcjXh=KUxft1r52F/hOR2Of=GvOdnw=LOp5ObMCrFT1K_DTfQ2BINh4q0xlAQegL_gjh38/EWHOx0l7v_4sNdHS7j_4Oo5mnDdFlHhZVxa0gdh8q5SNe7FZi7R5HGYIyansfHxSNOx2i1m54KQahxntgvNjYzFtDGp2Kihrn8mbw02pbDYqFbMpxY=5hKzQkiZmqkqOxekq5he4RNi5dGG7_nh57_4urWenhcYYkh=4xGq3tDw0D7DsYTFe3hNDe54zBxPDTIeY2cZh4D',
 }
 
 headers = {
@@ -34,31 +34,44 @@ headers = {
     'DNT': '1',
     'Origin': 'https://chat.qwen.ai',
     'Pragma': 'no-cache',
-    'Referer': 'https://chat.qwen.ai/c/a8c98a2d-9910-477e-9499-c0ab26e0bcc2',
+    'Referer': 'https://chat.qwen.ai/c/2412f2a1-b964-4af7-a2a4-6cc2e213df13',
     'Sec-Fetch-Dest': 'empty',
     'Sec-Fetch-Mode': 'cors',
     'Sec-Fetch-Site': 'same-origin',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
+    'bx-umidtoken': 'T2gA0vIYCH63-9f8G-HkJxZ-QTRRf-SNPjQfr8zLFWFBdnp2Ftt9ByU8Zhjx4lhqX6w=',
+    'bx-v': '2.5.31',
+    'content-type': 'application/json; charset=UTF-8',
+    'sec-ch-ua': '"Chromium";v="140", "Not=A?Brand";v="24", "Google Chrome";v="140"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"Windows"',
+    'source': 'web',
+    'timezone': 'Mon Sep 29 2025 16:34:00 GMT+0300',
+    'x-accel-buffering': 'no',
 }
 
 
-def load_messages(user_id):
+def load_context(user_id):
     context_item = context_db.get(ContextQuery().uid == user_id)
     if context_item:
         messages = json.loads(context_item.get("messages", "[]"))
+        chat_id = context_item.get("chat_id", "")
+        parent_id = context_item.get("parent_id", "")
         timestamp = float(context_item.get("timestamp", 0))
         if time.time() - timestamp < MESSAGE_EXPIRY:
-            return messages
-    return []
+            return messages, chat_id, parent_id
+    return [], "", ""
 
 
-def save_messages(user_id, messages):
+def save_context(user_id, messages, chat_id, parent_id):
     getcontext = ContextQuery().uid == user_id
     context_item = context_db.get(getcontext)
 
     new_data = {
         "uid": user_id,
         "messages": json.dumps(messages, ensure_ascii=False),
+        "chat_id": chat_id,
+        "parent_id": parent_id,
         "timestamp": time.time(),
     }
 
@@ -67,9 +80,11 @@ def save_messages(user_id, messages):
     else:
         context_db.insert(new_data)
 
+
 def remove_messages(user_id):
     getcontext = ContextQuery()
     context_db.remove(getcontext.uid == user_id)
+
 
 def process_latex(text):
     code_blocks = {}
@@ -129,41 +144,77 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id: int =
         return
 
     user_id = id if id is not None else message.from_user.id
-    messages = load_messages(user_id)
-
-    messages.append(
-        {
-            "role": "user",
-            "content": user_input,
-            "chat_type": "t2t",
-            "extra": {},
-            "feature_config": {"thinking_enabled": False},
-        }
-    )
-    
-    url = "https://chat.qwen.ai/api/chat/completions"
-    data = {
-        "stream": False,
-        "incremental_output": False,
-        "chat_type": "t2t",
-        "model": "qwen3-235b-a22b",
-        "messages": messages,
-        "session_id": str(uuid.uuid4()),
-        "chat_id": str(uuid.uuid4()),
-        "id": str(uuid.uuid4()),
-    }
+    messages, chat_id, parent_id = load_context(user_id)
 
     async with TypingIndicator(bot=bot, chat_id=message.chat.id):
-        async with aiohttp.ClientSession(cookies=cookies) as session:
+        async with aiohttp.ClientSession(cookies=cookies, headers=headers) as session:
             try:
-                async with session.post(url, headers=headers, json=data, timeout=180, proxy=proxy) as r:
+                if not chat_id:
+                    chat_payload = {
+                        "title": "Qwen Chat",
+                        "models": ["qwen3-max"],
+                        "chat_mode": "normal",
+                        "chat_type": "t2t",
+                        "timestamp": int(time.time() * 1000)
+                    }
+                    
+                    async with session.post(
+                        "https://chat.qwen.ai/api/v2/chats/new",
+                        json=chat_payload,
+                        proxy=proxy
+                    ) as chat_resp:
+                        if chat_resp.status != 200:
+                            raise Exception(f"Chat create failed: {chat_resp.status}")
+                        chat_data = await chat_resp.json()
+                        chat_id = chat_data["data"]["id"]
+
+                user_message = {
+                    'role': 'user',
+                    'content': user_input,
+                    'user_action': 'chat',
+                    'files': [],
+                    'models': ['qwen3-max'],
+                    'chat_type': 't2t',
+                    'feature_config': {
+                        'thinking_enabled': False,
+                        'output_schema': 'phase',
+                    },
+                    'extra': {
+                        'meta': {
+                            'subChatType': 't2t',
+                        },
+                    },
+                    'sub_chat_type': 't2t'
+                }
+
+                json_data = {
+                    'stream': False,
+                    'incremental_output': True,
+                    'chat_id': chat_id,
+                    'chat_mode': 'normal',
+                    'model': 'qwen3-max',
+                    **({'parent_id': parent_id} if parent_id else {}),
+                    'messages': [user_message],
+                }
+
+                params = {
+                    'chat_id': chat_id,
+                }
+
+                async with session.post(
+                    'https://chat.qwen.ai/api/v2/chat/completions',
+                    params=params,
+                    json=json_data,
+                    timeout=180,
+                    proxy=proxy
+                ) as r:
                     if r.status == 200:
                         result = await r.json()
                         assistant_reply = (
-                            result.get("choices", [{}])[0]
-                            .get("message", {})
-                            .get("content", "Ошибка")
+                            result.get("data", {}).get("choices", [{}])[0]
+                            .get("message", {}).get("content", "Ошибка")
                         )
+                        new_parent_id = result.get("data", {}).get("parent_id", "")
 
                         formatted_reply = process_latex(telegram_format(assistant_reply))
                         chunks = split_html(formatted_reply)
@@ -171,8 +222,8 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id: int =
                         for chunk in chunks:
                             await message.reply(chunk, parse_mode="HTML")
 
-                        messages.append({"role": "assistant", "content": assistant_reply})
-                        save_messages(user_id, messages)
+                        messages.append({"role": "user", "content": user_input})
+                        save_context(user_id, messages, chat_id, new_parent_id)
                     else:
                         await message.reply(_("qwen_server_error"))
             except aiohttp.ClientError:
@@ -225,7 +276,7 @@ async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
                 async with aiohttp.ClientSession(cookies=cookies, headers=headers) as session:
                     chat_payload = {
                         "title": "Qwen Image Chat",
-                        "models": ["qwen3-235b-a22b"],
+                        "models": ["qwen3-max"],
                         "chat_mode": "normal",
                         "chat_type": "t2i",
                         "timestamp": int(time.time() * 1000)
@@ -249,7 +300,7 @@ async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
                         "incremental_output": True,
                         "chat_id": chat_id,
                         "chat_mode": "normal",
-                        "model": "qwen3-235b-a22b",
+                        "model": "qwen3-max",
                         "parent_id": None,
                         "messages": [
                             {
@@ -261,7 +312,7 @@ async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
                                 "user_action": "chat",
                                 "files": [],
                                 "timestamp": int(time.time()),
-                                "models": ["qwen3-235b-a22b"],
+                                "models": ["qwen3-max"],
                                 "chat_type": "t2i",
                                 "feature_config": {
                                     "thinking_enabled": False,
