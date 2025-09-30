@@ -57,13 +57,14 @@ def load_context(user_id):
         messages = json.loads(context_item.get("messages", "[]"))
         chat_id = context_item.get("chat_id", "")
         parent_id = context_item.get("parent_id", "")
+        message_id = context_item.get("message_id", "")
         timestamp = float(context_item.get("timestamp", 0))
         if time.time() - timestamp < MESSAGE_EXPIRY:
-            return messages, chat_id, parent_id
-    return [], "", ""
+            return messages, chat_id, parent_id, message_id
+    return [], "", "", ""
 
 
-def save_context(user_id, messages, chat_id, parent_id):
+def save_context(user_id, messages, chat_id, parent_id, message_id):
     getcontext = ContextQuery().uid == user_id
     context_item = context_db.get(getcontext)
 
@@ -72,6 +73,7 @@ def save_context(user_id, messages, chat_id, parent_id):
         "messages": json.dumps(messages, ensure_ascii=False),
         "chat_id": chat_id,
         "parent_id": parent_id,
+        "message_id": message_id,
         "timestamp": time.time(),
     }
 
@@ -144,7 +146,7 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id: int =
         return
 
     user_id = id if id is not None else message.from_user.id
-    messages, chat_id, parent_id = load_context(user_id)
+    messages, chat_id, parent_id, message_id = load_context(user_id)
 
     async with TypingIndicator(bot=bot, chat_id=message.chat.id):
         async with aiohttp.ClientSession(cookies=cookies, headers=headers) as session:
@@ -167,6 +169,8 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id: int =
                             raise Exception(f"Chat create failed: {chat_resp.status}")
                         chat_data = await chat_resp.json()
                         chat_id = chat_data["data"]["id"]
+                
+                #print(f"Current parent_id: {parent_id}")
 
                 user_message = {
                     'role': 'user',
@@ -175,6 +179,8 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id: int =
                     'files': [],
                     'models': ['qwen3-max'],
                     'chat_type': 't2t',
+                    **({'parentId': parent_id} if parent_id else {}),
+                    **({'parent_id': parent_id} if parent_id else {}),
                     'feature_config': {
                         'thinking_enabled': False,
                         'output_schema': 'phase',
@@ -188,7 +194,7 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id: int =
                 }
 
                 json_data = {
-                    'stream': False,
+                    'stream': True,
                     'incremental_output': True,
                     'chat_id': chat_id,
                     'chat_mode': 'normal',
@@ -201,6 +207,10 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id: int =
                     'chat_id': chat_id,
                 }
 
+                full_response = ""
+                new_parent_id = parent_id
+                new_message_id = message_id
+
                 async with session.post(
                     'https://chat.qwen.ai/api/v2/chat/completions',
                     params=params,
@@ -209,23 +219,60 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id: int =
                     proxy=proxy
                 ) as r:
                     if r.status == 200:
-                        result = await r.json()
-                        assistant_reply = (
-                            result.get("data", {}).get("choices", [{}])[0]
-                            .get("message", {}).get("content", "Ошибка")
-                        )
-                        new_parent_id = result.get("data", {}).get("parent_id", "")
+                        async for line in r.content:
+                            if not line:
+                                continue
+                            line = line.decode("utf-8").strip()
+                            
+                            if not line or not line.startswith("data: "):
+                                continue
+                            
+                            payload = line[len("data: "):]
+                            
+                            if not payload:
+                                continue
 
-                        formatted_reply = process_latex(telegram_format(assistant_reply))
-                        chunks = split_html(formatted_reply)
+                            try:
+                                result = json.loads(payload)
+                                
+                                if 'response.created' in result:
+                                    response_created_data = result['response.created']
+                                    new_parent_id = response_created_data.get('response_id', new_parent_id)
+                                    new_message_id = None
+                                
+                                elif 'choices' in result:
+                                    choices = result.get('choices', [])
+                                    if choices:
+                                        delta = choices[0].get('delta', {})
+                                        content = delta.get('content', '')
+                                        
+                                        if content is not None:
+                                            full_response += content
+                                            
+                                elif 'status' in result and result.get('status') == 'finished':
+                                    break
+                                    
+                                if 'parent_id' in result:
+                                    new_parent_id = result.get('response_id', new_parent_id)
+                                if 'message_id' in result:
+                                    new_message_id = result.get('message_id', new_message_id)
+                                        
+                            except json.JSONDecodeError:
+                                continue
+                            except Exception:
+                                continue
 
-                        for chunk in chunks:
-                            await message.reply(chunk, parse_mode="HTML")
+                if full_response.strip():
+                    formatted_reply = process_latex(telegram_format(full_response))
+                    chunks = split_html(formatted_reply)
 
-                        messages.append({"role": "user", "content": user_input})
-                        save_context(user_id, messages, chat_id, new_parent_id)
-                    else:
-                        await message.reply(_("qwen_server_error"))
+                    for chunk in chunks:
+                        await message.reply(chunk, parse_mode="HTML")
+
+                    save_context(user_id, messages, chat_id, new_parent_id, new_message_id)
+                else:
+                    await message.reply(_("qwen_error"))
+
             except aiohttp.ClientError:
                 await message.reply(_("qwen_network"))
             except asyncio.TimeoutError:
@@ -365,7 +412,7 @@ async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
                                 continue
 
             except Exception as e:
-                print(f"Qwen error (acc {acc_index}): {e}")
+                #print(f"Qwen error (acc {acc_index}): {e}")
                 acc_index += 1
                 continue
 
