@@ -122,12 +122,39 @@ def process_latex(text):
     return text
 
 
+async def update_memory_settings(session, proxy):
+    memory_settings_payload = {
+        "memory": {
+            "enable_memory": False,
+            "enable_history_memory": False,
+            "memory_version_reminder": False
+        }
+    }
+    
+    try:
+        async with session.post(
+            'https://chat.qwen.ai/api/v2/users/user/settings/update',
+            json=memory_settings_payload,
+            proxy=proxy
+        ) as resp:
+            if resp.status == 200:
+                #print("Memory settings updated successfully")
+                pass
+            else:
+                #print(f"Memory settings update failed: {resp.status}")
+                pass
+    except Exception as e:
+        #print(f"Error updating memory settings: {e}")
+        pass
+
+
 @router.message(Command("qwen", ignore_case=True))
 @check_command_enabled("qwen")
 async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id: int = None, lang: str = None):
     load_dotenv(override=True)
     qwen_accs = json.loads(os.getenv("QWEN_ACCS") or "[]")
     headers["authorization"] = "Bearer " + (qwen_accs[0]["bearer"] if qwen_accs else "")
+    cookies.update({'token': qwen_accs[0]["bearer"]})
     
     if message.reply_to_message and id == None:
         user_input = (
@@ -151,6 +178,9 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id: int =
     async with TypingIndicator(bot=bot, chat_id=message.chat.id):
         async with aiohttp.ClientSession(cookies=cookies, headers=headers) as session:
             try:
+                
+                await update_memory_settings(session, proxy)
+                
                 if not chat_id:
                     chat_payload = {
                         "title": "Qwen Chat",
@@ -318,9 +348,11 @@ async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
         acc_index = 0
         while acc_index < len(qwen_accs):
             headers["authorization"] = "Bearer " + qwen_accs[acc_index]["bearer"]
+            cookies.update({'token': qwen_accs[0][acc_index]})
 
             try:
                 async with aiohttp.ClientSession(cookies=cookies, headers=headers) as session:
+                    await update_memory_settings(session, proxy)                    
                     chat_payload = {
                         "title": "Qwen Image Chat",
                         "models": ["qwen3-max"],
