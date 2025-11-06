@@ -348,7 +348,7 @@ async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
         acc_index = 0
         while acc_index < len(qwen_accs):
             headers["authorization"] = "Bearer " + qwen_accs[acc_index]["bearer"]
-            cookies.update({'token': qwen_accs[0][acc_index]})
+            cookies.update({'token': qwen_accs[acc_index]["bearer"]})
 
             try:
                 async with aiohttp.ClientSession(cookies=cookies, headers=headers) as session:
