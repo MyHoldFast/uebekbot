@@ -13,9 +13,7 @@ from utils.command_states import check_command_enabled
 from localization import DEFAULT_LANGUAGE, get_localization
 
 API_URLS = [
-    "https://api-inference.huggingface.co/models/openai/whisper-large-v3-turbo",
-    "https://api-inference.huggingface.co/models/openai/whisper-base",
-    "https://api-inference.huggingface.co/models/openai/whisper-tiny"
+    "https://router.huggingface.co/hf-inference/models/openai/whisper-large-v3"
 ]
 headers = {
     "Authorization": "Bearer "+os.getenv("HF_TOKEN"),
