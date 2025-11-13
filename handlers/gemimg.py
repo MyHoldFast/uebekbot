@@ -15,7 +15,7 @@ from localization import get_localization, DEFAULT_LANGUAGE
 
 
 API_KEY = os.environ.get("GEMINI_API_KEY")
-MODEL_NAME = "gemini-2.0-flash-exp-image-generation"
+MODEL_NAME = "gemini-2.0-flash-preview-image-generation"
 BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models" 
 URL_PROXY = os.environ.get("URL_PROXY")
 if URL_PROXY:
