@@ -10,8 +10,8 @@ from io import BytesIO
 from utils.text_utils import split_html
 from utils.typing_indicator import TypingIndicator
 #from duckai import DuckAI
-from g4f.client import AsyncClient
-from g4f.Provider import Yqcloud
+#from g4f.client import AsyncClient
+#from g4f.Provider import Yqcloud
 from aiogram import Bot, Router
 from aiogram.filters import Command, CommandObject
 from aiogram.types import (
@@ -28,7 +28,7 @@ from chatgpt_md_converter import telegram_format
 from utils.command_states import check_command_enabled
 
 API_KEY = os.environ.get("GEMINI_API_KEY")
-MODEL_NAME = "gemini-2.5-flash-preview-05-20"
+MODEL_NAME = "gemini-2.5-flash"
 BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models" 
 URL_PROXY = os.environ.get("URL_PROXY")
 if URL_PROXY:
