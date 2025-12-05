@@ -21,38 +21,16 @@ jobs:
             source myenv/bin/activate
             cd /root/uebekbot
             git pull
-            
             pip install --no-cache-dir -r requirements.txt
             mkdir -p trained_models
             
-            check_lfs_pointer() {
-              local file="$1"
-              if [ ! -f "$file" ]; then
-                return 1 
-              fi
-              
-              # Читаем первые 100 байт файла
-              local first_bytes=$(head -c 100 "$file")
-              
-              if echo "$first_bytes" | grep -q "version https://git-lfs.github.com/spec/v1"; then
-                return 0 
-              else
-                return 1 
-              fi
-            }
-            
-            if ! [ -f "trained_models/lid.176.bin" ] || check_lfs_pointer "trained_models/lid.176.bin"; then
-              echo "Downloading lid.176.bin (file missing or LFS pointer detected)..."
-              wget -q --show-progress -O trained_models/lid.176.bin https://github.com/MyHoldFast/uebekbot/raw/main/trained_models/lid.176.bin
-              
-              if check_lfs_pointer "trained_models/lid.176.bin"; then
-                echo "ERROR: Still got LFS pointer after download!"
-                exit 1
-              else
-                echo "File downloaded successfully!"
+            if [ -f "trained_models/lid.176.bin" ]; then
+              FILE_SIZE=$(stat -c%s "trained_models/lid.176.bin")
+              if [ $FILE_SIZE -lt 1000000 ]; then
+                wget -q -O trained_models/lid.176.bin https://github.com/MyHoldFast/uebekbot/raw/main/trained_models/lid.176.bin
               fi
             else
-              echo "File lid.176.bin already exists and looks valid, skipping download."
+              wget -q -O trained_models/lid.176.bin https://github.com/MyHoldFast/uebekbot/raw/main/trained_models/lid.176.bin
             fi
             
             pkill -f "python bot.py" 2>/dev/null || true
