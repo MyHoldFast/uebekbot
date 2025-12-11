@@ -1,4 +1,4 @@
-import aiohttp, httpx
+import aiohttp
 import asyncio
 import os
 import re
@@ -7,217 +7,131 @@ from utils.typing_indicator import TypingIndicator
 from aiogram import Router, Bot
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from aiogram.types import CallbackQuery
-from bs4 import BeautifulSoup
 from utils.command_states import check_command_enabled
-
-from localization import DEFAULT_LANGUAGE, LANGUAGES, get_localization
-#from utils.translate import translate_text
+from localization import DEFAULT_LANGUAGE, get_localization
 
 router = Router()
 
-gen_url = "https://300.ya.ru/api/generation"
+GEN_URL = "https://300.ya.ru/api/generation"
 
-async def fetch_data(session, url, data):
-    async with session.post(url, json=data, timeout=120, headers={
-        'Authorization': f'OAuth {os.getenv("YANDEX_OAUTH_TOKEN")}'}, 
-        cookies={'Session_id': os.getenv("YANDEX_SESSIONID_COOK"),
-        'yp': os.getenv("YANDEX_YP_COOK")}) as response:
-        return await response.json()
+class Yandex300API:
+    def __init__(self):
+        self.session = None
+        self.headers = {
+            'accept': '*/*',
+            'accept-language': 'ru-RU,ru;q=0.9',
+            'content-type': 'application/json',
+            'origin': 'https://300.ya.ru',
+            'referer': 'https://300.ya.ru/',
+            'sec-ch-ua': '"Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"Windows"',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'authorization': f'OAuth {os.getenv("YANDEX_OAUTH_TOKEN")}'
+        }
+        self.cookies = {
+            'Session_id': os.getenv("YANDEX_SESSIONID_COOK"),
+            'yp': os.getenv("YANDEX_YP_COOK")
+        }
 
-async def generate_summary(input_value: str, is_text=False) -> str:
-    summary = ''
-    try:
-        async with aiohttp.ClientSession() as session:
-            params = {"text": input_value, "type": "text"} if is_text else {"video_url": input_value, "type": "video"}
-            gen_start_json = await fetch_data(session, gen_url, params)
+    async def __aenter__(self):
+        self.session = aiohttp.ClientSession(headers=self.headers, cookies=self.cookies)
+        return self
 
-        if "message" in gen_start_json:
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if self.session:
+            await self.session.close()
+
+    async def post(self, url, data):
+        async with self.session.post(url, json=data, timeout=120) as response:
+            return await response.json()
+
+async def generate_summary(input_value: str, content_type: str = "text") -> str:
+    async with Yandex300API() as api:
+        payload = {"text": input_value, "type": content_type} if content_type == "text" else {"video_url": input_value, "type": "video"} if content_type == "video" else {"article_url": input_value, "ignore_cache": False, "type": "article"}
+        
+        gen_data = await api.post(GEN_URL, payload)
+        
+        if "message" in gen_data:
             return None
 
-        session_id = gen_start_json['session_id']
-        await asyncio.sleep(gen_start_json['poll_interval_ms'] / 1000)
+        if gen_data.get('status_code') == 2:
+            return await process_summary_data(gen_data, content_type)
 
-        gen_data = {}
+        session_id = gen_data['session_id']
+        await asyncio.sleep(gen_data['poll_interval_ms'] / 1000)
+
         first_run = True
-
         while first_run or gen_data.get('status_code') == 1:
             first_run = False
-            async with aiohttp.ClientSession() as session:
-                params = {"session_id": session_id, "text": input_value, "type": "text"} if is_text else {"session_id": session_id, "video_url": input_value, "type": "video"}
-                gen_data = await fetch_data(session, gen_url, params)
-
-            interval = gen_data['poll_interval_ms']
-            await asyncio.sleep(interval / 1000)
-
-        keypoints = gen_data.get('thesis', []) if is_text else gen_data.get('keypoints', [])
-
-        for keypoint in keypoints:
-            if is_text:
-                summary += f"* {keypoint['content']}\n"
+            payload = {"session_id": session_id, "type": content_type}
+            if content_type == "text":
+                payload["text"] = input_value
+            elif content_type == "video":
+                payload["video_url"] = input_value
             else:
-                for thesis in keypoint['theses']:
-                    summary += f"{keypoint['id']}.{thesis['id']}. {thesis['content']}\n"
-        return summary
-    except Exception as e:
-        print(f"Error: {e}")
-        return None
+                payload["article_url"] = input_value
+                payload["ignore_cache"] = False
+            
+            gen_data = await api.post(GEN_URL, payload)
+            await asyncio.sleep(gen_data['poll_interval_ms'] / 1000)
 
-async def fetch_sharing_url(link):
-    endpoint = "https://300.ya.ru/api/sharing-url"
-    async with aiohttp.ClientSession() as session:
-        async with session.post(endpoint, timeout=120, json={"article_url": f"{link}"}, headers={"Authorization": f'OAuth {os.getenv("YANDEX_OAUTH_TOKEN")}'}) as response:
-            data = await response.json()
-            return data.get("sharing_url")
+        return await process_summary_data(gen_data, content_type)
 
-async def extract_url_info(target):
-    final_url = await fetch_sharing_url(target)
-    title, description, identifier = '', '', None
+async def process_summary_data(data: dict, content_type: str) -> str:
+    summary = ""
 
-    headers = {
-        'DNT': '1',
-        'Upgrade-Insecure-Requests': '1',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
-        'sec-ch-ua': '"Chromium";v="128", "Not;A=Brand";v="24", "Google Chrome";v="128"',
-        'sec-ch-ua-mobile': '?0',
-        'sec-ch-ua-platform': '"Windows"'
+    if content_type == "text":
+        for thesis in data.get('thesis', []):
+            summary += f"* {thesis['content']}\n"
+    elif content_type == "video":
+        for keypoint in data.get('keypoints', []):
+            for thesis in keypoint.get('theses', []):
+                summary += f"{keypoint['id']}.{thesis['id']}. {thesis['content']}\n"
+    else:
+        if data.get('have_chapters', False):
+            for chapter in data.get('chapters', []):
+                summary += f"\n{chapter['id'] + 1}. {chapter['content']}\n"
+                for thesis in chapter.get('theses', []):
+                    summary += f"   {chapter['id'] + 1}.{thesis['id'] + 1}. {thesis['content']}\n"
+        else:
+            for thesis in data.get('thesis', []):
+                summary += f"{thesis['id'] + 1}. {thesis['content']}\n"
+
+    return summary.strip()
+
+async def process_url(text: str) -> str:
+    if not text:    
+        user_language = DEFAULT_LANGUAGE
+        _ = get_localization(user_language)
+        return _("send_link")
+
+    url_patterns = {
+        r'https?://(?:www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)/\S+': 'video',
+        r'https?://[^\s]+': 'article'
     }
 
-    if final_url:
-        identifier_match = re.search(r'https://300\.ya\.ru/([a-zA-Z0-9]+)', final_url)
-        if identifier_match:
-            identifier = identifier_match.group(1)
+    content_type = 'text'
+    match_url = None
 
-        async with httpx.AsyncClient(follow_redirects=True) as client:
-            response = await client.post(final_url, headers=headers)
-            
-            if response.status_code == 200:
-                response.encoding = 'utf-8'
-                soup = BeautifulSoup(response.text, "html.parser")
-                og_title_tag = soup.find("meta", attrs={"property": "og:title"})
-                if og_title_tag:
-                    title = og_title_tag["content"]
-                og_description_tag = soup.find("meta", attrs={"name": "description"})
-                if og_description_tag:
-                    description = og_description_tag.get("content")
-                content = (title + "\n\n" + description).replace(" - Пересказ YandexGPT", "")
-                return content, identifier
-
-    return None, None
-
-async def process_url(text):
-    if not text:    
-        return _("send_link"), None # type: ignore
-
-    result = ""
-    button_callback = None
-
-    regexes = [
-        (r'https?://(?:www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)/\S+', generate_summary),
-        (r'https?://(?:www\.)?(?:[a-zA-Zа-яА-Я]{2,}\.)?(?:m\.)?wikipedia\.\w{2,}/wiki/[^\s]+', extract_url_info),
-        (r'https?://(?:www\.)?habr\.\w{2,}/\S+', extract_url_info)
-    ]
-
-    for regex, func in regexes:
-        match = re.search(regex, text)
+    for pattern in url_patterns:
+        match = re.search(pattern, text)
         if match:
-            link = match.group()
-            if func == extract_url_info:
-                func_result, button_callback = await func(link)
-            else:
-                func_result = await func(link)
-            if func_result:
-                result += "\n\n" + func_result
+            match_url = match.group()
+            content_type = url_patterns[pattern]
             break
 
-    if not result:
-        #if text.startswith('/summary'):
-        #   return _("send_link"), None # type: ignore
-        match = re.search(r'(https?://[^\s]+)', text)
-        if match:
-            result, button_callback = await extract_url_info(match.group(0))
-        else:
-            result = await generate_summary(text, True)
-
-    return result, button_callback
-
-@router.callback_query(lambda c: c.data.startswith("link:"))
-async def handle_details_callback(callback: CallbackQuery):
-    identifier = callback.data[5:]
-    target_url = f"https://300.ya.ru/{identifier}/"
-    detailed_summary = await fetch_detailed_summary(target_url)
-    user_language = callback.from_user.language_code or DEFAULT_LANGUAGE
-    _ = get_localization(user_language)
-
-    if detailed_summary:
-        #if user_language and user_language != "ru" and user_language in LANGUAGES:
-        #   detailed_summary = await translate_text([detailed_summary], "ru", user_language) or detailed_summary 
-        for x in range(0, len(detailed_summary), 4096):
-            await callback.message.reply(detailed_summary[x:x + 4096])
-    else:
-        await callback.message.reply(_("summary_detail_failed"))
-    await callback.answer()
-
-async def fetch_detailed_summary(final_url: str):
-    #print(final_url)
-    headers = {
-        "accept": "application/json",
-        "accept-language": "ru-RU,ru;q=0.9,en-US;q=0.8",
-        "content-type": "application/x-www-form-urlencoded",
-        "sec-ch-ua": "\"Google Chrome\";v=\"131\", \"Chromium\";v=\"131\", \"Not_A Brand\";v=\"24\"",
-        "sec-ch-ua-mobile": "?0",
-        "sec-ch-ua-platform": "\"Windows\"",
-        "referrer": final_url,
-    }
-
-    data = {
-        "summary-mode": "detailed"
-    }
-
-    cookies = {
-        "summary-mode": "detailed"
-    }
-
-    async with httpx.AsyncClient(follow_redirects=True) as client:
-        toggle_response = await client.post(final_url + "?/toggle", headers=headers, data=data, cookies=cookies, timeout=120)
-
-        if toggle_response.status_code != 200:
-            return None
-
-        response = await client.get(final_url, headers=headers, cookies=cookies, timeout=120)
-        if response.status_code == 200:
-            response.encoding = 'utf-8'
-            soup = BeautifulSoup(response.text, "html.parser")
-            summary_div = soup.find("div", class_="summary-text")
-            if not summary_div:
-                return None
-
-            results = []
-            seen_headings = set()
-            seen_texts = set()
-
-            for h2 in summary_div.find_all("h2"):
-                h2_text = h2.get_text(strip=True)
-                if h2_text not in seen_headings:
-                    results.append(f"\n- {h2_text}")
-                    seen_headings.add(h2_text)
-
-                span_texts = []
-                for span in h2.find_all_next("span", class_="text-wrapper"):
-                    span_text = span.get_text(strip=True)
-                    if span.find_previous("h2") != h2:
-                        break
-                    if span_text not in seen_texts:
-                        span_texts.append(span_text)
-                        seen_texts.add(span_text)
-                
-                for text in span_texts:
-                    results.append(f"  {text}")
-
-            return "\n".join(results)
-
-    return None
+    if match_url:
+        summary = await generate_summary(match_url, content_type)
+        if summary:
+            title = ""
+            if isinstance(summary, tuple):
+                summary, title = summary
+            if title:
+                summary = f"{title}\n\n{summary}"
+            return summary
+    
+    return await generate_summary(text, 'text')
 
 @router.message(Command("summary", ignore_case=True))
 @check_command_enabled("summary")
@@ -236,23 +150,15 @@ async def summary(message: Message, command: CommandObject, bot: Bot):
         text = link_preview.url
 
     async with TypingIndicator(bot=bot, chat_id=message.chat.id):
-        result, button_callback = await process_url(text)
+        result = await process_url(text)
 
         if result:
-            #if user_language and user_language != "ru" and user_language in LANGUAGES:
-            #    result = await translate_text([result], "ru", user_language) or result 
-
-            keyboard = None
-            if button_callback:
-                details_button = InlineKeyboardButton(text=_("summary_detail"), callback_data='link:'+button_callback)
-                keyboard = InlineKeyboardMarkup(inline_keyboard=[[details_button]])
-
             is_long = len(result) >= 1000
             wrap_start, wrap_end = ("<blockquote expandable>", "</blockquote>") if is_long else ("", "")
             chunk_length = 4096 - len(wrap_start) - len(wrap_end)
 
             for i in range(0, len(result), chunk_length):
                 chunk = f"{wrap_start}{result[i:i + chunk_length]}{wrap_end}"
-                await message.reply(chunk, reply_markup=keyboard if i == 0 else None, parse_mode="HTML")
+                await message.reply(chunk, parse_mode="HTML")
         else:
             await message.reply(_("summary_failed"))
