@@ -22,17 +22,9 @@ jobs:
             cd /root/uebekbot
             git pull
             pip install --no-cache-dir -r requirements.txt
-            mkdir -p trained_models
             
-            if [ -f "trained_models/lid.176.bin" ]; then
-              FILE_SIZE=$(stat -c%s "trained_models/lid.176.bin")
-              if [ $FILE_SIZE -lt 1000000 ]; then
-                wget -q -O trained_models/lid.176.bin https://github.com/MyHoldFast/uebekbot/raw/main/trained_models/lid.176.bin
-              fi
-            else
-              wget -q -O trained_models/lid.176.bin https://github.com/MyHoldFast/uebekbot/raw/main/trained_models/lid.176.bin
-            fi
-            
-            pkill -f "python bot.py" 2>/dev/null || true
-            sleep 2
-            nohup python bot.py > bot.log 2>&1 &
+            killall python
+            nohup python bot.py > bot.log 2>&1 < /dev/null &
+            exit 0
+#mkdir -p trained_models
+#wget -q -O trained_models/lid.176.bin https://github.com/MyHoldFast/uebekbot/raw/main/trained_models/lid.176.bin

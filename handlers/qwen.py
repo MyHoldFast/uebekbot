@@ -12,12 +12,72 @@ from utils.command_states import check_command_enabled
 from dotenv import load_dotenv
 from pylatexenc.latex2text import LatexNodes2Text
 import re
+from typing import List, Dict
+import threading
 
 context_db, ContextQuery = DB("db/qwen_context.json").get_db()
 router = Router()
 
 MESSAGE_EXPIRY = 3 * 60 * 60
 
+qwen_keys = []
+current_key_index = 0
+key_lock = threading.Lock()
+chat_in_progress_locks = {}
+chat_lock_timeout = 30
+
+def init_keys():
+    global qwen_keys
+    load_dotenv(override=True)
+    qwen_keys = json.loads(os.getenv("QWEN_ACCS") or "[]")
+    if not qwen_keys:
+        raise ValueError("No Qwen accounts configured")
+
+def get_next_key():
+    global current_key_index
+    if not qwen_keys:
+        init_keys()
+    
+    with key_lock:
+        key = qwen_keys[current_key_index]
+        current_key_index = (current_key_index + 1) % len(qwen_keys)
+        return key
+
+async def get_headers_with_retry(max_retries=3):
+    for attempt in range(max_retries):
+        key = get_next_key()
+        headers = {
+            "Authorization": f"Bearer {key['bearer']}",
+            "Content-Type": "application/json",
+        }
+        return headers, key
+    raise ValueError("Failed to get valid API key after retries")
+
+async def wait_for_chat_lock(user_id):
+    lock_key = f"chat_lock_{user_id}"
+    
+    if lock_key not in chat_in_progress_locks:
+        chat_in_progress_locks[lock_key] = asyncio.Lock()
+    
+    lock = chat_in_progress_locks[lock_key]
+    
+    try:
+        await asyncio.wait_for(lock.acquire(), timeout=chat_lock_timeout)
+        return True
+    except asyncio.TimeoutError:
+        return False
+    except Exception:
+        return False
+
+def release_chat_lock(user_id):
+    lock_key = f"chat_lock_{user_id}"
+    if lock_key in chat_in_progress_locks:
+        lock = chat_in_progress_locks[lock_key]
+        try:
+            if lock.locked():
+                lock.release()
+        except RuntimeError:
+            pass
 
 def load_context(user_id):
     context_item = context_db.get(ContextQuery().uid == user_id)
@@ -27,7 +87,6 @@ def load_context(user_id):
         if time.time() - timestamp < MESSAGE_EXPIRY:
             return messages
     return []
-
 
 def save_context(user_id, messages):
     getcontext = ContextQuery().uid == user_id
@@ -44,11 +103,9 @@ def save_context(user_id, messages):
     else:
         context_db.insert(new_data)
 
-
 def remove_messages(user_id):
     getcontext = ContextQuery()
     context_db.remove(getcontext.uid == user_id)
-
 
 def process_latex(text):
     code_blocks = {}
@@ -86,26 +143,12 @@ def process_latex(text):
 
     return text
 
-
 def remove_details_tags(text):
     return re.sub(r'<details>.*?</details>', '', text, flags=re.DOTALL)
 
-
-def get_headers():
-    load_dotenv(override=True)
-    qwen_accs = json.loads(os.getenv("QWEN_ACCS") or "[]")
-    if not qwen_accs:
-        raise ValueError("No Qwen accounts configured")
-    
-    return {
-        "Authorization": f"Bearer {qwen_accs[0]['bearer']}",
-        "Content-Type": "application/json",
-    }
-
-
 @router.message(Command("qwen", ignore_case=True))
 @check_command_enabled("qwen")
-async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id: int = None, lang: str = None):
+async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id=None, lang=None):
     if message.reply_to_message and id is None:
         user_input = (
             message.reply_to_message.text or message.reply_to_message.caption or ""
@@ -124,59 +167,91 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id: int =
 
     user_id = id if id is not None else message.from_user.id
     
-    messages = load_context(user_id)
-    messages.append({"role": "user", "content": user_input})
+    lock_acquired = await wait_for_chat_lock(user_id)
+    if not lock_acquired:
+        await message.reply(_("qwen_busy"))
+        return
+    
+    try:
+        messages = load_context(user_id)
+        messages.append({"role": "user", "content": user_input})
 
-    async with TypingIndicator(bot=bot, chat_id=message.chat.id):
-        try:
-            headers = get_headers()
+        async with TypingIndicator(bot=bot, chat_id=message.chat.id):
+            max_retries = len(qwen_keys) * 2 if qwen_keys else 3
+            last_error = None
             
-            json_data = {
-                "model": "qwen3-max",
-                "messages": messages,
-                "stream": False,
-            }
+            for attempt in range(max_retries):
+                try:
+                    headers, current_key = await get_headers_with_retry()
+                    
+                    json_data = {
+                        "model": "qwen3-max",
+                        "messages": messages,
+                        "stream": False,
+                    }
 
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    "https://qwen.aikit.club/v1/chat/completions",
-                    headers=headers,
-                    json=json_data,
-                    timeout=180
-                ) as response:
-                    
-                    if response.status != 200:
-                        error_text = await response.text()
-                        raise Exception(f"API error {response.status}: {error_text}")
-                    
-                    result = await response.json()
-                    
-                    if "choices" in result and len(result["choices"]) > 0:
-                        assistant_message = result["choices"][0]["message"]
-                        response_text = assistant_message.get("content", "")
-                        
-                        messages.append(assistant_message)
-                        save_context(user_id, messages)
-                        
-                        if response_text.strip():
-                            response_text = remove_details_tags(response_text)
-                            formatted_reply = process_latex(telegram_format(response_text))
-                            chunks = split_html(formatted_reply)
+                    async with aiohttp.ClientSession() as session:
+                        async with session.post(
+                            "https://qwen.aikit.club/v1/chat/completions",
+                            headers=headers,
+                            json=json_data,
+                            timeout=180
+                        ) as response:
                             
-                            for chunk in chunks:
-                                await message.reply(chunk, parse_mode="HTML")
-                        else:
-                            await message.reply(_("qwen_error"))
-                    else:
-                        await message.reply(_("qwen_error"))
-
-        except aiohttp.ClientError as e:
-            await message.reply(_("qwen_network") + f" ({str(e)})")
-        except asyncio.TimeoutError:
-            await message.reply(_("qwen_timeout"))
-        except Exception as e:
-            await message.reply(_("qwen_error") + f" ({str(e)})")
-
+                            if response.status == 400:
+                                error_data = await response.json()
+                                if error_data.get("error", {}).get("message") == "The chat is in progress!":
+                                    await asyncio.sleep(2)
+                                    continue
+                            
+                            if response.status != 200:
+                                error_text = await response.text()
+                                raise Exception(f"API error {response.status}: {error_text}")
+                            
+                            result = await response.json()
+                            
+                            if "choices" in result and len(result["choices"]) > 0:
+                                assistant_message = result["choices"][0]["message"]
+                                response_text = assistant_message.get("content", "")
+                                
+                                messages.append(assistant_message)
+                                save_context(user_id, messages)
+                                
+                                if response_text.strip():
+                                    response_text = remove_details_tags(response_text)
+                                    formatted_reply = process_latex(telegram_format(response_text))
+                                    chunks = split_html(formatted_reply)
+                                    
+                                    for chunk in chunks:
+                                        await message.reply(chunk, parse_mode="HTML")
+                                else:
+                                    await message.reply(_("qwen_error"))
+                                return
+                            else:
+                                raise Exception("No choices in response")
+                                
+                except aiohttp.ClientError as e:
+                    last_error = e
+                    await asyncio.sleep(1)
+                    continue
+                except Exception as e:
+                    last_error = e
+                    await asyncio.sleep(2)
+                    continue
+            
+            error_msg = _("qwen_error")
+            if last_error:
+                error_msg += f" ({str(last_error)})"
+            await message.reply(error_msg)
+            
+    except Exception as e:
+        error_msg = _("qwen_error")
+        if str(e):
+            error_msg += f" ({str(e)})"
+        await message.reply(error_msg)
+        
+    finally:
+        release_chat_lock(user_id)
 
 @router.message(Command("qwenrm", ignore_case=True))
 async def cmd_qwenrm(message: Message, bot: Bot):
@@ -185,7 +260,6 @@ async def cmd_qwenrm(message: Message, bot: Bot):
     _ = get_localization(user_language)
     remove_messages(user_id)
     await message.reply(_("qwen_history_rm"))
-
 
 @router.message(Command("qwenimg", ignore_case=True))
 @check_command_enabled("qwenimg")
@@ -209,54 +283,74 @@ async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
     sent_message = await message.reply(_("qwenimg_gen"))
 
     try:
-        headers = get_headers()
+        max_retries = len(qwen_keys) * 2 if qwen_keys else 3
+        last_error = None
         
-        json_data = {
-            "prompt": user_input,
-            "size": "1024x1024",
-            "n": 1,
-        }
+        for attempt in range(max_retries):
+            try:
+                headers, current_key = await get_headers_with_retry()
+                
+                json_data = {
+                    "prompt": user_input,
+                    "size": "1024x1024",
+                    "n": 1,
+                }
 
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                "https://qwen.aikit.club/v1/images/generations",
-                headers=headers,
-                json=json_data,
-                timeout=120
-            ) as response:
-                
-                if response.status != 200:
-                    error_text = await response.text()
-                    raise Exception(f"Image generation failed: {response.status} - {error_text}")
-                
-                result = await response.json()
-                
-                if "data" in result and len(result["data"]) > 0:
-                    image_url = result["data"][0].get("url")
-                    
-                    if image_url:
-                        await safe_delete(sent_message)
-                        await message.reply_photo(photo=image_url)
-                    else:
-                        await safe_delete(sent_message)
-                        await message.reply(_("qwenimg_err"))
-                else:
-                    await safe_delete(sent_message)
-                    await message.reply(_("qwenimg_err"))
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(
+                        "https://qwen.aikit.club/v1/images/generations",
+                        headers=headers,
+                        json=json_data,
+                        timeout=120
+                    ) as response:
+                        
+                        if response.status == 400:
+                            error_data = await response.json()
+                            if error_data.get("error", {}).get("message") == "The chat is in progress!":
+                                await asyncio.sleep(2)
+                                continue
+                        
+                        if response.status != 200:
+                            error_text = await response.text()
+                            raise Exception(f"Image generation failed: {response.status} - {error_text}")
+                        
+                        result = await response.json()
+                        
+                        if "data" in result and len(result["data"]) > 0:
+                            image_url = result["data"][0].get("url")
+                            
+                            if image_url:
+                                await safe_delete(sent_message)
+                                await message.reply_photo(photo=image_url)
+                            else:
+                                raise Exception("No image URL in response")
+                            return
+                        else:
+                            raise Exception("No data in response")
+                            
+            except aiohttp.ClientError as e:
+                last_error = e
+                await asyncio.sleep(1)
+                continue
+            except Exception as e:
+                last_error = e
+                await asyncio.sleep(2)
+                continue
+        
+        await safe_delete(sent_message)
+        error_msg = _("qwenimg_err")
+        if last_error:
+            error_msg += f" ({str(last_error)})"
+        await message.reply(error_msg)
 
-    except aiohttp.ClientError as e:
-        await safe_delete(sent_message)
-        await message.reply(_("qwen_network") + f" ({str(e)})")
-    except asyncio.TimeoutError:
-        await safe_delete(sent_message)
-        await message.reply(_("qwen_timeout"))
     except Exception as e:
         await safe_delete(sent_message)
         await message.reply(_("qwenimg_err") + f" ({str(e)})")
-
 
 async def safe_delete(message):
     try:
         await message.delete()
     except TelegramBadRequest:
         pass
+
+init_keys()
