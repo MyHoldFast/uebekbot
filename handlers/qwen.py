@@ -12,7 +12,6 @@ from utils.command_states import check_command_enabled
 from dotenv import load_dotenv
 from pylatexenc.latex2text import LatexNodes2Text
 import re
-from typing import List, Dict
 import threading
 
 context_db, ContextQuery = DB("db/qwen_context.json").get_db()
@@ -20,23 +19,22 @@ router = Router()
 
 MESSAGE_EXPIRY = 3 * 60 * 60
 
-qwen_keys = []
 current_key_index = 0
 key_lock = threading.Lock()
 chat_in_progress_locks = {}
 chat_lock_timeout = 30
 
-def init_keys():
-    global qwen_keys
+def load_keys_from_env():
     load_dotenv(override=True)
     qwen_keys = json.loads(os.getenv("QWEN_ACCS") or "[]")
     if not qwen_keys:
         raise ValueError("No Qwen accounts configured")
+    return qwen_keys
 
 def get_next_key():
     global current_key_index
-    if not qwen_keys:
-        init_keys()
+    
+    qwen_keys = load_keys_from_env()
     
     with key_lock:
         key = qwen_keys[current_key_index]
@@ -177,6 +175,7 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id=None, 
         messages.append({"role": "user", "content": user_input})
 
         async with TypingIndicator(bot=bot, chat_id=message.chat.id):
+            qwen_keys = load_keys_from_env()
             max_retries = len(qwen_keys) * 2 if qwen_keys else 3
             last_error = None
             
@@ -283,6 +282,7 @@ async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
     sent_message = await message.reply(_("qwenimg_gen"))
 
     try:
+        qwen_keys = load_keys_from_env()
         max_retries = len(qwen_keys) * 2 if qwen_keys else 3
         last_error = None
         
@@ -352,5 +352,3 @@ async def safe_delete(message):
         await message.delete()
     except TelegramBadRequest:
         pass
-
-init_keys()
