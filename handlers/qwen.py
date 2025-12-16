@@ -144,6 +144,32 @@ def process_latex(text):
 def remove_details_tags(text):
     return re.sub(r'<details>.*?</details>', '', text, flags=re.DOTALL)
 
+
+async def update_memory_settings(session, headers):
+    memory_settings_payload = {
+        "memory": {
+            "enable_memory": False,
+            "enable_history_memory": False,
+            "memory_version_reminder": False
+        }
+    }
+    
+    try:
+        async with session.post(
+            'https://chat.qwen.ai/api/v2/users/user/settings/update',
+            json=memory_settings_payload,
+            headers=headers
+        ) as resp:
+            if resp.status == 200:
+                #print("Memory settings updated successfully")
+                pass
+            else:
+                #print(f"Memory settings update failed: {resp.status}")
+                pass
+    except Exception as e:
+        #print(f"Error updating memory settings: {e}")
+        pass
+
 @router.message(Command("qwen", ignore_case=True))
 @check_command_enabled("qwen")
 async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id=None, lang=None):
@@ -190,6 +216,8 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id=None, 
                     }
 
                     async with aiohttp.ClientSession() as session:
+                        await update_memory_settings(session, headers)
+
                         async with session.post(
                             "https://qwen.aikit.club/v1/chat/completions",
                             headers=headers,
@@ -297,6 +325,8 @@ async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
                 }
 
                 async with aiohttp.ClientSession() as session:
+                    await update_memory_settings(session, headers)
+
                     async with session.post(
                         "https://qwen.aikit.club/v1/images/generations",
                         headers=headers,
