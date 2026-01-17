@@ -5,6 +5,7 @@ import os
 import aiohttp
 import re
 import time
+from utils.markdownify import markdownify as md
 from io import BytesIO
 #from concurrent.futures import ProcessPoolExecutor
 from utils.text_utils import split_html
@@ -334,9 +335,13 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
 
         answer = data.get("answer")
 
-        if answer:
+        if answer:            
             chat_messages.append({"role": "assistant", "content": answer})
             save_user_context(user_id, chat_messages, None, None)
+            if ('claude' in model):
+                print(answer)
+                answer = md(answer, escape_asterisks=False, escape_underscores=False, preserve_leading_spaces=True, preserve_code_indentation=True)
+            
             answer = process_latex(telegram_format(answer))
             chunks = split_html(answer)
             for chunk in chunks:
