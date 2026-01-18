@@ -5,6 +5,8 @@ re_newline = re.compile(r'\r\n?')
 re_html_heading = re.compile(r'h(\d+)')
 re_make_convert_fn_name = re.compile(r'[\[\]:-]')
 re_backtick_runs = re.compile(r'`+')
+re_fenced_blocks = re.compile(r"```.*?```", re.S)
+re_inline_code = re.compile(r"`[^`]*`")
 
 ASTERISK='*'
 STRIP_ONE='strip_one'
@@ -132,5 +134,38 @@ class MarkdownConverter:
         n=min(6,max(1,n))
         return f'\n\n{"#"*n} {text.strip()}\n\n'
 
-def markdownify(html,**options):
+def _markdownify_raw(html,**options):
     return MarkdownConverter(**options).convert(html)
+
+def _protect_inline(text):
+    store=[]
+    def repl(m):
+        store.append(m.group(0))
+        return f"\x00{len(store)-1}\x00"
+    text=re_inline_code.sub(repl,text)
+    return text,store
+
+def _restore_inline(text,store):
+    for i,v in enumerate(store):
+        text=text.replace(f"\x00{i}\x00",v)
+    return text
+
+def markdownify(text,**options):
+    parts=[]
+    last=0
+    for m in re_fenced_blocks.finditer(text):
+        normal=text[last:m.start()]
+        if normal:
+            normal,store=_protect_inline(normal)
+            normal=_markdownify_raw(normal,**options)
+            normal=_restore_inline(normal,store)
+        parts.append(normal)
+        parts.append(m.group(0))
+        last=m.end()
+    tail=text[last:]
+    if tail:
+        tail,store=_protect_inline(tail)
+        tail=_markdownify_raw(tail,**options)
+        tail=_restore_inline(tail,store)
+    parts.append(tail)
+    return ''.join(parts)

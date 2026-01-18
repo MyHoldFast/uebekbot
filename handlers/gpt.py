@@ -339,7 +339,7 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
             chat_messages.append({"role": "assistant", "content": answer})
             save_user_context(user_id, chat_messages, None, None)
             if ('claude' in model):
-                print(answer)
+                #print(answer)
                 answer = md(answer, escape_asterisks=False, escape_underscores=False, preserve_leading_spaces=True, preserve_code_indentation=True)
             
             answer = process_latex(telegram_format(answer))
