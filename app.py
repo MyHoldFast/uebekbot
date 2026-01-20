@@ -5,7 +5,7 @@ from quart import Quart, render_template
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from dotenv import load_dotenv
-from handlers import callbacks, ya_ocr, summary, gpt, admin, stt, neuro, qwen, pm, gemimg, tts, shazam, rephrase
+from handlers import callbacks, ya_ocr, summary, gpt, admin, stt, neuro, qwen, pm, gemimg, tts, shazam, rephrase, forecast
 from utils.StatsMiddleware import StatsMiddleware
 from utils.BanMiddleware import BanMiddleware
 
@@ -35,7 +35,7 @@ async def main():
     dp.include_routers(
         callbacks.router, ya_ocr.router, summary.router, gpt.router,
         admin.router, stt.router, neuro.router, qwen.router, pm.router, gemimg.router, tts.router,
-        shazam.router, rephrase.router
+        shazam.router, rephrase.router, forecast.router
     )
 
     await bot.delete_webhook(drop_pending_updates=True)
