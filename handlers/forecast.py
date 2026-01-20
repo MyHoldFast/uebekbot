@@ -209,7 +209,7 @@ async def forecast_command(message: Message, command: CommandObject, bot: Bot, l
     if not city:
         saved = city_db.get(CityQuery().uid == user_id)
         if not saved:
-            await message.reply(("Укажите город после команды, например /forecast Москва. После успшного получения погоды город будет записан в память, и его можно будет не указывать."))
+            await message.reply(("Укажите город после команды, например /forecast Москва. После успешного получения погоды город будет записан в память, и его можно будет не указывать."))
             return
         city = saved["city"]
 
