@@ -150,7 +150,7 @@ def draw_card(d) -> BytesIO:
     df = fit_text(dr, d["desc"], 480, 36, 30)
 
     dr.text((WIDTH//2, 33), d["city"], font=cf, anchor="mm", fill="white")
-    dr.text((WIDTH//2, 80), d["desc"], font=df, anchor="mm", fill="#bbb")
+    dr.text((WIDTH//2, 85), d["desc"], font=df, anchor="mm", fill="#bbb")
 
     ifo = ImageFont.truetype(FONT_PATH, 90)
     tf = ImageFont.truetype(FONT_PATH, 90)
@@ -199,8 +199,8 @@ def draw_card(d) -> BytesIO:
 
 @router.message(Command("forecast", ignore_case=True))
 @check_command_enabled("forecast")
-async def forecast_command(message: Message, command: CommandObject, bot: Bot, lang=None):
-    user_language = lang or message.from_user.language_code or DEFAULT_LANGUAGE
+async def forecast_command(message: Message, command: CommandObject, bot: Bot):
+    user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
 
     user_id = message.from_user.id
