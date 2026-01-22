@@ -1,4 +1,6 @@
+# pip install PySide6 polib markdown
 import sys
+import ctypes
 import asyncio
 import subprocess
 import shutil
@@ -9,13 +11,30 @@ import markdown
 import json
 
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QTableWidget, QTableWidgetItem,
-    QPushButton, QVBoxLayout, QWidget, QHBoxLayout,
-    QMessageBox, QDialog, QLabel, QPlainTextEdit,
-    QMenu, QInputDialog, QProgressDialog, QTextBrowser
+    QApplication,
+    QMainWindow,
+    QTableWidget,
+    QTableWidgetItem,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+    QHBoxLayout,
+    QMessageBox,
+    QDialog,
+    QLabel,
+    QPlainTextEdit,
+    QMenu,
+    QInputDialog,
+    QProgressDialog,
+    QTextBrowser,
 )
 from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QIcon, QPainter, QPixmap, QFont
 from PySide6.QtGui import QDesktopServices
+
+myappid = "uebekbot.poeditor.1.0"
+if sys.platform == "win32":
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
 CURRENT_FILE = Path(__file__).resolve()
 PROJECT_ROOT = CURRENT_FILE.parent.parent
@@ -34,18 +53,21 @@ async def translate_text(session, text, source_lang, target_lang):
         "sl": source_lang,
         "tl": target_lang,
         "dt": "t",
-        "q": text
+        "q": text,
     }
     try:
         async with session.post(url, data=params) as response:
-            content_type = response.headers.get('Content-Type', '')
-            if 'application/json' not in content_type and 'text/javascript' not in content_type:
+            content_type = response.headers.get("Content-Type", "")
+            if (
+                "application/json" not in content_type
+                and "text/javascript" not in content_type
+            ):
                 text_response = await response.text()
                 if "sorry/index" in str(response.url):
                     error_url = str(response.url)
                     return {"error": "captcha", "url": error_url}
                 return {"error": "content_type", "text": text_response}
-            
+
             data = await response.json()
             if data and data[0]:
                 return "".join(p[0] for p in data[0])
@@ -85,7 +107,11 @@ class POManager:
         for lang in self.locales:
             path = self._po_path(lang)
             path.parent.mkdir(parents=True, exist_ok=True)
-            pos[lang] = polib.pofile(str(path), encoding="utf-8") if path.exists() else polib.POFile()
+            pos[lang] = (
+                polib.pofile(str(path), encoding="utf-8")
+                if path.exists()
+                else polib.POFile()
+            )
         return pos
 
     def add_language(self, lang):
@@ -146,8 +172,9 @@ class POManager:
         return False
 
     def save_all(self):
-        for po in self.pos.values():
-            po.save()
+        for lang, po in self.pos.items():
+            path = self._po_path(lang)
+            po.save(str(path))
 
     def compile(self):
         subprocess.run(["pybabel", "compile", "-d", str(LOCALES_PATH)])
@@ -157,7 +184,7 @@ class MultilineInputDialog(QDialog):
     def __init__(self, title, label, text="", parent=None, with_translate=False):
         super().__init__(parent)
         self.setWindowTitle(title)
-        self.resize(900, 550)
+        # self.resize(900, 550)
         self.text_edit = QPlainTextEdit(text)
         self.preview = QTextBrowser()
         self.preview.setVisible(False)
@@ -187,7 +214,9 @@ class MultilineInputDialog(QDialog):
     def toggle_preview(self):
         if self.preview_btn.isChecked():
             md_text = self.text_edit.toPlainText()
-            html = markdown.markdown(md_text, extensions=["fenced_code", "tables", "nl2br"])
+            html = markdown.markdown(
+                md_text, extensions=["fenced_code", "tables", "nl2br"]
+            )
             self.preview.setHtml(html)
             self.preview.setVisible(True)
             self.text_edit.setVisible(False)
@@ -209,7 +238,8 @@ class POEditor(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("PO Editor")
-        self.resize(1400, 750)
+        self.setWindowIcon(self.create_emoji_icon("📝"))
+        # self.resize(1400, 750)
         self.manager = POManager()
         self.table = QTableWidget()
         self._original_msgids = {}
@@ -221,6 +251,30 @@ class POEditor(QMainWindow):
         header = self.table.horizontalHeader()
         header.setContextMenuPolicy(Qt.CustomContextMenu)
         header.customContextMenuRequested.connect(self.show_header_context_menu)
+        self.showMaximized()
+
+    def create_emoji_icon(self, emoji):
+        icon = QIcon()
+        sizes = [16, 24, 32, 48, 64, 128, 256]
+
+        for size in sizes:
+            pixmap = QPixmap(size, size)
+            pixmap.fill(Qt.transparent)
+            painter = QPainter(pixmap)
+            font = QFont()
+            if sys.platform == "win32":
+                font.setFamily("Segoe UI Emoji")
+            elif sys.platform == "darwin":
+                font.setFamily("Apple Color Emoji")
+            else:
+                font.setFamily("Noto Color Emoji")
+            font.setPixelSize(int(size * 0.7))
+            painter.setFont(font)
+            painter.drawText(pixmap.rect(), Qt.AlignCenter, emoji)
+            painter.end()
+            icon.addPixmap(pixmap)
+
+        return icon
 
     def _init_ui(self):
         add_key = QPushButton("➕ Add key")
@@ -250,12 +304,14 @@ class POEditor(QMainWindow):
         self.table.setColumnCount(len(locales) + 1)
         self.table.setHorizontalHeaderLabels(["msgid"] + locales)
         self.table.setRowCount(len(data))
-        
+
         for row, (msgid, langs) in enumerate(sorted(data.items())):
             self.table.setItem(row, 0, QTableWidgetItem(msgid))
             self._original_msgids[row] = msgid
             for col, lang in enumerate(locales, start=1):
-                self.table.setItem(row, col, QTableWidgetItem(show_po_text(langs.get(lang, ""))))
+                self.table.setItem(
+                    row, col, QTableWidgetItem(show_po_text(langs.get(lang, "")))
+                )
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -275,7 +331,7 @@ class POEditor(QMainWindow):
     def _check_msgid_exists(self, msgid, exclude_row=None):
         if self.manager.msgid_exists(msgid):
             return True
-            
+
         for row in range(self.table.rowCount()):
             if exclude_row is not None and row == exclude_row:
                 continue
@@ -289,46 +345,76 @@ class POEditor(QMainWindow):
         lang = lang.strip()
         if not ok or not lang or not self.manager.add_language(lang):
             return
+
         col = self.table.columnCount()
         self.table.insertColumn(col)
         self.table.setHorizontalHeaderItem(col, QTableWidgetItem(lang))
+
+        for row in range(self.table.rowCount()):
+            self.table.setItem(row, col, QTableWidgetItem(""))
+
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(self._translate_new_language(lang))
+        loop.run_until_complete(self._translate_new_language(lang, col))
         loop.close()
         self._adjust_lang_columns_width()
 
-    async def _translate_new_language(self, lang):
+    async def _translate_new_language(self, lang, lang_col_index):
         ru_col = 1
-        texts = [save_po_text(self.table.item(r, ru_col).text()) for r in range(self.table.rowCount())]
+        texts = []
+        for r in range(self.table.rowCount()):
+            item = self.table.item(r, ru_col)
+            if item:
+                texts.append(save_po_text(item.text()))
+            else:
+                texts.append("")
+
         progress = QProgressDialog("Translating rows...", "Cancel", 0, len(texts), self)
         progress.setWindowTitle(f"Adding language: {lang}")
         progress.setMinimumDuration(0)
         progress.show()
         QApplication.processEvents()
+
         async with aiohttp.ClientSession() as session:
             for i, text in enumerate(texts):
                 if progress.wasCanceled():
                     break
+
+                if not text.strip():
+                    self.table.setItem(i, lang_col_index, QTableWidgetItem(""))
+                    progress.setValue(i + 1)
+                    QApplication.processEvents()
+                    continue
+
                 result = await translate_text(session, text, BASE_LANG, lang)
                 if isinstance(result, dict):
                     if result.get("error") == "captcha":
                         QApplication.processEvents()
-                        reply = QMessageBox.question(self, "Google Captcha", 
+                        reply = QMessageBox.question(
+                            self,
+                            "Google Captcha",
                             f"Google требует пройти капчу для перевода. Открыть ссылку в браузере?\n\nПосле прохождения капчи попробуйте снова.",
-                            QMessageBox.Yes | QMessageBox.No)
+                            QMessageBox.Yes | QMessageBox.No,
+                        )
                         if reply == QMessageBox.Yes:
                             QDesktopServices.openUrl(result["url"])
                         progress.cancel()
                         return
                     else:
-                        QMessageBox.warning(self, "Translation Error", 
-                            f"Ошибка перевода: {result.get('message', 'Unknown error')}")
-                        self.table.setItem(i, self.table.columnCount() - 1, QTableWidgetItem(""))
+                        QMessageBox.warning(
+                            self,
+                            "Translation Error",
+                            f"Ошибка перевода: {result.get('message', 'Unknown error')}",
+                        )
+                        self.table.setItem(i, lang_col_index, QTableWidgetItem(""))
                 else:
-                    self.table.setItem(i, self.table.columnCount() - 1, QTableWidgetItem(show_po_text(result)))
+                    self.table.setItem(
+                        i, lang_col_index, QTableWidgetItem(show_po_text(result))
+                    )
+
                 progress.setValue(i + 1)
                 QApplication.processEvents()
+
         progress.close()
 
     def add_key(self):
@@ -336,68 +422,96 @@ class POEditor(QMainWindow):
         if msgid_dlg.exec() != QDialog.Accepted:
             return
         msgid = msgid_dlg.get_text().strip()
-        
+
         if not msgid:
             QMessageBox.warning(self, "Error", "msgid cannot be empty")
             return
-            
+
         if self._check_msgid_exists(msgid):
             QMessageBox.warning(self, "Error", "This msgid already exists")
             return
-            
+
         ru_dlg = MultilineInputDialog("Russian text", "Введите текст:")
         if ru_dlg.exec() != QDialog.Accepted:
             return
-            
-        asyncio.run(self._add_key_async(msgid, ru_dlg.get_text(), ru_dlg.translate_others))
 
-    async def _add_key_async(self, msgid, ru_text, translate_others=False, source_lang=BASE_LANG):
+        asyncio.run(
+            self._add_key_async(msgid, ru_dlg.get_text(), ru_dlg.translate_others)
+        )
+
+    async def _add_key_async(
+        self, msgid, ru_text, translate_others=False, source_lang=BASE_LANG
+    ):
         row = self.table.rowCount()
         self.table.insertRow(row)
         self.table.setItem(row, 0, QTableWidgetItem(msgid))
         self._original_msgids[row] = msgid
+
+        for col in range(1, self.table.columnCount()):
+            if not self.table.item(row, col):
+                self.table.setItem(row, col, QTableWidgetItem(""))
+
         ru_text = save_po_text(ru_text)
         self.table.setItem(row, 1, QTableWidgetItem(show_po_text(ru_text)))
+
         langs = self.manager.locales[1:]
         if translate_others:
             source_index = self.manager.locales.index(source_lang)
             source_text = save_po_text(self.table.item(row, source_index + 1).text())
         else:
             source_text = ru_text
+
         progress = QProgressDialog("Translating key...", "Cancel", 0, len(langs), self)
         progress.setMinimumDuration(0)
         progress.show()
         QApplication.processEvents()
+
         async with aiohttp.ClientSession() as session:
             for i, lang in enumerate(langs):
                 if progress.wasCanceled():
                     break
+
                 if lang == source_lang:
                     text = source_text
                 else:
-                    result = await translate_text(session, source_text, source_lang, lang)
+                    result = await translate_text(
+                        session, source_text, source_lang, lang
+                    )
                     if isinstance(result, dict):
                         if result.get("error") == "captcha":
                             QApplication.processEvents()
-                            reply = QMessageBox.question(self, "Google Captcha", 
+                            reply = QMessageBox.question(
+                                self,
+                                "Google Captcha",
                                 f"Google требует пройти капчу для перевода. Открыть ссылку в браузере?\n\nПосле прохождения капчи попробуйте снова.",
-                                QMessageBox.Yes | QMessageBox.No)
+                                QMessageBox.Yes | QMessageBox.No,
+                            )
                             if reply == QMessageBox.Yes:
                                 QDesktopServices.openUrl(result["url"])
                             progress.cancel()
                             return
                         else:
-                            QMessageBox.warning(self, "Translation Error", 
-                                f"Ошибка перевода: {result.get('message', 'Unknown error')}")
+                            QMessageBox.warning(
+                                self,
+                                "Translation Error",
+                                f"Ошибка перевода: {result.get('message', 'Unknown error')}",
+                            )
                             text = ""
                     else:
                         text = result
-                self.table.setItem(row, i + 2, QTableWidgetItem(show_po_text(text)))
+
+                col_index = i + 2
+                if col_index < self.table.columnCount():
+                    self.table.setItem(
+                        row, col_index, QTableWidgetItem(show_po_text(text))
+                    )
+
                 QApplication.processEvents()
                 progress.setValue(i + 1)
+
         progress.close()
         self.table.resizeColumnToContents(0)
-        
+
         self._scroll_to_row(row)
 
     def _scroll_to_row(self, row):
@@ -411,59 +525,85 @@ class POEditor(QMainWindow):
             return
         row = item.row()
         col = item.column()
-        msgid = self.table.item(row, 0).text()
+        msgid_item = self.table.item(row, 0)
+        if not msgid_item:
+            return
+
+        msgid = msgid_item.text()
         menu = QMenu(self)
         edit_action = None
         if col != 0:
             edit_action = menu.addAction("✏ Edit text")
         delete_action = menu.addAction("🗑 Delete row")
         action = menu.exec(self.table.viewport().mapToGlobal(pos))
+
         if action == delete_action:
             self.manager.delete_msgid(msgid)
             self.table.removeRow(row)
             self._reindex()
         elif action == edit_action:
             current = save_po_text(item.text())
-            dlg = MultilineInputDialog("Edit translation", "Edit text:", current, with_translate=True)
+            dlg = MultilineInputDialog(
+                "Edit translation", "Edit text:", current, with_translate=True
+            )
             if dlg.exec() == QDialog.Accepted:
                 source_lang = self.manager.locales[col - 1]
-                asyncio.run(self._edit_and_translate(row, col, dlg.get_text(), dlg.translate_others, source_lang))
+                asyncio.run(
+                    self._edit_and_translate(
+                        row, col, dlg.get_text(), dlg.translate_others, source_lang
+                    )
+                )
 
     async def _edit_and_translate(self, row, col, text, translate_others, source_lang):
         text = save_po_text(text)
         self.table.setItem(row, col, QTableWidgetItem(show_po_text(text)))
+
         if translate_others:
             langs = self.manager.locales
             progress = QProgressDialog("Translating...", "Cancel", 0, len(langs), self)
             progress.setMinimumDuration(0)
             progress.show()
             QApplication.processEvents()
+
             async with aiohttp.ClientSession() as session:
                 for i, lang in enumerate(langs):
                     if progress.wasCanceled():
                         break
                     if lang == source_lang:
                         continue
+
                     result = await translate_text(session, text, source_lang, lang)
                     if isinstance(result, dict):
                         if result.get("error") == "captcha":
                             QApplication.processEvents()
-                            reply = QMessageBox.question(self, "Google Captcha", 
+                            reply = QMessageBox.question(
+                                self,
+                                "Google Captcha",
                                 f"Google требует пройти капчу для перевода. Открыть ссылку в браузере?\n\nПосле прохождения капчи попробуйте снова.",
-                                QMessageBox.Yes | QMessageBox.No)
+                                QMessageBox.Yes | QMessageBox.No,
+                            )
                             if reply == QMessageBox.Yes:
                                 QDesktopServices.openUrl(result["url"])
                             progress.cancel()
                             return
                         else:
-                            QMessageBox.warning(self, "Translation Error", 
-                                f"Ошибка перевода: {result.get('message', 'Unknown error')}")
+                            QMessageBox.warning(
+                                self,
+                                "Translation Error",
+                                f"Ошибка перевода: {result.get('message', 'Unknown error')}",
+                            )
                             translated = ""
                     else:
                         translated = result
-                    self.table.setItem(row, i + 1, QTableWidgetItem(show_po_text(translated)))
+
+                    if i + 1 < self.table.columnCount():
+                        self.table.setItem(
+                            row, i + 1, QTableWidgetItem(show_po_text(translated))
+                        )
+
                     progress.setValue(i + 1)
                     QApplication.processEvents()
+
             progress.close()
 
     def show_header_context_menu(self, pos):
@@ -477,15 +617,23 @@ class POEditor(QMainWindow):
         delete_action = menu.addAction("🗑 Delete language")
         action = menu.exec(self.table.horizontalHeader().mapToGlobal(pos))
         if action == delete_action:
-            if QMessageBox.question(self, "Delete language",
-                f"Delete language '{lang}' completely?",
-                QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+            if (
+                QMessageBox.question(
+                    self,
+                    "Delete language",
+                    f"Delete language '{lang}' completely?",
+                    QMessageBox.Yes | QMessageBox.No,
+                )
+                == QMessageBox.Yes
+            ):
                 self.manager.delete_language(lang)
                 self.table.removeColumn(col)
                 self._adjust_lang_columns_width()
 
     def _reindex(self):
-        self._original_msgids = {row: self.table.item(row, 0).text() for row in range(self.table.rowCount())}
+        self._original_msgids = {
+            row: self.table.item(row, 0).text() for row in range(self.table.rowCount())
+        }
 
     def on_item_changed(self, item):
         if item.column() != 0:
@@ -493,28 +641,40 @@ class POEditor(QMainWindow):
         row = item.row()
         new = item.text().strip()
         old = self._original_msgids.get(row)
-        
+
         if not new:
             item.setText(old)
             return
-            
+
         if new == old:
             return
-            
+
         if self._check_msgid_exists(new, exclude_row=row):
             QMessageBox.warning(self, "Error", "This msgid already exists")
             item.setText(old)
             return
-            
+
         self.manager.rename_msgid(old, new)
         self._original_msgids[row] = new
         self.table.resizeColumnToContents(0)
 
     def save(self):
         for row in range(self.table.rowCount()):
-            msgid = self.table.item(row, 0).text()
+            msgid_item = self.table.item(row, 0)
+            if not msgid_item:
+                continue
+
+            msgid = msgid_item.text()
+
             for col, lang in enumerate(self.manager.locales, start=1):
-                self.manager.update(msgid, lang, save_po_text(self.table.item(row, col).text()))
+                item = self.table.item(row, col)
+                if item:
+                    text = save_po_text(item.text())
+                else:
+                    text = ""
+
+                self.manager.update(msgid, lang, text)
+
         self.manager.save_all()
         QMessageBox.information(self, "Saved", "Translations saved")
 
@@ -525,22 +685,22 @@ class POEditor(QMainWindow):
     def _adjust_lang_columns_width(self):
         if self.table.columnCount() <= 1:
             return
-            
+
         first_col_width = self.table.columnWidth(0)
         total_width = self.table.viewport().width()
-        
+
         if total_width <= 0:
             return
-            
+
         available_width = total_width - first_col_width
-        
+
         lang_cols = self.table.columnCount() - 1
-        
+
         if lang_cols > 0:
             lang_col_width = max(150, available_width // lang_cols)
             for col in range(1, self.table.columnCount()):
                 self.table.setColumnWidth(col, lang_col_width)
-    
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._adjust_lang_columns_width()
