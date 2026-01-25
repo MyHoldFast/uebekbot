@@ -14,7 +14,6 @@ from localization import DEFAULT_LANGUAGE, get_localization
 
 from PIL import Image, ImageDraw, ImageFont
 
-
 WIDTH = HEIGHT = 512
 FONT_PATH = "res/DejaVuSans-Bold.ttf"
 BG_IMAGE = "res/bg.webp"
@@ -23,8 +22,6 @@ ICON_SIZE_DAY = 38
 ICON_SIZE_NIGHT = 38
 TEMP_SIZE_DAY = 30
 TEMP_SIZE_NIGHT = 25
-MAIN_ICON_SIZE = 90
-
 CLOUD_Y_OFFSET = -10
 
 DAYS_RU = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "ВС"]
@@ -57,7 +54,7 @@ WEATHER_CODES = {
     86: "Сильный снегопад",
     95: "Гроза",
     96: "Гроза с градом",
-    99: "Сильная гроза с градом",
+    99: "Сильная гроза с градом"
 }
 
 router = Router()
@@ -83,43 +80,44 @@ def draw_moon(img, center, size, color, angle=-25):
     x, y = center
     moon = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     d = ImageDraw.Draw(moon)
+
     d.ellipse((0, 0, size, size), fill=color)
+
     cut = int(size * 0.4)
     d.ellipse((-cut, 0, size - cut, size), fill=(0, 0, 0, 0))
+
     moon = moon.rotate(angle, resample=Image.BICUBIC, expand=True)
     w, h = moon.size
     img.alpha_composite(moon, (int(x - w / 2), int(y - h / 2)))
 
 
-def icon_by_code(code, hour=None):
-    is_night = hour is not None and (hour < 6 or hour >= 21)
-
+def icon_by_code(code, is_night=False):
     if code in (0, 1):
-        return "MOON" if is_night else "☀"
+        return "moon" if is_night else "☀"
     if code in (2, 3):
         return "☁"
     if code in (45, 48):
         return "≋"
-    if code in (51, 53, 55, 61, 63, 65, 80, 81, 82):
+    if code in (51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82):
         return "☂"
-    if code in (71, 73, 75, 85, 86):
+    if code in (71, 73, 75, 77, 85, 86):
         return "❄"
-    if code == 95:
+    if code in (95, 96, 99):
         return "⚡"
     return "☁"
 
 
-def iy(y, i):
-    return y + CLOUD_Y_OFFSET if i == "☁" else y
+def iy(y, icon):
+    return y + CLOUD_Y_OFFSET if icon == "☁" else y
 
 
 async def get_coordinates(city: str):
     async with aiohttp.ClientSession() as session:
         async with session.get(
             "https://nominatim.openstreetmap.org/search",
-            params={"q": city, "format": "json", "limit": 1, "accept-language": "auto"},
+            params={"q": city, "format": "json", "limit": 1},
             headers={"User-Agent": "weather-sticker-bot/1.0"},
-            timeout=10,
+            timeout=10
         ) as r:
             data = await r.json()
 
@@ -139,9 +137,9 @@ async def get_weather(lat, lon):
                 "longitude": lon,
                 "current_weather": "true",
                 "hourly": "temperature_2m,weathercode",
-                "timezone": "auto",
+                "timezone": "auto"
             },
-            timeout=10,
+            timeout=10
         ) as r:
             return await r.json()
 
@@ -152,7 +150,7 @@ def build_data(city, data):
     for t, temp, code in zip(
         data["hourly"]["time"],
         data["hourly"]["temperature_2m"],
-        data["hourly"]["weathercode"],
+        data["hourly"]["weathercode"]
     ):
         d, h = t.split("T")
         days[d].append((int(h[:2]), temp, code))
@@ -167,25 +165,24 @@ def build_data(city, data):
         dc = max([c for _, c in day], key=[c for _, c in day].count)
         nc = max([c for _, c in night], key=[c for _, c in night].count)
 
-        forecast.append(
-            {
-                "day": DAYS_RU[datetime.fromisoformat(d).weekday()],
-                "day_temp": round(sum(t for t, _ in day) / len(day)),
-                "night_temp": round(sum(t for t, _ in night) / len(night)),
-                "day_icon": icon_by_code(dc, 12),
-                "night_icon": icon_by_code(nc, 0),
-            }
-        )
+        forecast.append({
+            "day": DAYS_RU[datetime.fromisoformat(d).weekday()],
+            "day_temp": round(sum(t for t, _ in day) / len(day)),
+            "night_temp": round(sum(t for t, _ in night) / len(night)),
+            "day_icon": icon_by_code(dc, False),
+            "night_icon": icon_by_code(nc, True)
+        })
 
     cur = data["current_weather"]
-    cur_hour = int(cur["time"].split("T")[1][:2])
+    hour = int(cur["time"].split("T")[1][:2])
+    is_night = hour < 6 or hour >= 21
 
     return {
         "city": city,
         "temp": round(cur["temperature"]),
-        "icon": icon_by_code(cur["weathercode"], cur_hour),
+        "icon": icon_by_code(cur["weathercode"], is_night),
         "desc": WEATHER_CODES.get(cur["weathercode"], "—"),
-        "forecast": forecast,
+        "forecast": forecast
     }
 
 
@@ -204,33 +201,43 @@ def draw_card(d) -> BytesIO:
     dr.text((WIDTH // 2, 33), d["city"], font=cf, anchor="mm", fill="white")
     dr.text((WIDTH // 2, 85), d["desc"], font=df, anchor="mm", fill="#bbb")
 
-    ifo = ImageFont.truetype(FONT_PATH, MAIN_ICON_SIZE)
-    tf = ImageFont.truetype(FONT_PATH, MAIN_ICON_SIZE)
+    ifo = ImageFont.truetype(FONT_PATH, 90)
+    tf = ImageFont.truetype(FONT_PATH, 90)
 
-    tb = dr.textbbox((0, 0), format_temp(d["temp"]), font=tf)
-    sx = WIDTH // 2 - (MAIN_ICON_SIZE + tb[2] + 20) // 2
+    temp_text = format_temp(d["temp"])
+    tb = dr.textbbox((0, 0), temp_text, font=tf)
 
-    if d["icon"] == "MOON":
-        draw_moon(
-            img,
-            center=(sx + MAIN_ICON_SIZE // 2, 155),
-            size=int(MAIN_ICON_SIZE * 0.75),
-            color=(255, 255, 255, 255),
-        )
+    ICON_SIZE_CUR = 48
+    ICON_GAP = 20
+    ICON_WIDTH = ICON_SIZE_CUR if d["icon"] == "moon" else dr.textbbox((0, 0), d["icon"], font=ifo)[2]
+
+    total_width = ICON_WIDTH + ICON_GAP + tb[2]
+    sx = WIDTH // 2 - total_width // 2
+
+    icon_x = sx + ICON_WIDTH // 2
+    temp_x = sx + ICON_WIDTH + ICON_GAP
+
+    if d["icon"] == "moon":
+        draw_moon(img, (icon_x, 155), ICON_SIZE_CUR, (255, 255, 255, 255))
     else:
-        dr.text(
-            (sx, iy(155, d["icon"])), d["icon"], font=ifo, anchor="lm", fill="white"
-        )
+        dr.text((icon_x, iy(155, d["icon"])), d["icon"], font=ifo, anchor="mm", fill="white")
 
-    dr.text(
-        (sx + MAIN_ICON_SIZE + 20, 155),
-        format_temp(d["temp"]),
-        font=tf,
-        anchor="lm",
-        fill="white",
-    )
+    dr.text((temp_x, 155), temp_text, font=tf, anchor="lm", fill="white")
 
     cw, by = WIDTH // 5, 280
+
+    sep = Image.new("RGBA", (WIDTH, HEIGHT))
+    sd = ImageDraw.Draw(sep)
+
+    for i in range(1, 5):
+        x = cw * i
+        sd.line([(x, by - 50), (x, by + 140)], fill=(255, 255, 255, 50))
+
+    for i in range(5):
+        sd.line([(cw * i + 20, by + 66), (cw * (i + 1) - 20, by + 66)], fill=(255, 255, 255, 70))
+
+    img = Image.alpha_composite(img, sep)
+    dr = ImageDraw.Draw(img)
 
     dif = ImageFont.truetype(FONT_PATH, ICON_SIZE_DAY)
     nif = ImageFont.truetype(FONT_PATH, ICON_SIZE_NIGHT)
@@ -240,46 +247,21 @@ def draw_card(d) -> BytesIO:
 
     for i, f in enumerate(d["forecast"]):
         x = cw * i + cw // 2
-
         dr.text((x, by - 38), f["day"], font=df2, anchor="mm", fill="#bbb")
-        dr.text(
-            (x, iy(by, f["day_icon"])),
-            f["day_icon"],
-            font=dif,
-            anchor="mm",
-            fill="white",
-        )
-        dr.text(
-            (x, by + 36),
-            format_temp(f["day_temp"]),
-            font=dtf,
-            anchor="mm",
-            fill="white",
-        )
 
-        if f["night_icon"] == "MOON":
-            draw_moon(
-                img,
-                center=(x, by + 86),
-                size=int(ICON_SIZE_NIGHT * 0.7),
-                color=(200, 200, 200, 255),
-            )
+        if f["day_icon"] == "moon":
+            draw_moon(img, (x, by), ICON_SIZE_DAY, (255, 255, 255, 255))
         else:
-            dr.text(
-                (x, iy(by + 86, f["night_icon"])),
-                f["night_icon"],
-                font=nif,
-                anchor="mm",
-                fill="#ccc",
-            )
+            dr.text((x, iy(by, f["day_icon"])), f["day_icon"], font=dif, anchor="mm", fill="white")
 
-        dr.text(
-            (x, by + 116),
-            format_temp(f["night_temp"]),
-            font=ntf,
-            anchor="mm",
-            fill="#ccc",
-        )
+        dr.text((x, by + 36), format_temp(f["day_temp"]), font=dtf, anchor="mm", fill="white")
+
+        if f["night_icon"] == "moon":
+            draw_moon(img, (x, by + 86), ICON_SIZE_NIGHT, (200, 200, 200, 255))
+        else:
+            dr.text((x, iy(by + 86, f["night_icon"])), f["night_icon"], font=nif, anchor="mm", fill="#ccc")
+
+        dr.text((x, by + 116), format_temp(f["night_temp"]), font=ntf, anchor="mm", fill="#ccc")
 
     buf = BytesIO()
     img.convert("RGB").save(buf, "WEBP", quality=95)
@@ -311,7 +293,10 @@ async def forecast_command(message: Message, command: CommandObject, bot: Bot):
 
             sticker = draw_card(data)
 
-            city_db.upsert({"uid": user_id, "city": name}, CityQuery().uid == user_id)
+            city_db.upsert(
+                {"uid": user_id, "city": name},
+                CityQuery().uid == user_id
+            )
 
             await message.reply_sticker(
                 BufferedInputFile(sticker.read(), filename="weather.webp")
