@@ -19,7 +19,7 @@ FONT_PATH = "res/DejaVuSans-Bold.ttf"
 BG_IMAGE = "res/bg.webp"
 
 ICON_SIZE_DAY = 38
-ICON_SIZE_NIGHT = 38
+ICON_SIZE_NIGHT = 30
 TEMP_SIZE_DAY = 30
 TEMP_SIZE_NIGHT = 25
 CLOUD_Y_OFFSET = -10
@@ -257,7 +257,7 @@ def draw_card(d) -> BytesIO:
         dr.text((x, by + 36), format_temp(f["day_temp"]), font=dtf, anchor="mm", fill="white")
 
         if f["night_icon"] == "moon":
-            draw_moon(img, (x, by + 86), ICON_SIZE_NIGHT, (200, 200, 200, 255))
+            draw_moon(img, (x, by + 86), 25, (200, 200, 200, 255))
         else:
             dr.text((x, iy(by + 86, f["night_icon"])), f["night_icon"], font=nif, anchor="mm", fill="#ccc")
 
