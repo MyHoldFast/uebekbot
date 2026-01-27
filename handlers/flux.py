@@ -17,8 +17,14 @@ router = Router()
 async def cmd_flux(message: Message, command: CommandObject, bot: Bot):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
-
-    prompt = command.args if command.args else ""
+    if message.reply_to_message:
+        prompt = (
+            message.reply_to_message.text or message.reply_to_message.caption or ""
+        )
+        if command.args:
+            prompt += "\n" + command.args
+    else:
+        prompt = command.args if command.args else ""
     if not prompt:
         await message.reply(_("qwenimghelp"))
         return

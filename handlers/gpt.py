@@ -7,12 +7,8 @@ import re
 import time
 from utils.markdownify import markdownify as md
 from io import BytesIO
-#from concurrent.futures import ProcessPoolExecutor
 from utils.text_utils import split_html
 from utils.typing_indicator import TypingIndicator
-#from duckai import DuckAI
-#from g4f.client import AsyncClient
-#from g4f.Provider import Yqcloud
 from aiogram import Bot, Router
 from aiogram.filters import Command, CommandObject
 from aiogram.types import (
@@ -28,13 +24,15 @@ from utils.dbmanager import DB
 from chatgpt_md_converter import telegram_format
 from utils.command_states import check_command_enabled
 
-API_KEY = os.environ.get("GEMINI_API_KEY")
-MODEL_NAME = "gemini-2.5-flash"
-BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models" 
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+GEMINI_MODEL_NAME = "gemini-2.5-flash"
+GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 URL_PROXY = os.environ.get("URL_PROXY")
 if URL_PROXY:
-    BASE_URL = URL_PROXY + BASE_URL
-    
+    GEMINI_BASE_URL = URL_PROXY + GEMINI_BASE_URL
+
+GPT_API_URL = "https://duckai.mbteam.ru/v1/chat/completions"
+
 router = Router()
 
 db, Query = DB("db/gpt_models.json").get_db()
@@ -47,7 +45,8 @@ models = {
     "llama-4": "meta-llama/Llama-4-Scout-17B-16E-Instruct",
     "claude-3.5-haiku": "claude-3-5-haiku-latest",
     "mistral-small-3": "mistralai/Mistral-Small-24B-Instruct-2501",
-    }
+    "openai/gpt-oss-120b": "openai/gpt-oss-120b",
+}
 
 
 def get_gpt_keyboard(selected_model: str):
@@ -145,7 +144,8 @@ async def callback_query_handler(callback_query: CallbackQuery):
 
 
 def split_message(text: str, max_length: int = 4000):
-    return [text[i : i + max_length] for i in range(0, len(text), max_length)]
+    return [text[i: i + max_length] for i in range(0, len(text), max_length)]
+
 
 async def process_gemini(message: Message, command: CommandObject, bot, photo):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
@@ -162,7 +162,7 @@ async def process_gemini(message: Message, command: CommandObject, bot, photo):
         image_bytes = photo_stream.getvalue()
         img_base64 = base64.b64encode(image_bytes).decode('utf-8')
 
-        url = f"{BASE_URL}/{MODEL_NAME}:generateContent?key={API_KEY}"
+        url = f"{GEMINI_BASE_URL}/{GEMINI_MODEL_NAME}:generateContent?key={GEMINI_API_KEY}"
         payload = {
             "contents": [
                 {
@@ -227,72 +227,6 @@ async def process_gemini(message: Message, command: CommandObject, bot, photo):
         await message.reply(_("gpt_gemini_error"))
 
 
-#def chat_with_duckai(model, message, chat_messages, chat_vqd, chat_vqd_hash):
-#    duck_ai = DuckAI(proxy=os.getenv("PROXY"))
-#    if chat_messages is not None and chat_vqd is not None and chat_vqd_hash is not None:
-#        duck_ai._chat_messages = chat_messages
-#        duck_ai._chat_vqd = chat_vqd
-#        duck_ai._chat_vqd_hash = chat_vqd_hash
-#    answer = duck_ai.chat(message, model=model)
-#    return answer, duck_ai._chat_messages, duck_ai._chat_vqd, duck_ai._chat_vqd_hash
-
-
-# async def process_gpt(message: Message, command: CommandObject, user_id):
-#     if message.reply_to_message:
-#         user_input = (
-#             message.reply_to_message.text or message.reply_to_message.caption or ""
-#         )
-#         if command.args:
-#             user_input += "\n" + command.args
-#     else:
-#         user_input = command.args if command.args else ""
-
-#     model = "gpt-4o-mini"
-#     user_model = db.get(Query().uid == user_id)
-#     if user_model and user_model["model"] in models:
-#         model = user_model["model"]
-
-#     if not user_input:        
-#         keyboard = get_gpt_keyboard(model)
-#         user_language = message.from_user.language_code or DEFAULT_LANGUAGE
-#         _ = get_localization(user_language)
-#         await message.reply(_("gpt_help"), reply_markup=keyboard, parse_mode="markdown")
-#         return
-
-#     try:
-#         chat_messages, chat_vqd, chat_vqd_hash = load_user_context(user_id)
-
-#         async with TypingIndicator(bot=message.bot, chat_id=message.chat.id):
-#             loop = asyncio.get_event_loop()
-#             with ProcessPoolExecutor() as executor:
-#                 answer, messages, vqd, vqdhash = await loop.run_in_executor(
-#                     executor,
-#                     chat_with_duckai,
-#                     model,
-#                     user_input,
-#                     chat_messages,
-#                     chat_vqd,
-#                     chat_vqd_hash,
-#                 )
-
-#                 if answer:
-#                     save_user_context(user_id, messages, vqd, vqdhash)
-#                     answer = process_latex(telegram_format(answer))
-#                     chunks = split_html(answer)
-#                     for chunk in chunks:
-#                         await message.reply(chunk, parse_mode="HTML")
-
-#                 else:
-#                     raise Exception("Exception")
-#     except Exception as e:
-#         user_language = message.from_user.language_code or DEFAULT_LANGUAGE
-#         _ = get_localization(user_language)
-#         print(e)
-#         await message.reply(_("gpt_error"), parse_mode="html")
-
-API_URL = os.getenv("GPT_API_URL")
-
-
 async def process_gpt(message: Message, command: CommandObject, user_id):
     messagetext = (
         message.reply_to_message.text if message.reply_to_message else ""
@@ -316,31 +250,59 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
         return
 
     try:
-        chat_messages, _, _ = load_user_context(user_id)
+        chat_messages, _, _ = load_user_context(user_id)        
         if chat_messages is not None:
-            chat_messages.append({"role": "user", "content": messagetext})
+            messages_for_api = chat_messages + [{"role": "user", "content": messagetext}]
         else:
-            chat_messages = [{"role": "user", "content": messagetext}]
+            messages_for_api = [{"role": "user", "content": messagetext}]
+
+        payload = {
+            "model": models[model],
+            "messages": messages_for_api
+        }
+
+        headers = {
+            "Content-Type": "application/json"
+        }
 
         async with TypingIndicator(bot=message.bot, chat_id=message.chat.id):
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    API_URL,
-                    json={"messages": chat_messages, "model": models[model]},
-                    timeout=60,
+                    GPT_API_URL,
+                    json=payload,
+                    headers=headers,
+                    timeout=60
                 ) as resp:
                     if resp.status != 200:
+                        error_text = await resp.text()
+                        print(f"API error {resp.status}: {error_text}")
                         raise Exception(f"API error {resp.status}")
+                    
                     data = await resp.json()
 
-        answer = data.get("answer")
+        if "choices" in data and len(data["choices"]) > 0:
+            answer = data["choices"][0]["message"]["content"]
+        elif "answer" in data:
+            answer = data.get("answer")
+        else:
+            print(f"Unexpected API response format: {data}")
+            raise Exception("Unexpected API response format")
 
-        if answer:            
-            chat_messages.append({"role": "assistant", "content": answer})
+        if answer:
+            if chat_messages is not None:
+                chat_messages.append({"role": "user", "content": messagetext})
+                chat_messages.append({"role": "assistant", "content": answer})
+            else:
+                chat_messages = [
+                    {"role": "user", "content": messagetext},
+                    {"role": "assistant", "content": answer}
+                ]
+            
             save_user_context(user_id, chat_messages, None, None)
-            if ('claude' in model):
-                #print(answer)
-                answer = md(answer, escape_asterisks=False, escape_underscores=False, preserve_leading_spaces=True, preserve_code_indentation=True)
+            
+            if 'claude' in model:
+                answer = md(answer, escape_asterisks=False, escape_underscores=False, 
+                           preserve_leading_spaces=True, preserve_code_indentation=True)
             
             answer = process_latex(telegram_format(answer))
             chunks = split_html(answer)
@@ -349,6 +311,12 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
         else:
             raise Exception("Empty answer from API")
 
+    except asyncio.TimeoutError:
+        user_language = message.from_user.language_code or DEFAULT_LANGUAGE
+        _ = get_localization(user_language)
+        print("process_gpt timeout error")
+        await message.reply(_("gpt_timeout_error"), parse_mode="html")
+        
     except Exception as e:
         user_language = message.from_user.language_code or DEFAULT_LANGUAGE
         _ = get_localization(user_language)
