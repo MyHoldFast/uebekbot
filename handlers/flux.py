@@ -43,11 +43,11 @@ async def cmd_flux(message: Message, command: CommandObject, bot: Bot):
         }
 
         payload = {
-            "model": "black-forest-labs/FLUX-2-max",
+            "model": "black-forest-labs/FLUX-2-pro",
             "prompt": prompt,
             "response_format": "b64_json",
-           # "height": 480,
-           # "width": 832,
+            #"height": 480,
+            #"width": 832,
         }
 
         async with TypingIndicator(bot=bot, chat_id=message.chat.id):
