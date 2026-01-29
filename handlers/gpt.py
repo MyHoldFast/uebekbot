@@ -5,6 +5,7 @@ import os
 import aiohttp
 import re
 import time
+import itertools
 from utils.markdownify import markdownify as md
 from io import BytesIO
 from utils.text_utils import split_html
@@ -24,7 +25,27 @@ from utils.dbmanager import DB
 from chatgpt_md_converter import telegram_format
 from utils.command_states import check_command_enabled
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+_raw_gemini_keys = os.environ.get("GEMINI_API_KEY")
+
+if not _raw_gemini_keys:
+    raise RuntimeError("GEMINI_API_KEY is not set")
+
+
+def parse_gemini_keys(value: str) -> list[str]:
+    value = value.strip().strip("[]")
+    return [k.strip() for k in value.split(",") if k.strip()]
+
+
+GEMINI_KEYS = parse_gemini_keys(_raw_gemini_keys)
+_gemini_key_cycle = itertools.cycle(GEMINI_KEYS)
+_gemini_key_lock = asyncio.Lock()
+
+
+async def get_next_gemini_key() -> str:
+    async with _gemini_key_lock:
+        return next(_gemini_key_cycle)
+
+
 GEMINI_MODEL_NAME = "gemini-2.5-flash"
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 URL_PROXY = os.environ.get("URL_PROXY")
@@ -74,8 +95,7 @@ def load_user_context(user_id):
     context_item = context_db.get(ContextQuery().uid == user_id)
     if context_item:
         last_modified_time = float(context_item.get("last_modified_time", 0))
-        current_time = time.time()
-        if current_time - last_modified_time < 3 * 3600:
+        if time.time() - last_modified_time < 3 * 3600:
             return (
                 json.loads(
                     base64.b64decode(context_item.get("chat_messages")).decode("utf-8")
@@ -87,23 +107,20 @@ def load_user_context(user_id):
 
 
 def save_user_context(user_id, chat_messages, chat_vqd, chat_vqd_hash):
-    getcontext = ContextQuery()
     encoded_chat_messages = base64.b64encode(
         json.dumps(chat_messages, ensure_ascii=False).encode("utf-8")
     ).decode("utf-8")
-    current_time = time.time()
 
-    context_item = context_db.get(getcontext.uid == user_id)
     context_data = {
         "uid": user_id,
         "chat_messages": encoded_chat_messages,
         "chat_vqd": chat_vqd,
         "chat_vqd_hash": chat_vqd_hash,
-        "last_modified_time": current_time,
+        "last_modified_time": time.time(),
     }
 
-    if context_item:
-        context_db.update(context_data, getcontext.uid == user_id)
+    if context_db.get(ContextQuery().uid == user_id):
+        context_db.update(context_data, ContextQuery().uid == user_id)
     else:
         context_db.insert(context_data)
 
@@ -115,122 +132,77 @@ def remove_user_context(user_id):
 def process_latex(text):
     return re.sub(
         r"(?m)^\s*(\$\$|\\\[)\s*\n(.*?)\n\s*(\$\$|\\\])\s*$",
-        lambda match: LatexNodes2Text().latex_to_text(match.group(2)),
+        lambda m: LatexNodes2Text().latex_to_text(m.group(2)),
         text,
         flags=re.DOTALL,
     )
 
 
-@router.callback_query(lambda c: c.data and c.data in models)
-async def callback_query_handler(callback_query: CallbackQuery):
-    user_id = callback_query.from_user.id
-    getmodel = Query()
-    db_item = db.get(getmodel.uid == user_id)
-
-    if not db_item:
-        db.insert({"uid": user_id, "model": callback_query.data})
-    else:
-        db.update({"model": callback_query.data}, getmodel.uid == user_id)
-
-    remove_user_context(user_id)
-    await callback_query.answer()
-    await update_model_message(callback_query, callback_query.data)
-
-    user_language = callback_query.from_user.language_code or DEFAULT_LANGUAGE
-    _ = get_localization(user_language)
-    await callback_query.message.answer(
-        f"{callback_query.from_user.first_name}, {_('you_choose_model')} {callback_query.data}"
-    )
-
-
 def split_message(text: str, max_length: int = 4000):
-    return [text[i: i + max_length] for i in range(0, len(text), max_length)]
+    return [text[i:i + max_length] for i in range(0, len(text), max_length)]
 
 
-async def process_gemini(message: Message, command: CommandObject, bot, photo):
+
+async def process_gemini(message: Message, command: CommandObject, bot: Bot, photo):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
 
     text = command.args or "опиши изображение на русском языке"
     try:
         file = await bot.get_file(photo.file_id)
-        file_path = file.file_path
         photo_stream = BytesIO()
-        await bot.download_file(file_path, destination=photo_stream)
-        photo_stream.seek(0)
-
+        await bot.download_file(file.file_path, destination=photo_stream)
         image_bytes = photo_stream.getvalue()
-        img_base64 = base64.b64encode(image_bytes).decode('utf-8')
 
-        url = f"{GEMINI_BASE_URL}/{GEMINI_MODEL_NAME}:generateContent?key={GEMINI_API_KEY}"
+        api_key = await get_next_gemini_key()
+
         payload = {
             "contents": [
                 {
                     "parts": [
-                        {
-                            "text": text
-                        },
+                        {"text": text},
                         {
                             "inline_data": {
                                 "mime_type": "image/jpeg",
-                                "data": img_base64
+                                "data": base64.b64encode(image_bytes).decode(),
                             }
-                        }
+                        },
                     ]
                 }
-            ],
-            "generationConfig": {"responseModalities": ["TEXT"]}
+            ]
         }
 
-        headers = {
-            "Content-Type": "application/json"
-        }
+        url = (
+            f"{GEMINI_BASE_URL}/"
+            f"{GEMINI_MODEL_NAME}:generateContent"
+            f"?key={api_key}"
+        )
 
         async with TypingIndicator(bot=bot, chat_id=message.chat.id):
             async with aiohttp.ClientSession() as session:
-                async with session.post(url, json=payload, headers=headers) as response:
-                    response_text = await response.text()
-                    if response.status == 200:
-                        try:
-                            data = await response.json()
-                        except ValueError as e:
-                            print(f"Error parsing JSON: {e}")
-                            await message.reply(_("gpt_gemini_error"))
-                            return
-
-                        candidates = data.get("candidates", [])
-                        if not candidates:
-                            print("No candidates in response")
-                            await message.reply(_("gpt_gemini_error"))
-                            return
-
-                        for candidate in candidates:
-                            content = candidate.get("content", {})
-                            parts = content.get("parts", [])
-                            for part in parts:
-                                if part.get("text"):
-                                    text_response = part.get("text")
-                                    chunks = split_html(telegram_format(text_response))
-                                    for chunk in chunks:
-                                        await message.reply(chunk, parse_mode="HTML")
-                                    break
-                    else:
-                        print(f"HTTP error: {response.status}, {response_text}")
+                async with session.post(url, json=payload) as resp:
+                    if resp.status != 200:
                         await message.reply(_("gpt_gemini_error"))
+                        return
 
-    except asyncio.TimeoutError:
-        print(f"process_gemini timed out after 30 seconds")
+                    data = await resp.json()
+
+        for candidate in data.get("candidates", []):
+            for part in candidate.get("content", {}).get("parts", []):
+                if "text" in part:
+                    for chunk in split_html(telegram_format(part["text"])):
+                        await message.reply(chunk, parse_mode="HTML")
+                    return
+
         await message.reply(_("gpt_gemini_error"))
 
     except Exception as e:
-        print(f"Gemini error: {e}")
+        print("Gemini error:", e)
         await message.reply(_("gpt_gemini_error"))
 
 
 async def process_gpt(message: Message, command: CommandObject, user_id):
-    messagetext = (
-        message.reply_to_message.text if message.reply_to_message else ""
-    )
+    messagetext = message.reply_to_message.text if message.reply_to_message else ""
     if command.args:
         messagetext += "\n" + command.args
     messagetext = messagetext.strip()
@@ -241,110 +213,74 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
         model = user_model["model"]
 
     if not messagetext:
-        keyboard = get_gpt_keyboard(model)
-        user_language = message.from_user.language_code or DEFAULT_LANGUAGE
-        _ = get_localization(user_language)
         await message.reply(
-            _("gpt_help"), reply_markup=keyboard, parse_mode="markdown"
+            get_localization(message.from_user.language_code or DEFAULT_LANGUAGE)(
+                "gpt_help"
+            ),
+            reply_markup=get_gpt_keyboard(model),
+            parse_mode="markdown",
         )
         return
 
     try:
-        chat_messages, _, _ = load_user_context(user_id)        
-        if chat_messages is not None:
-            messages_for_api = chat_messages + [{"role": "user", "content": messagetext}]
-        else:
-            messages_for_api = [{"role": "user", "content": messagetext}]
-
-        payload = {
-            "model": models[model],
-            "messages": messages_for_api
-        }
-
-        headers = {
-            "Content-Type": "application/json"
-        }
+        chat_messages, _, _ = load_user_context(user_id)
+        messages_for_api = (
+            chat_messages + [{"role": "user", "content": messagetext}]
+            if chat_messages
+            else [{"role": "user", "content": messagetext}]
+        )
 
         async with TypingIndicator(bot=message.bot, chat_id=message.chat.id):
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     GPT_API_URL,
-                    json=payload,
-                    headers=headers,
-                    timeout=60
+                    json={"model": models[model], "messages": messages_for_api},
+                    timeout=60,
                 ) as resp:
-                    if resp.status != 200:
-                        error_text = await resp.text()
-                        print(f"API error {resp.status}: {error_text}")
-                        raise Exception(f"API error {resp.status}")
-                    
                     data = await resp.json()
 
-        if "choices" in data and len(data["choices"]) > 0:
-            answer = data["choices"][0]["message"]["content"]
-        elif "answer" in data:
-            answer = data.get("answer")
-        else:
-            print(f"Unexpected API response format: {data}")
-            raise Exception("Unexpected API response format")
+        answer = data["choices"][0]["message"]["content"]
 
-        if answer:
-            if chat_messages is not None:
-                chat_messages.append({"role": "user", "content": messagetext})
-                chat_messages.append({"role": "assistant", "content": answer})
-            else:
-                chat_messages = [
-                    {"role": "user", "content": messagetext},
-                    {"role": "assistant", "content": answer}
-                ]
-            
-            save_user_context(user_id, chat_messages, None, None)
-            
-            if 'claude' in model:
-                answer = md(answer, escape_asterisks=False, escape_underscores=False, 
-                           preserve_leading_spaces=True, preserve_code_indentation=True)
-            
-            answer = process_latex(telegram_format(answer))
-            chunks = split_html(answer)
-            for chunk in chunks:
-                await message.reply(chunk, parse_mode="HTML")
-        else:
-            raise Exception("Empty answer from API")
+        chat_messages = messages_for_api + [
+            {"role": "assistant", "content": answer}
+        ]
+        save_user_context(user_id, chat_messages, None, None)
 
-    except asyncio.TimeoutError:
-        user_language = message.from_user.language_code or DEFAULT_LANGUAGE
-        _ = get_localization(user_language)
-        print("process_gpt timeout error")
-        await message.reply(_("gpt_timeout_error"), parse_mode="html")
-        
+        answer = process_latex(telegram_format(answer))
+        for chunk in split_html(answer):
+            await message.reply(chunk, parse_mode="HTML")
+
     except Exception as e:
-        user_language = message.from_user.language_code or DEFAULT_LANGUAGE
-        _ = get_localization(user_language)
-        print("process_gpt error:", e)
-        await message.reply(_("gpt_error"), parse_mode="html")
+        print("GPT error:", e)
+        await message.reply(
+            get_localization(message.from_user.language_code or DEFAULT_LANGUAGE)(
+                "gpt_error"
+            ),
+            parse_mode="html",
+        )
 
 
 @router.message(Command("gpt", ignore_case=True))
 @check_command_enabled("gpt")
 async def cmd_gpt(message: Message, command: CommandObject, bot: Bot):
-    user_id = message.from_user.id
-
     photo = (
         message.reply_to_message.photo[-1]
         if message.reply_to_message and message.reply_to_message.photo
         else None
-    )
-    photo = photo or (message.photo[-1] if message.photo else None)
+    ) or (message.photo[-1] if message.photo else None)
 
     if photo:
         await process_gemini(message, command, bot, photo)
     else:
-        await process_gpt(message, command, user_id)
+        await process_gpt(message, command, message.from_user.id)
 
 
 @router.message(Command("gptrm", ignore_case=True))
 async def cmd_remove_context(message: Message):
-    user_language = message.from_user.language_code or DEFAULT_LANGUAGE
-    _ = get_localization(user_language)
     remove_user_context(message.from_user.id)
-    await message.reply(_("gpt_ctx_removed"), parse_mode="markdown")
+    await message.reply(
+        get_localization(message.from_user.language_code or DEFAULT_LANGUAGE)(
+            "gpt_ctx_removed"
+        ),
+        parse_mode="markdown",
+    )
