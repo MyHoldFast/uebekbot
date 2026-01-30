@@ -115,7 +115,7 @@ async def get_coordinates(city: str):
     async with aiohttp.ClientSession() as session:
         async with session.get(
             "https://nominatim.openstreetmap.org/search",
-            params={"q": city, "format": "json", "limit": 1},
+            params={"q": city, "format": "json", "limit": 10},
             headers={"User-Agent": "weather-sticker-bot/1.0"},
             timeout=10
         ) as r:
@@ -123,6 +123,16 @@ async def get_coordinates(city: str):
 
     if not data:
         raise ValueError(city)
+    
+    place_types = [
+        "city", "town", "village", "hamlet", "isolated_dwelling", 
+        "farm", "allotments", "neighbourhood", "suburb", "quarter", 
+        "borough", "municipality", "administrative"
+    ]
+    
+    for item in data:
+        if item.get("class") == "place" and item.get("type") in place_types:
+            return float(item["lat"]), float(item["lon"]), item["display_name"].split(",")[0]
 
     i = data[0]
     return float(i["lat"]), float(i["lon"]), i["display_name"].split(",")[0]
