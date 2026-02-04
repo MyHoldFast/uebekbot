@@ -2,7 +2,9 @@ import aiohttp
 import asyncio
 import os
 import subprocess
+import json
 from io import BytesIO
+from aiohttp import TCPConnector, ClientTimeout
 
 from utils.typing_indicator import TypingIndicator
 from aiogram import Bot, Router, types
@@ -15,6 +17,7 @@ from localization import DEFAULT_LANGUAGE, get_localization
 API_URLS = [
     "https://router.huggingface.co/hf-inference/models/openai/whisper-large-v3-turbo"
 ]
+
 headers = {
     "Authorization": "Bearer "+os.getenv("HF_TOKEN"),
     'Content-Type': 'audio/ogg'
@@ -36,7 +39,7 @@ async def download_as_audio(file_path, output_file):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )
-    await process.communicate()
+    stdout, stderr = await process.communicate()
     if os.path.exists(output_file):
         with open(output_file, 'rb') as f:
             return f.read()
@@ -47,10 +50,37 @@ async def process_audio(wav_buffer: BytesIO, message, api=0):
         user_language = message.from_user.language_code or DEFAULT_LANGUAGE
         _ = get_localization(user_language)
         wav_buffer.seek(0)
-        async with aiohttp.ClientSession() as session:
-            async with session.post(API_URLS[api], headers=headers, data=wav_buffer.getvalue()) as response:
-                response_json = await response.json()
-                return response_json.get('text', _("voice_error")) 
+        
+        connector = TCPConnector(
+            limit=0,
+            limit_per_host=0,
+            force_close=True,
+            enable_cleanup_closed=True
+        )
+        
+        timeout = ClientTimeout(total=300)
+        
+        async with aiohttp.ClientSession(
+            connector=connector,
+            timeout=timeout
+        ) as session:
+            async with session.post(
+                API_URLS[api],
+                headers=headers,
+                data=wav_buffer.getvalue()
+            ) as response:
+                text = await response.text()
+                
+                if len(text) > 10000:
+                    loop = asyncio.get_event_loop()
+                    response_json = await loop.run_in_executor(
+                        None,
+                        lambda: json.loads(text)
+                    )
+                else:
+                    response_json = json.loads(text)
+                    
+                return response_json.get('text', _("voice_error"))
     except Exception:
         return _("voice_error")
 
