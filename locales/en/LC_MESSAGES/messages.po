@@ -191,3 +191,6 @@ msgstr "❌ City not found."
 
 msgid "forecast_error"
 msgstr "❌ Error when receiving weather: "
+
+msgid "qwen_busy"
+msgstr "❌ Error: service is temporarily unavailable, try again later"

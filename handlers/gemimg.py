@@ -1,8 +1,6 @@
 import os
 import tempfile
 import asyncio
-import base64
-import aiohttp
 
 from aiogram import Router, Bot
 from aiogram.filters import Command, CommandObject
@@ -13,15 +11,35 @@ from utils.typing_indicator import TypingIndicator
 from utils.command_states import check_command_enabled
 from localization import get_localization, DEFAULT_LANGUAGE
 
+from gemini_webapi import GeminiClient
+from gemini_webapi import set_log_level
 
-API_KEY = os.environ.get("GEMINI_API_KEY")
-MODEL_NAME = "gemini-2.0-flash-preview-image-generation"
-BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models" 
-URL_PROXY = os.environ.get("URL_PROXY")
-if URL_PROXY:
-    BASE_URL = URL_PROXY + BASE_URL
+set_log_level("CRITICAL")
 
 router = Router()
+
+client = None
+client_cookies = None
+client_lock = asyncio.Lock()
+
+async def get_client():
+    global client, client_cookies
+    
+    Secure_1PSID = os.environ.get("GEMINI_SECURE_1PSID")
+    Secure_1PSIDTS = os.environ.get("GEMINI_SECURE_1PSIDTS")
+    
+    if not Secure_1PSID:
+        return None
+    
+    current_cookies = (Secure_1PSID, Secure_1PSIDTS)
+    
+    async with client_lock:
+        if client is None or client_cookies != current_cookies:
+            client = GeminiClient(Secure_1PSID, Secure_1PSIDTS, proxy=None)
+            await client.init(timeout=30)
+            client_cookies = current_cookies
+        
+        return client
 
 async def safe_delete(message):
     try:
@@ -29,51 +47,38 @@ async def safe_delete(message):
     except TelegramBadRequest:
         pass
 
-async def generate_image(user_input, image_path: str = None, timeout: int = 30):
+async def generate_image_gemini_web(user_input, image_path=None):
     try:
-        contents = [{"parts": [{"text": user_input}]}]
+        enhanced_prompt = f"{user_input}. Generate a large, detailed, high-quality image."
+        
+        client = await get_client()
+        if not client:
+            return None
 
         if image_path and os.path.exists(image_path):
-            with open(image_path, "rb") as f:
-                image_bytes = f.read()
-                img_base64 = base64.b64encode(image_bytes).decode('utf-8')
-                contents[0]["parts"].append({
-                    "inline_data": {
-                        "mime_type": "image/jpeg",
-                        "data": img_base64
-                    }
-                })
+            response = await client.generate_content(enhanced_prompt, files=[image_path])
+        else:
+            response = await client.generate_content(enhanced_prompt)
 
-        url = f"{BASE_URL}/{MODEL_NAME}:generateContent?key={API_KEY}"
-        payload = {
-            "contents": contents,
-            "generationConfig": {"responseModalities": ["TEXT", "IMAGE"]}
-        }
-
-        headers = {
-            "Content-Type": "application/json"
-        }
-
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, json=payload, headers=headers) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    for candidate in data.get("candidates", []):
-                        content = candidate.get("content", {})
-                        for part in content.get("parts", []):
-                            inline_data = part.get("inlineData", {})
-                            if inline_data and inline_data.get("data"):
-                                return base64.b64decode(inline_data["data"])
-                else:
-                    print(f"HTTP error: {response.status}, {await response.text()}")
-                    return None
-
-    except asyncio.TimeoutError:
-        print(f"generate_image timed out after {timeout} seconds")
+        if response.images:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_file:
+                tmp_path = tmp_file.name
+            
+            await response.images[0].save(
+                path=os.path.dirname(tmp_path),
+                filename=os.path.basename(tmp_path),
+                skip_invalid_filename=True
+            )
+            
+            return tmp_path
+        
+        if response.text:
+            return response.text
+        
         return None
-
+            
     except Exception as e:
-        print("generate_image error:", e)
+        print(f"generate_image_gemini_web error: {e}")
         return None
 
 @router.message(Command("gemimg", ignore_case=True))
@@ -85,10 +90,12 @@ async def cmd_gemimg(message: Message, command: CommandObject, bot: Bot):
         else message.photo[-1] if message.photo
         else None
     )
+    
     user_input = (
         message.reply_to_message.text or message.reply_to_message.caption or ""
         if message.reply_to_message and not photo else ""
     )
+    
     if command.args:
         user_input += ("\n" if user_input else "") + command.args
 
@@ -103,7 +110,7 @@ async def cmd_gemimg(message: Message, command: CommandObject, bot: Bot):
         sent_message = await message.reply(_("qwenimg_gen"))
 
         image_path = None
-        output_path = None
+        generated_image_path = None
 
         try:
             if photo:
@@ -112,40 +119,31 @@ async def cmd_gemimg(message: Message, command: CommandObject, bot: Bot):
                     await bot.download_file(file.file_path, destination=tmp_file)
                     image_path = tmp_file.name
 
-            result = await generate_image(user_input, image_path=image_path)
+            result = await generate_image_gemini_web(user_input, image_path)
 
-            if result:
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as output_file:
-                    output_file.write(result)
-                    output_path = output_file.name
-                
+            if isinstance(result, str) and result.endswith('.png') and os.path.exists(result):
+                generated_image_path = result
                 await asyncio.sleep(0.1)
-
                 await safe_delete(sent_message)
-
-                try:                   
-                    await asyncio.shield(
-                        message.reply_photo(photo=FSInputFile(output_path))
-                    )
-                except asyncio.CancelledError:
-                    print("Upload task was cancelled during file transmission.")
-                    raise
-                except Exception as e:
-                    print("Failed to send image:", e)
-                    await message.reply(_("gemimg_err"))
+                await message.reply_photo(photo=FSInputFile(generated_image_path))
+            
+            elif isinstance(result, str):
+                await safe_delete(sent_message)
+                await message.reply(result[:4000], parse_mode="Markdown")
+            
             else:
                 await safe_delete(sent_message)
                 await message.reply(_("gemimg_err"))
 
         except Exception as e:
-            print("cmd_gemimg error:", e)
+            print(f"cmd_gemimg error: {e}")
             await safe_delete(sent_message)
             await message.reply(_("gemimg_err"))
 
         finally:
-            for path in (image_path, output_path):
+            for path in (image_path, generated_image_path):
                 if path and os.path.exists(path):
                     try:
                         os.remove(path)
                     except Exception as e:
-                        print(f"Error deleting file {path}:", e)
+                        print(f"Error deleting file {path}: {e}")

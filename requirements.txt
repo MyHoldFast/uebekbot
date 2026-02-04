@@ -1,4 +1,4 @@
-aiogram==3.18.0
+aiogram==3.24.0
 aiohttp
 Babel==2.15.0
 beautifulsoup4==4.12.3
@@ -17,5 +17,6 @@ numpy==2.2.2
 edge_tts
 shazamio
 psutil
+gemini_webapi
 
 uvloop #remove on windows
