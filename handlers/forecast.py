@@ -115,7 +115,7 @@ async def get_coordinates(city: str):
     async with aiohttp.ClientSession() as session:
         async with session.get(
             "https://nominatim.openstreetmap.org/search",
-            params={"q": city, "format": "json", "limit": 10},
+            params={"q": city, "format": "json", "limit": 5, "addressdetails": 1},
             headers={"User-Agent": "weather-sticker-bot/1.0"},
             timeout=10
         ) as r:
@@ -123,7 +123,7 @@ async def get_coordinates(city: str):
 
     if not data:
         raise ValueError(city)
-    
+
     place_types = [
         "city", "town", "village", "hamlet", "isolated_dwelling", 
         "farm", "allotments", "neighbourhood", "suburb", "quarter", 
@@ -132,10 +132,22 @@ async def get_coordinates(city: str):
     
     for item in data:
         if item.get("class") == "place" and item.get("type") in place_types:
-            return float(item["lat"]), float(item["lon"]), item["display_name"].split(",")[0]
+            address = item.get("address")
+            if address and "city" in address:
+                city_name = address["city"]
+            else:
+                city_name = item["display_name"].split(",")[0]
+            
+            return float(item["lat"]), float(item["lon"]), city_name
 
     i = data[0]
-    return float(i["lat"]), float(i["lon"]), i["display_name"].split(",")[0]
+    address = i.get("address")
+    if address and "city" in address:
+        city_name = address["city"]
+    else:
+        city_name = i["display_name"].split(",")[0]
+    
+    return float(i["lat"]), float(i["lon"]), city_name
 
 
 async def get_weather(lat, lon):
@@ -304,7 +316,7 @@ async def forecast_command(message: Message, command: CommandObject, bot: Bot):
             sticker = draw_card(data)
 
             city_db.upsert(
-                {"uid": user_id, "city": name},
+                {"uid": user_id, "city": city},
                 CityQuery().uid == user_id
             )
 
