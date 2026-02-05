@@ -1,7 +1,6 @@
 import os
 import tempfile
 import asyncio
-import httpx
 
 from aiogram import Router, Bot
 from aiogram.filters import Command, CommandObject
@@ -22,7 +21,6 @@ router = Router()
 client = None
 client_cookies = None
 client_lock = asyncio.Lock()
-PROXY_URL = os.environ.get("URL_PROXY")
 
 async def get_client():
     global client, client_cookies
@@ -37,20 +35,7 @@ async def get_client():
     
     async with client_lock:
         if client is None or client_cookies != current_cookies:
-            if PROXY_URL:
-                async def proxy_request(request):
-                    original_url = str(request.url)
-                    proxy_url = f"{PROXY_URL}?url={original_url}"
-                    request.url = httpx.URL(proxy_url)
-                    return request
-                
-                transport = httpx.AsyncHTTPTransport()
-                async_client = httpx.AsyncClient(transport=transport, event_hooks={'request': [proxy_request]})
-                client = GeminiClient(Secure_1PSID, Secure_1PSIDTS, proxy=None)
-                client._client = async_client
-            else:
-                client = GeminiClient(Secure_1PSID, Secure_1PSIDTS, proxy=None)
-            
+            client = GeminiClient(Secure_1PSID, Secure_1PSIDTS, proxy=None)
             await client.init(timeout=30)
             client_cookies = current_cookies
         
