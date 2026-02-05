@@ -90,6 +90,27 @@ async def update_model_message(callback_query: CallbackQuery, model: str):
     except Exception:
         pass
 
+@router.callback_query(lambda c: c.data and c.data in models)
+async def callback_query_handler(callback_query: CallbackQuery):
+    user_id = callback_query.from_user.id
+    getmodel = Query()
+    db_item = db.get(getmodel.uid == user_id)
+
+    if not db_item:
+        db.insert({"uid": user_id, "model": callback_query.data})
+    else:
+        db.update({"model": callback_query.data}, getmodel.uid == user_id)
+
+    remove_user_context(user_id)
+    await callback_query.answer()
+    await update_model_message(callback_query, callback_query.data)
+
+    user_language = callback_query.from_user.language_code or DEFAULT_LANGUAGE
+    _ = get_localization(user_language)
+    await callback_query.message.answer(
+        f"{callback_query.from_user.first_name}, {_('you_choose_model')} {callback_query.data}"
+)
+    
 
 def load_user_context(user_id):
     context_item = context_db.get(ContextQuery().uid == user_id)
