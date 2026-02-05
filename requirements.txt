@@ -1,4 +1,4 @@
-aiogram==3.18.0
+aiogram==3.24.0
 aiohttp
 Babel==2.15.0
 beautifulsoup4==4.12.3
