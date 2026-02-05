@@ -5,6 +5,12 @@ from dotenv import load_dotenv
 from handlers import callbacks, ya_ocr, summary, gpt, admin, stt, neuro, qwen, pm, gemimg, tts, shazam, rephrase, forecast, flux
 from utils.StatsMiddleware import StatsMiddleware
 from utils.BanMiddleware import BanMiddleware
+from aiogram import Router, F
+
+base_router = Router()
+
+base_router.message.filter(~F.forward_origin)
+base_router.message.filter(~F.via_bot)
 
 if sys.platform != "win32":
     import uvloop  # type: ignore
@@ -23,11 +29,14 @@ async def main():
     dp.update.middleware(BanMiddleware(bot))
     dp.update.middleware(StatsMiddleware(bot)) 
 
-    dp.include_routers(
-        callbacks.router, ya_ocr.router, summary.router, gpt.router,
-        admin.router, stt.router, neuro.router, qwen.router, pm.router, gemimg.router, tts.router,
-        shazam.router, rephrase.router, forecast.router, flux.router
-    )
+    base_router.include_routers(
+    callbacks.router, ya_ocr.router, summary.router, gpt.router,
+    admin.router, stt.router, neuro.router, qwen.router, pm.router, gemimg.router, tts.router,
+    shazam.router, rephrase.router, forecast.router, flux.router
+)
+
+    dp.include_router(base_router)
+
 
     await bot.delete_webhook(drop_pending_updates=True)    
     await dp.start_polling(bot, polling_timeout=50)

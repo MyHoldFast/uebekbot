@@ -349,10 +349,8 @@ async def cmd_gemimg(message: Message, command: CommandObject, bot: Bot):
         elif message.reply_to_message.text:
             user_input = message.reply_to_message.text
 
-    if command.args:
-        user_input += ("\n" if user_input else "") + command.args
-    elif not photos:
-        user_input = message.text or message.caption or ""
+    if command.args and command.args.strip():
+        user_input += ("\n" if user_input else "") + command.args.strip()
 
     if photos:
         await process_gemimg(message, bot, user_input, photos)
@@ -361,7 +359,7 @@ async def cmd_gemimg(message: Message, command: CommandObject, bot: Bot):
     user_language = message.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
 
-    if not user_input:
+    if not user_input.strip():
         await message.reply(_("gemimghelp"))
         return
 
