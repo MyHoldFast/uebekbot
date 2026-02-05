@@ -1,6 +1,8 @@
 import os
 import tempfile
 import asyncio
+import json
+from pathlib import Path
 
 from aiogram import Router, Bot
 from aiogram.filters import Command, CommandObject
@@ -13,17 +15,63 @@ from localization import get_localization, DEFAULT_LANGUAGE
 
 from gemini_webapi import GeminiClient
 from gemini_webapi import set_log_level
+from gemini_webapi.utils import rotate_1psidts
 
 set_log_level("CRITICAL")
 
 router = Router()
 
 client = None
-client_cookies = None
 client_lock = asyncio.Lock()
 
+async def update_env_cookies():
+    try:
+        env_path = Path(".env")
+        secure_1psid = os.environ.get("GEMINI_SECURE_1PSID", "")
+        secure_1psidts = os.environ.get("GEMINI_SECURE_1PSIDTS", "")
+        
+        if not env_path.exists():
+            with open(env_path, "w", encoding="utf-8") as f:
+                if secure_1psid:
+                    f.write(f"GEMINI_SECURE_1PSID={secure_1psid}\n")
+                if secure_1psidts:
+                    f.write(f"GEMINI_SECURE_1PSIDTS={secure_1psidts}\n")
+            return
+        
+        with open(env_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        
+        updated_lines = []
+        
+        for line in lines:
+            line = line.strip()
+            if line.startswith("GEMINI_SECURE_1PSID="):
+                if secure_1psid:
+                    updated_lines.append(f"GEMINI_SECURE_1PSID={secure_1psid}\n")
+                else:
+                    updated_lines.append(line + "\n")
+            elif line.startswith("GEMINI_SECURE_1PSIDTS="):
+                if secure_1psidts:
+                    updated_lines.append(f"GEMINI_SECURE_1PSIDTS={secure_1psidts}\n")
+                else:
+                    updated_lines.append(line + "\n")
+            else:
+                updated_lines.append(line + "\n")
+        
+        if not any(line.startswith("GEMINI_SECURE_1PSID=") for line in updated_lines) and secure_1psid:
+            updated_lines.append(f"GEMINI_SECURE_1PSID={secure_1psid}\n")
+        
+        if not any(line.startswith("GEMINI_SECURE_1PSIDTS=") for line in updated_lines) and secure_1psidts:
+            updated_lines.append(f"GEMINI_SECURE_1PSIDTS={secure_1psidts}\n")
+        
+        with open(env_path, "w", encoding="utf-8") as f:
+            f.writelines(updated_lines)
+        
+    except Exception:
+        pass
+
 async def get_client():
-    global client, client_cookies
+    global client
     
     Secure_1PSID = os.environ.get("GEMINI_SECURE_1PSID")
     Secure_1PSIDTS = os.environ.get("GEMINI_SECURE_1PSIDTS")
@@ -31,21 +79,90 @@ async def get_client():
     if not Secure_1PSID:
         return None
     
-    current_cookies = (Secure_1PSID, Secure_1PSIDTS)
-    
     async with client_lock:
-        if client is None or client_cookies != current_cookies:
+        if client is None:
             client = GeminiClient(Secure_1PSID, Secure_1PSIDTS, proxy=None)
-            await client.init(timeout=30)
-            client_cookies = current_cookies
+            
+            async def custom_auto_refresh():
+                while client._running:
+                    await asyncio.sleep(300)
+                    
+                    if not client._running:
+                        break
+                    
+                    try:
+                        async with client._lock:
+                            new_1psidts, rotated_cookies = await rotate_1psidts(
+                                client.cookies, client.proxy
+                            )
+                            
+                            if rotated_cookies:
+                                client.cookies.update(rotated_cookies)
+                                if client.client:
+                                    client.client.cookies.update(rotated_cookies)
+                                
+                                secure_1psid = rotated_cookies.get("__Secure-1PSID")
+                                secure_1psidts = rotated_cookies.get("__Secure-1PSIDTS")
+                                
+                                if secure_1psid:
+                                    os.environ["GEMINI_SECURE_1PSID"] = secure_1psid
+                                if secure_1psidts:
+                                    os.environ["GEMINI_SECURE_1PSIDTS"] = secure_1psidts
+                                
+                                await update_env_cookies()
+                    
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception:
+                        pass
+            
+            await client.init(
+                timeout=30,
+                auto_refresh=True,
+                refresh_interval=300,
+                verbose=False
+            )
+            
+            refresh_task = asyncio.create_task(custom_auto_refresh())
+            client.refresh_task = refresh_task
         
         return client
 
-async def safe_delete(message):
+async def extract_prompt_from_response(text):
     try:
-        await message.delete()
-    except TelegramBadRequest:
-        pass
+        if not text or not isinstance(text, str):
+            return None
+        
+        text = text.strip()
+        
+        if '"action": "image_generation"' in text:
+            try:
+                data = json.loads(text)
+                if isinstance(data, dict) and data.get("action") == "image_generation":
+                    action_input = data.get("action_input", "")
+                    
+                    if isinstance(action_input, str):
+                        try:
+                            inner_data = json.loads(action_input.replace("'", '"'))
+                        except:
+                            try:
+                                inner_data = json.loads(action_input)
+                            except:
+                                return None
+                        
+                        prompt = inner_data.get("prompt")
+                        if prompt:
+                            return prompt
+                    elif isinstance(action_input, dict):
+                        prompt = action_input.get("prompt")
+                        if prompt:
+                            return prompt
+            except json.JSONDecodeError:
+                return None
+        
+        return None
+    except Exception:
+        return None
 
 async def generate_image_gemini_web(user_input, image_path=None):
     try:
@@ -73,12 +190,32 @@ async def generate_image_gemini_web(user_input, image_path=None):
             return tmp_path
         
         if response.text:
-            return response.text
+            extracted_prompt = await extract_prompt_from_response(response.text)
+            
+            if extracted_prompt:
+                second_response = await client.generate_content(extracted_prompt)
+                
+                if second_response.images:
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_file:
+                        tmp_path = tmp_file.name
+                    
+                    await second_response.images[0].save(
+                        path=os.path.dirname(tmp_path),
+                        filename=os.path.basename(tmp_path),
+                        skip_invalid_filename=True
+                    )
+                    
+                    return tmp_path
+                elif second_response.text:
+                    return second_response.text
+                else:
+                    return None
+            else:
+                return response.text
         
         return None
             
-    except Exception as e:
-        print(f"generate_image_gemini_web error: {e}")
+    except Exception:
         return None
 
 @router.message(Command("gemimg", ignore_case=True))
@@ -135,8 +272,7 @@ async def cmd_gemimg(message: Message, command: CommandObject, bot: Bot):
                 await safe_delete(sent_message)
                 await message.reply(_("gemimg_err"))
 
-        except Exception as e:
-            print(f"cmd_gemimg error: {e}")
+        except Exception:
             await safe_delete(sent_message)
             await message.reply(_("gemimg_err"))
 
@@ -145,5 +281,11 @@ async def cmd_gemimg(message: Message, command: CommandObject, bot: Bot):
                 if path and os.path.exists(path):
                     try:
                         os.remove(path)
-                    except Exception as e:
-                        print(f"Error deleting file {path}: {e}")
+                    except Exception:
+                        pass
+
+async def safe_delete(message):
+    try:
+        await message.delete()
+    except TelegramBadRequest:
+        pass
