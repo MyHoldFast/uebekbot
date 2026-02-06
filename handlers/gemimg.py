@@ -15,7 +15,6 @@ from localization import get_localization, DEFAULT_LANGUAGE
 
 from gemini_webapi import GeminiClient
 from gemini_webapi import set_log_level
-from gemini_webapi.utils import rotate_1psidts
 
 set_log_level("CRITICAL")
 
@@ -24,52 +23,6 @@ router = Router()
 client = None
 client_lock = asyncio.Lock()
 albums_buffer = {}
-
-async def update_env_cookies():
-    try:
-        env_path = Path(".env")
-        secure_1psid = os.environ.get("GEMINI_SECURE_1PSID", "")
-        secure_1psidts = os.environ.get("GEMINI_SECURE_1PSIDTS", "")
-        
-        if not env_path.exists():
-            with open(env_path, "w", encoding="utf-8") as f:
-                if secure_1psid:
-                    f.write(f"GEMINI_SECURE_1PSID={secure_1psid}\n")
-                if secure_1psidts:
-                    f.write(f"GEMINI_SECURE_1PSIDTS={secure_1psidts}\n")
-            return
-        
-        with open(env_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-        
-        updated_lines = []
-        
-        for line in lines:
-            line = line.strip()
-            if line.startswith("GEMINI_SECURE_1PSID="):
-                if secure_1psid:
-                    updated_lines.append(f"GEMINI_SECURE_1PSID={secure_1psid}\n")
-                else:
-                    updated_lines.append(line + "\n")
-            elif line.startswith("GEMINI_SECURE_1PSIDTS="):
-                if secure_1psidts:
-                    updated_lines.append(f"GEMINI_SECURE_1PSIDTS={secure_1psidts}\n")
-                else:
-                    updated_lines.append(line + "\n")
-            else:
-                updated_lines.append(line + "\n")
-        
-        if not any(line.startswith("GEMINI_SECURE_1PSID=") for line in updated_lines) and secure_1psid:
-            updated_lines.append(f"GEMINI_SECURE_1PSID={secure_1psid}\n")
-        
-        if not any(line.startswith("GEMINI_SECURE_1PSIDTS=") for line in updated_lines) and secure_1psidts:
-            updated_lines.append(f"GEMINI_SECURE_1PSIDTS={secure_1psidts}\n")
-        
-        with open(env_path, "w", encoding="utf-8") as f:
-            f.writelines(updated_lines)
-        
-    except Exception:
-        pass
 
 async def get_client():
     global client
@@ -83,49 +36,9 @@ async def get_client():
     async with client_lock:
         if client is None:
             client = GeminiClient(Secure_1PSID, Secure_1PSIDTS, proxy=None)
-            
-            async def custom_auto_refresh():
-                while client._running:
-                    await asyncio.sleep(300)
-                    
-                    if not client._running:
-                        break
-                    
-                    try:
-                        async with client._lock:
-                            new_1psidts, rotated_cookies = await rotate_1psidts(
-                                client.cookies, client.proxy
-                            )
-                            
-                            if rotated_cookies:
-                                client.cookies.update(rotated_cookies)
-                                if client.client:
-                                    client.client.cookies.update(rotated_cookies)
-                                
-                                secure_1psid = rotated_cookies.get("__Secure-1PSID")
-                                secure_1psidts = rotated_cookies.get("__Secure-1PSIDTS")
-                                
-                                if secure_1psid:
-                                    os.environ["GEMINI_SECURE_1PSID"] = secure_1psid
-                                if secure_1psidts:
-                                    os.environ["GEMINI_SECURE_1PSIDTS"] = secure_1psidts
-                                
-                                await update_env_cookies()
-                    
-                    except asyncio.CancelledError:
-                        raise
-                    except Exception:
-                        pass
-            
             await client.init(
-                timeout=30,
-                auto_refresh=True,
-                refresh_interval=300,
-                verbose=False
+                timeout=30
             )
-            
-            refresh_task = asyncio.create_task(custom_auto_refresh())
-            client.refresh_task = refresh_task
         
         return client
 
