@@ -32,8 +32,7 @@ async def main():
     base_router.include_routers(
     callbacks.router, ya_ocr.router, summary.router, gpt.router,
     admin.router, stt.router, neuro.router, qwen.router, pm.router, gemimg.router, tts.router,
-    shazam.router, rephrase.router, forecast.router, flux.router
-)
+    shazam.router, rephrase.router, forecast.router, flux.router)  
 
     dp.include_router(base_router)
 
