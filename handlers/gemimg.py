@@ -248,6 +248,14 @@ async def handle_album_command(message: Message, bot: Bot):
     albums_buffer[mgid].append(message)
 
 
+@router.message(F.photo, F.caption.startswith("/gemimg"))
+@check_command_enabled("gemimg")
+async def handle_single_photo_with_caption(message: Message, bot: Bot):
+    user_input = message.caption.replace("/gemimg", "").strip()
+    photos = [message.photo[-1]]
+
+    await process_gemimg(message, bot, user_input, photos)
+    
 @router.message(Command("gemimg", ignore_case=True))
 @check_command_enabled("gemimg")
 async def cmd_gemimg(message: Message, command: CommandObject, bot: Bot):
