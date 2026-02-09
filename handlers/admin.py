@@ -2,6 +2,7 @@ import platform
 import psutil
 import sys
 import os
+from pathlib import Path
 from datetime import datetime
 from functools import wraps
 from aiogram import Router
@@ -294,16 +295,8 @@ async def cmd_stop(message: Message):
 @router.message(Command("trunc", ignore_case=True))
 @admin_only
 async def cmd_trunc(message: Message, command: CommandObject):
-    db_list = [
-        "gpt_models",
-        "gpt_context",
-        "qwen_context",
-        "stats",
-        "command_states",
-        "banned_users",
-        "banned_chats",
-        "chats"
-    ]
+    db_path = Path("db")
+    db_list = [f.stem for f in db_path.glob("*.json")] if db_path.exists() else []
 
     if not command.args:
         await message.reply(", ".join(db_list))

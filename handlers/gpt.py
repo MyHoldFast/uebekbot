@@ -203,6 +203,7 @@ async def process_gemini(message: Message, command: CommandObject, bot: Bot, pho
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, json=payload) as resp:
                     if resp.status != 200:
+                        print(await resp.text())
                         await message.reply(_("gpt_gemini_error"))
                         return
 
