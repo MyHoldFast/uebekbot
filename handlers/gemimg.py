@@ -276,11 +276,13 @@ async def cmd_gemimg(message: Message, command: CommandObject, bot: Bot):
 
     if message.reply_to_message and message.reply_to_message.photo:
         photos.append(message.reply_to_message.photo[-1])
+    
+    if message.reply_to_message:
+        if message.reply_to_message.caption:
+            user_input = message.reply_to_message.caption
+        elif message.reply_to_message.text:
+            user_input = message.reply_to_message.text
 
-    if message.reply_to_message.caption:
-        user_input = message.reply_to_message.caption
-    elif message.reply_to_message.text:
-        user_input = message.reply_to_message.text
 
     if message.photo:
         photos.append(message.photo[-1])
