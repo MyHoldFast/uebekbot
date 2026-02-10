@@ -145,7 +145,6 @@ async def generate_image_gemini_web(user_input, image_paths=None):
 
 async def process_gemimg(message: Message, bot: Bot, user_input: str, photos):
     input_image_paths = []
-
     for photo in photos:
         try:
             file = await bot.get_file(photo.file_id)
@@ -278,9 +277,7 @@ async def cmd_gemimg(message: Message, command: CommandObject, bot: Bot):
         photos.append(message.reply_to_message.photo[-1])
     
     if message.reply_to_message:
-        if message.reply_to_message.caption:
-            user_input = message.reply_to_message.caption
-        elif message.reply_to_message.text:
+        if message.reply_to_message.text:
             user_input = message.reply_to_message.text
 
 
@@ -300,6 +297,8 @@ async def cmd_gemimg(message: Message, command: CommandObject, bot: Bot):
     if not user_input.strip():
         await message.reply(_("gemimghelp"))
         return
+    
+  
 
     async with TypingIndicator(bot=bot, chat_id=message.chat.id):
         sent_message = await message.reply(_("qwenimg_gen"))
