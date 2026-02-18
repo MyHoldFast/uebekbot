@@ -14,6 +14,7 @@ from localization import DEFAULT_LANGUAGE, get_localization
 
 from PIL import Image, ImageDraw, ImageFont
 
+
 WIDTH = HEIGHT = 512
 FONT_PATH = "res/DejaVuSans-Bold.ttf"
 BG_IMAGE = "res/bg.webp"
@@ -76,13 +77,18 @@ def format_temp(t):
     return f"+{t}°C" if t > 0 else f"{t}°C"
 
 
+def wind_arrow(deg):
+    arrows = ["↑", "↗", "→", "↘", "↓", "↙", "←", "↖"]
+    idx = round(deg / 45) % 8
+    return arrows[idx]
+
+
 def draw_moon(img, center, size, color, angle=-25):
     x, y = center
     moon = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     d = ImageDraw.Draw(moon)
 
     d.ellipse((0, 0, size, size), fill=color)
-
     cut = int(size * 0.4)
     d.ellipse((-cut, 0, size - cut, size), fill=(0, 0, 0, 0))
 
@@ -124,30 +130,8 @@ async def get_coordinates(city: str):
     if not data:
         raise ValueError(city)
 
-    place_types = [
-        "city", "town", "village", "hamlet", "isolated_dwelling", 
-        "farm", "allotments", "neighbourhood", "suburb", "quarter", 
-        "borough", "municipality", "administrative"
-    ]
-    
-    for item in data:
-        if item.get("class") == "place" and item.get("type") in place_types:
-            address = item.get("address")
-            if address and "city" in address:
-                city_name = address["city"]
-            else:
-                city_name = item["display_name"].split(",")[0]
-            
-            return float(item["lat"]), float(item["lon"]), city_name
-
     i = data[0]
-    address = i.get("address")
-    if address and "city" in address:
-        city_name = address["city"]
-    else:
-        city_name = i["display_name"].split(",")[0]
-    
-    return float(i["lat"]), float(i["lon"]), city_name
+    return float(i["lat"]), float(i["lon"]), i["display_name"].split(",")[0]
 
 
 async def get_weather(lat, lon):
@@ -159,7 +143,8 @@ async def get_weather(lat, lon):
                 "longitude": lon,
                 "current_weather": "true",
                 "hourly": "temperature_2m,weathercode",
-                "timezone": "auto"
+                "timezone": "auto",
+                "windspeed_unit": "ms"
             },
             timeout=10
         ) as r:
@@ -204,6 +189,8 @@ def build_data(city, data):
         "temp": round(cur["temperature"]),
         "icon": icon_by_code(cur["weathercode"], is_night),
         "desc": WEATHER_CODES.get(cur["weathercode"], "—"),
+        "wind_speed": round(cur.get("windspeed", 0), 1),
+        "wind_dir": cur.get("winddirection", 0),
         "forecast": forecast
     }
 
@@ -223,8 +210,8 @@ def draw_card(d) -> BytesIO:
     dr.text((WIDTH // 2, 33), d["city"], font=cf, anchor="mm", fill="white")
     dr.text((WIDTH // 2, 85), d["desc"], font=df, anchor="mm", fill="#bbb")
 
-    ifo = ImageFont.truetype(FONT_PATH, 90)
-    tf = ImageFont.truetype(FONT_PATH, 90)
+    ifo = ImageFont.truetype(FONT_PATH, 80)
+    tf = ImageFont.truetype(FONT_PATH, 80)
 
     temp_text = format_temp(d["temp"])
     tb = dr.textbbox((0, 0), temp_text, font=tf)
@@ -240,11 +227,15 @@ def draw_card(d) -> BytesIO:
     temp_x = sx + ICON_WIDTH + ICON_GAP
 
     if d["icon"] == "moon":
-        draw_moon(img, (icon_x, 155), ICON_SIZE_CUR, (255, 255, 255, 255))
+        draw_moon(img, (icon_x, 145), ICON_SIZE_CUR, (255, 255, 255, 255))
     else:
-        dr.text((icon_x, iy(155, d["icon"])), d["icon"], font=ifo, anchor="mm", fill="white")
+        dr.text((icon_x, iy(145, d["icon"])), d["icon"], font=ifo, anchor="mm", fill="white")
 
-    dr.text((temp_x, 155), temp_text, font=tf, anchor="lm", fill="white")
+    dr.text((temp_x, 145), temp_text, font=tf, anchor="lm", fill="white")
+
+    wf = ImageFont.truetype(FONT_PATH, 24)
+    wind_text = f"{wind_arrow(d['wind_dir'])} {d['wind_speed']} м/с"
+    dr.text((WIDTH // 2, 200), wind_text, font=wf, anchor="mm", fill="#bbb")
 
     cw, by = WIDTH // 5, 280
 
@@ -289,6 +280,7 @@ def draw_card(d) -> BytesIO:
     img.convert("RGB").save(buf, "WEBP", quality=95)
     buf.seek(0)
     return buf
+
 
 
 @router.message(Command("forecast", ignore_case=True))
