@@ -130,8 +130,30 @@ async def get_coordinates(city: str):
     if not data:
         raise ValueError(city)
 
+    place_types = [
+        "city", "town", "village", "hamlet", "isolated_dwelling", 
+        "farm", "allotments", "neighbourhood", "suburb", "quarter", 
+        "borough", "municipality", "administrative"
+    ]
+    
+    for item in data:
+        if item.get("class") == "place" and item.get("type") in place_types:
+            address = item.get("address")
+            if address and "city" in address:
+                city_name = address["city"]
+            else:
+                city_name = item["display_name"].split(",")[0]
+            
+            return float(item["lat"]), float(item["lon"]), city_name
+
     i = data[0]
-    return float(i["lat"]), float(i["lon"]), i["display_name"].split(",")[0]
+    address = i.get("address")
+    if address and "city" in address:
+        city_name = address["city"]
+    else:
+        city_name = i["display_name"].split(",")[0]
+    
+    return float(i["lat"]), float(i["lon"]), city_name
 
 
 async def get_weather(lat, lon):
