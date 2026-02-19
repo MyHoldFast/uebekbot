@@ -41,15 +41,12 @@ def get_next_key():
         current_key_index = (current_key_index + 1) % len(qwen_keys)
         return key
 
-async def get_headers_with_retry(max_retries=3):
-    for attempt in range(max_retries):
-        key = get_next_key()
-        headers = {
-            "Authorization": f"Bearer {key['bearer']}",
-            "Content-Type": "application/json",
-        }
-        return headers, key
-    raise ValueError("Failed to get valid API key after retries")
+async def get_headers_with_key(key):
+    headers = {
+        "Authorization": f"Bearer {key['bearer']}",
+        "Content-Type": "application/json",
+    }
+    return headers
 
 async def wait_for_chat_lock(user_id):
     lock_key = f"chat_lock_{user_id}"
@@ -176,15 +173,16 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id=None, 
 
         async with TypingIndicator(bot=bot, chat_id=message.chat.id):
             qwen_keys = load_keys_from_env()
-            max_retries = len(qwen_keys) * 2 if qwen_keys else 3
+            max_retries = len(qwen_keys) * 2
             last_error = None
             
             for attempt in range(max_retries):
                 try:
-                    headers, current_key = await get_headers_with_retry()
+                    current_key = get_next_key()
+                    headers = await get_headers_with_key(current_key)
                     
                     json_data = {
-                        "model": "qwen3-max",
+                        "model": "qwen3.5-plus",
                         "messages": messages,
                         "stream": False,
                     }
@@ -200,12 +198,16 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id=None, 
                             if response.status == 400:
                                 error_data = await response.json()
                                 if error_data.get("error", {}).get("message") == "The chat is in progress!":
-                                    await asyncio.sleep(2)
+                                    await asyncio.sleep(1)
                                     continue
                             
                             if response.status != 200:
                                 error_text = await response.text()
-                                raise Exception(f"API error {response.status}: {error_text}")
+                                if response.status in [401, 403, 429, 500, 502, 503, 504]:
+                                    await asyncio.sleep(1)
+                                    continue
+                                else:
+                                    raise Exception(f"API error {response.status}: {error_text}")
                             
                             result = await response.json()
                             
@@ -227,15 +229,19 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id=None, 
                                     await message.reply(_("qwen_error"))
                                 return
                             else:
-                                raise Exception("No choices in response")
+                                continue
                                 
                 except aiohttp.ClientError as e:
                     last_error = e
                     await asyncio.sleep(1)
                     continue
+                except asyncio.TimeoutError as e:
+                    last_error = e
+                    await asyncio.sleep(1)
+                    continue
                 except Exception as e:
                     last_error = e
-                    await asyncio.sleep(2)
+                    await asyncio.sleep(1)
                     continue
             
             error_msg = _("qwen_error")
@@ -283,12 +289,13 @@ async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
 
     try:
         qwen_keys = load_keys_from_env()
-        max_retries = len(qwen_keys) * 2 if qwen_keys else 3
+        max_retries = len(qwen_keys) * 2
         last_error = None
         
         for attempt in range(max_retries):
             try:
-                headers, current_key = await get_headers_with_retry()
+                current_key = get_next_key()
+                headers = await get_headers_with_key(current_key)
                 
                 json_data = {
                     "prompt": user_input,
@@ -307,12 +314,16 @@ async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
                         if response.status == 400:
                             error_data = await response.json()
                             if error_data.get("error", {}).get("message") == "The chat is in progress!":
-                                await asyncio.sleep(2)
+                                await asyncio.sleep(1)
                                 continue
                         
                         if response.status != 200:
                             error_text = await response.text()
-                            raise Exception(f"Image generation failed: {response.status} - {error_text}")
+                            if response.status in [401, 403, 429, 500, 502, 503, 504]:
+                                await asyncio.sleep(1)
+                                continue
+                            else:
+                                raise Exception(f"Image generation failed: {response.status} - {error_text}")
                         
                         result = await response.json()
                         
@@ -326,15 +337,19 @@ async def cmd_qwenimg(message: Message, command: CommandObject, bot: Bot):
                                 raise Exception("No image URL in response")
                             return
                         else:
-                            raise Exception("No data in response")
+                            continue
                             
             except aiohttp.ClientError as e:
                 last_error = e
                 await asyncio.sleep(1)
                 continue
+            except asyncio.TimeoutError as e:
+                last_error = e
+                await asyncio.sleep(1)
+                continue
             except Exception as e:
                 last_error = e
-                await asyncio.sleep(2)
+                await asyncio.sleep(1)
                 continue
         
         await safe_delete(sent_message)
