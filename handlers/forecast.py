@@ -164,7 +164,7 @@ async def get_weather(lat, lon):
                 "latitude": lat,
                 "longitude": lon,
                 "current_weather": "true",
-                "hourly": "temperature_2m,weathercode",
+                "hourly": "temperature_2m,weathercode,pressure_msl",
                 "timezone": "auto",
                 "windspeed_unit": "ms"
             },
@@ -206,6 +206,36 @@ def build_data(city, data):
     hour = int(cur["time"].split("T")[1][:2])
     is_night = hour < 6 or hour >= 21
 
+    current_time = cur["time"]
+    pressure = None
+    try:
+        time_idx = data["hourly"]["time"].index(current_time)
+        pressure = round(data["hourly"]["pressure_msl"][time_idx])
+    except (ValueError, IndexError):
+        if data["hourly"]["time"]:
+            pressure = round(data["hourly"]["pressure_msl"][0])
+
+    current_date = cur["time"].split("T")[0]
+    today_hours = days.get(current_date, [])
+    
+    today_summary = None
+    if today_hours:
+        day_data = [(t, c) for h, t, c in today_hours if 10 <= h <= 17]
+        night_data = [(t, c) for h, t, c in today_hours if h >= 22 or h < 6]
+        
+        if day_data and night_data:
+            day_codes = [c for _, c in day_data]
+            night_codes = [c for _, c in night_data]
+            day_icon = icon_by_code(max(set(day_codes), key=day_codes.count), False)
+            night_icon = icon_by_code(max(set(night_codes), key=night_codes.count), True)
+            
+            today_summary = {
+                "day_temp": round(sum(t for t, _ in day_data) / len(day_data)),
+                "night_temp": round(sum(t for t, _ in night_data) / len(night_data)),
+                "day_icon": day_icon,
+                "night_icon": night_icon
+            }
+
     return {
         "city": city,
         "temp": round(cur["temperature"]),
@@ -213,6 +243,8 @@ def build_data(city, data):
         "desc": WEATHER_CODES.get(cur["weathercode"], "—"),
         "wind_speed": round(cur.get("windspeed", 0), 1),
         "wind_dir": cur.get("winddirection", 0),
+        "pressure": pressure,
+        "today_summary": today_summary,
         "forecast": forecast
     }
 
@@ -230,36 +262,103 @@ def draw_card(d) -> BytesIO:
     df = fit_text(dr, d["desc"], 480, 36, 30)
 
     dr.text((WIDTH // 2, 33), d["city"], font=cf, anchor="mm", fill="white")
-    dr.text((WIDTH // 2, 85), d["desc"], font=df, anchor="mm", fill="#bbb")
+    dr.text((WIDTH // 2, 80), d["desc"], font=df, anchor="mm", fill="#bbb")
 
-    ifo = ImageFont.truetype(FONT_PATH, 80)
-    tf = ImageFont.truetype(FONT_PATH, 80)
+    CURRENT_BLOCK_Y = 140
+    CURRENT_SUMMARY_GAP = 60
+    RIGHT_WIND_PRESS_GAP = 35
+    SEPARATOR_ALPHA = 50
+    
+    SUMMARY_ICON_SIZE = 32
+    SUMMARY_MOON_SIZE = 28
+    SUMMARY_TEMP_SIZE = 28
 
+    left_col_center_x = 170
+    right_center_x = 425
+    separator_x = 340
+    
+    top_y = CURRENT_BLOCK_Y
+    bottom_y = top_y + RIGHT_WIND_PRESS_GAP
+    summary_y = top_y + CURRENT_SUMMARY_GAP
+    
+    sep_layer = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
+    sep_draw = ImageDraw.Draw(sep_layer)
+    sep_draw.line([(separator_x, top_y - 10), (separator_x, bottom_y + 10)], 
+                  fill=(255, 255, 255, SEPARATOR_ALPHA), width=2)
+    img = Image.alpha_composite(img, sep_layer)
+    
+    dr = ImageDraw.Draw(img)
+    
+    ifo = ImageFont.truetype(FONT_PATH, 70)
+    tf = ImageFont.truetype(FONT_PATH, 70)
     temp_text = format_temp(d["temp"])
-    tb = dr.textbbox((0, 0), temp_text, font=tf)
-
-    ICON_SIZE_CUR = 48
-    ICON_GAP = 20
-    ICON_WIDTH = ICON_SIZE_CUR if d["icon"] == "moon" else dr.textbbox((0, 0), d["icon"], font=ifo)[2]
-
-    total_width = ICON_WIDTH + ICON_GAP + tb[2]
-    sx = WIDTH // 2 - total_width // 2
-
-    icon_x = sx + ICON_WIDTH // 2
-    temp_x = sx + ICON_WIDTH + ICON_GAP
-
+    
+    icon_size_cur = 42
+    icon_bbox = dr.textbbox((0, 0), d["icon"], font=ifo) if d["icon"] != "moon" else (0, 0, icon_size_cur, icon_size_cur)
+    icon_width = icon_bbox[2]
+    
+    total_width = icon_width + 10 + dr.textbbox((0, 0), temp_text, font=tf)[2]
+    start_x = left_col_center_x - total_width // 2
+    
+    cur_icon_x = start_x + icon_width // 2
     if d["icon"] == "moon":
-        draw_moon(img, (icon_x, 145), ICON_SIZE_CUR, (255, 255, 255, 255))
+        draw_moon(img, (cur_icon_x, top_y), icon_size_cur, (255, 255, 255, 255))
     else:
-        dr.text((icon_x, iy(145, d["icon"])), d["icon"], font=ifo, anchor="mm", fill="white")
-
-    dr.text((temp_x, 145), temp_text, font=tf, anchor="lm", fill="white")
-
-    wf = ImageFont.truetype(FONT_PATH, 24)
+        dr.text((cur_icon_x, iy(top_y, d["icon"])), d["icon"], font=ifo, anchor="mm", fill="white")
+    
+    dr.text((start_x + icon_width + 10, top_y), temp_text, font=tf, anchor="lm", fill="white")
+    
+    if d.get("today_summary"):
+        sf = ImageFont.truetype(FONT_PATH, SUMMARY_TEMP_SIZE)
+        icon_font = ImageFont.truetype(FONT_PATH, SUMMARY_ICON_SIZE)
+        
+        ts = d["today_summary"]
+        
+        day_icon = ts["day_icon"]
+        night_icon = ts["night_icon"]
+        day_temp = format_temp(ts["day_temp"])
+        night_temp = format_temp(ts["night_temp"])
+        
+        day_icon_size = SUMMARY_MOON_SIZE if day_icon == "moon" else dr.textbbox((0, 0), day_icon, font=icon_font)[2]
+        night_icon_size = SUMMARY_MOON_SIZE if night_icon == "moon" else dr.textbbox((0, 0), night_icon, font=icon_font)[2]
+        
+        day_temp_w = dr.textbbox((0, 0), day_temp, font=sf)[2]
+        night_temp_w = dr.textbbox((0, 0), night_temp, font=sf)[2]
+        
+        slash_w = dr.textbbox((0, 0), " / ", font=sf)[2]
+        
+        total_summary_width = day_icon_size + 8 + day_temp_w + slash_w + night_icon_size + 8 + night_temp_w
+        summary_start_x = left_col_center_x - total_summary_width // 2
+        
+        day_icon_x = summary_start_x + day_icon_size // 2
+        if day_icon == "moon":
+            draw_moon(img, (day_icon_x, summary_y), SUMMARY_MOON_SIZE, (255, 255, 255, 255))
+        else:
+            dr.text((day_icon_x, iy(summary_y, day_icon)), day_icon, font=icon_font, anchor="mm", fill="white")
+        
+        dr.text((summary_start_x + day_icon_size + 8, summary_y), day_temp, font=sf, anchor="lm", fill="white")
+        
+        slash_x = summary_start_x + day_icon_size + 8 + day_temp_w
+        dr.text((slash_x, summary_y), " / ", font=sf, anchor="lm", fill="#888")
+        
+        night_icon_x = slash_x + slash_w + night_icon_size // 2
+        if night_icon == "moon":
+            draw_moon(img, (night_icon_x, summary_y), SUMMARY_MOON_SIZE, (200, 200, 200, 255))
+        else:
+            dr.text((night_icon_x, iy(summary_y, night_icon)), night_icon, font=icon_font, anchor="mm", fill="white")
+        
+        dr.text((slash_x + slash_w + night_icon_size + 8, summary_y), night_temp, font=sf, anchor="lm", fill="white")
+    
+    wf = ImageFont.truetype(FONT_PATH, 25)
     wind_text = f"{wind_arrow(d['wind_dir'])} {d['wind_speed']} м/с"
-    dr.text((WIDTH // 2, 200), wind_text, font=wf, anchor="mm", fill="#bbb")
+    dr.text((right_center_x, top_y), wind_text, font=wf, anchor="mm", fill="white")
+    
+    if d.get("pressure"):
+        pf = ImageFont.truetype(FONT_PATH, 25)
+        pressure_text = f"{d['pressure']} гПа"
+        dr.text((right_center_x, bottom_y), pressure_text, font=pf, anchor="mm", fill="white")
 
-    cw, by = WIDTH // 5, 280
+    cw, by = WIDTH // 5, 290
 
     sep = Image.new("RGBA", (WIDTH, HEIGHT))
     sd = ImageDraw.Draw(sep)
@@ -302,7 +401,6 @@ def draw_card(d) -> BytesIO:
     img.convert("RGB").save(buf, "WEBP", quality=95)
     buf.seek(0)
     return buf
-
 
 
 @router.message(Command("forecast", ignore_case=True))
