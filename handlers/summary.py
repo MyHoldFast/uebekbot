@@ -43,17 +43,7 @@ class Yandex300API:
         if self.session:
             await self.session.close()
 
-    async def toggle_summary_mode(self):
-        
-        toggle_url = "https://300.ya.ru/summary?/toggle"
-        form_data = {"summary-mode": "short"}
-        async with self.session.post(toggle_url, data=form_data) as response:
-            if response.status != 200:
-                raise Exception(f"Failed to toggle summary mode: {response.status}")
-
     async def post(self, url, data):
-        
-        await self.toggle_summary_mode() 
         async with self.session.post(url, json=data, timeout=120) as response:
             return await response.json()
 
@@ -100,14 +90,8 @@ async def process_summary_data(data: dict, content_type: str) -> str:
             for thesis in keypoint.get('theses', []):
                 summary += f"{keypoint['id']}.{thesis['id']}. {thesis['content']}\n"
     else:
-        if data.get('have_chapters', False):
-            for chapter in data.get('chapters', []):
-                summary += f"\n{chapter['id'] + 1}. {chapter['content']}\n"
-                for thesis in chapter.get('theses', []):
-                    summary += f"   {chapter['id'] + 1}.{thesis['id'] + 1}. {thesis['content']}\n"
-        else:
-            for thesis in data.get('thesis', []):
-                summary += f"{thesis['id'] + 1}. {thesis['content']}\n"
+        for thesis in data.get('thesis', []):
+            summary += f"{thesis['id'] + 1}. {thesis['content']}\n"
 
     return summary.strip()
 
