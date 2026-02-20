@@ -90,7 +90,10 @@ async def process_summary_data(data: dict, content_type: str) -> str:
             for thesis in keypoint.get('theses', []):
                 summary += f"{keypoint['id']}.{thesis['id']}. {thesis['content']}\n"
     else:
-        for thesis in data.get('thesis', []):
+        theses = data.get('thesis', [])
+        if theses and "Пересказана только часть" in theses[-1]['content']:
+            theses.pop()
+        for thesis in theses:
             summary += f"{thesis['id'] + 1}. {thesis['content']}\n"
 
     return summary.strip()
