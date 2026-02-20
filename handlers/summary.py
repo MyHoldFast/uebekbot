@@ -31,7 +31,8 @@ class Yandex300API:
         }
         self.cookies = {
             'Session_id': os.getenv("YANDEX_SESSIONID_COOK"),
-            'yp': os.getenv("YANDEX_YP_COOK")
+            'yp': os.getenv("YANDEX_YP_COOK"),
+            'summary-mode': 'short'
         }
 
     async def __aenter__(self):
