@@ -264,7 +264,7 @@ def draw_card(d) -> BytesIO:
     dr.text((WIDTH // 2, 33), d["city"], font=cf, anchor="mm", fill="white")
     dr.text((WIDTH // 2, 80), d["desc"], font=df, anchor="mm", fill="#bbb")
 
-    CURRENT_BLOCK_Y = 140
+    CURRENT_BLOCK_Y = 145
     CURRENT_SUMMARY_GAP = 60
     RIGHT_WIND_PRESS_GAP = 35
     SEPARATOR_ALPHA = 50
@@ -358,7 +358,7 @@ def draw_card(d) -> BytesIO:
         pressure_text = f"{d['pressure']} гПа"
         dr.text((right_center_x, bottom_y), pressure_text, font=pf, anchor="mm", fill="white")
 
-    cw, by = WIDTH // 5, 290
+    cw, by = WIDTH // 5, 300
 
     sep = Image.new("RGBA", (WIDTH, HEIGHT))
     sd = ImageDraw.Draw(sep)
@@ -391,11 +391,11 @@ def draw_card(d) -> BytesIO:
         dr.text((x, by + 36), format_temp(f["day_temp"]), font=dtf, anchor="mm", fill="white")
 
         if f["night_icon"] == "moon":
-            draw_moon(img, (x, by + 86), 25, (200, 200, 200, 255))
+            draw_moon(img, (x, by + 80), 25, (200, 200, 200, 255))
         else:
-            dr.text((x, iy(by + 86, f["night_icon"])), f["night_icon"], font=nif, anchor="mm", fill="#ccc")
+            dr.text((x, iy(by + 80, f["night_icon"])), f["night_icon"], font=nif, anchor="mm", fill="#ccc")
 
-        dr.text((x, by + 116), format_temp(f["night_temp"]), font=ntf, anchor="mm", fill="#ccc")
+        dr.text((x, by + 110), format_temp(f["night_temp"]), font=ntf, anchor="mm", fill="#ccc")
 
     buf = BytesIO()
     img.convert("RGB").save(buf, "WEBP", quality=95)
