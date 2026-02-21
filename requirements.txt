@@ -18,5 +18,6 @@ edge_tts
 shazamio
 psutil
 gemini_webapi
+brotli==1.1.0
 
 uvloop #remove on windows
