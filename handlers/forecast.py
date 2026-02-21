@@ -172,7 +172,7 @@ async def get_weather(lat, lon):
                 "windspeed_unit": "ms"
             },
             headers={
-                "Accept-Encoding": "gzip, deflate"  # ← ДОБАВЛЕНО
+                "Accept-Encoding": "gzip, deflate"
             },
             timeout=10
         ) as r:
