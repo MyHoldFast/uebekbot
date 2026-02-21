@@ -122,7 +122,10 @@ async def get_coordinates(city: str):
         async with session.get(
             "https://nominatim.openstreetmap.org/search",
             params={"q": city, "format": "json", "limit": 5, "addressdetails": 1},
-            headers={"User-Agent": "weather-sticker-bot/1.0"},
+            headers={
+                "User-Agent": "weather-sticker-bot/1.0",
+                "Accept-Encoding": "gzip, deflate"
+            },
             timeout=10
         ) as r:
             data = await r.json()
@@ -167,6 +170,9 @@ async def get_weather(lat, lon):
                 "hourly": "temperature_2m,weathercode,pressure_msl",
                 "timezone": "auto",
                 "windspeed_unit": "ms"
+            },
+            headers={
+                "Accept-Encoding": "gzip, deflate"  # ← ДОБАВЛЕНО
             },
             timeout=10
         ) as r:
