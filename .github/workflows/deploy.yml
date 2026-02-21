@@ -21,7 +21,7 @@ jobs:
             source myenv/bin/activate
             cd /root/uebekbot
             git pull
-            pip install --no-cache-dir -r requirements.txt
+            pip install --no-cache-dir -U -r requirements.txt
             
             killall python
             nohup python bot.py > bot.log 2>&1 < /dev/null &
