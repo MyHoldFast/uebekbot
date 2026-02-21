@@ -122,10 +122,7 @@ async def get_coordinates(city: str):
         async with session.get(
             "https://nominatim.openstreetmap.org/search",
             params={"q": city, "format": "json", "limit": 5, "addressdetails": 1},
-            headers={
-                "User-Agent": "weather-sticker-bot/1.0",
-                "Accept-Encoding": "gzip, deflate"
-            },
+            headers={"User-Agent": "weather-sticker-bot/1.0"},
             timeout=10
         ) as r:
             data = await r.json()
@@ -170,9 +167,6 @@ async def get_weather(lat, lon):
                 "hourly": "temperature_2m,weathercode,pressure_msl",
                 "timezone": "auto",
                 "windspeed_unit": "ms"
-            },
-            headers={
-                "Accept-Encoding": "gzip, deflate"
             },
             timeout=10
         ) as r:
@@ -355,13 +349,13 @@ def draw_card(d) -> BytesIO:
         
         dr.text((slash_x + slash_w + night_icon_size + 8, summary_y), night_temp, font=sf, anchor="lm", fill="white")
     
-    wf = ImageFont.truetype(FONT_PATH, 25)
+    wf = ImageFont.truetype(FONT_PATH, 21)
     wind_text = f"{wind_arrow(d['wind_dir'])} {d['wind_speed']} м/с"
     dr.text((right_center_x, top_y), wind_text, font=wf, anchor="mm", fill="white")
     
     if d.get("pressure"):
-        pf = ImageFont.truetype(FONT_PATH, 25)
-        pressure_text = f"{d['pressure']} гПа"
+        pf = ImageFont.truetype(FONT_PATH, 21)
+        pressure_text = f"{round(d['pressure'] * 0.750062)} мм.рт.ст"
         dr.text((right_center_x, bottom_y), pressure_text, font=pf, anchor="mm", fill="white")
 
     cw, by = WIDTH // 5, 300
@@ -397,11 +391,11 @@ def draw_card(d) -> BytesIO:
         dr.text((x, by + 36), format_temp(f["day_temp"]), font=dtf, anchor="mm", fill="white")
 
         if f["night_icon"] == "moon":
-            draw_moon(img, (x, by + 80), 25, (200, 200, 200, 255))
+            draw_moon(img, (x, by + 90), 20, (200, 200, 200, 255))
         else:
-            dr.text((x, iy(by + 80, f["night_icon"])), f["night_icon"], font=nif, anchor="mm", fill="#ccc")
+            dr.text((x, iy(by + 90, f["night_icon"])), f["night_icon"], font=nif, anchor="mm", fill="#ccc")
 
-        dr.text((x, by + 110), format_temp(f["night_temp"]), font=ntf, anchor="mm", fill="#ccc")
+        dr.text((x, by + 120), format_temp(f["night_temp"]), font=ntf, anchor="mm", fill="#ccc")
 
     buf = BytesIO()
     img.convert("RGB").save(buf, "WEBP", quality=95)
