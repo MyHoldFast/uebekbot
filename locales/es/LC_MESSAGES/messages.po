@@ -1,0 +1,186 @@
+#
+msgid ""
+msgstr ""
+
+msgid "ban_chat_message"
+msgstr "🚫 Este chat está prohibido y no puedes interactuar con este bot."
+
+msgid "ban_message"
+msgstr "🚫 Estás prohibido y no puedes interactuar con este bot."
+
+msgid "disable_global"
+msgstr "🚫 El comando /{command_name} está temporalmente deshabilitado."
+
+msgid "disable_in_chat"
+msgstr "🚫 El comando /{command_name} está deshabilitado en este chat."
+
+msgid "forecast_city_not_found"
+msgstr "❌ Ciudad no encontrada."
+
+msgid "forecast_error"
+msgstr "❌ Error al recibir el tiempo:"
+
+msgid "forecast_help"
+msgstr ""
+"ℹ️ Especifique la ciudad después del comando, por ejemplo `/forecast Moscú` \n"
+"También puede especificar el país `/pronóstico Alexandria USA`\n"
+"Después de recibir correctamente el tiempo, la ciudad se registrará en la memoria y podrá omitirse."
+
+msgid "gemimg_err"
+msgstr "❌Error al generar la imagen."
+
+msgid "gemimghelp"
+msgstr ""
+"ℹ️ Ingrese una descripción de la imagen después del comando. Para editar una"
+" imagen, responda con un comando y una solicitud"
+
+msgid "gpt_ctx_not_found"
+msgstr "ℹ️ Contexto no encontrado"
+
+msgid "gpt_ctx_removed"
+msgstr "ℹ️ Contexto eliminado"
+
+msgid "gpt_error"
+msgstr ""
+"❌ Se produjo un error, intente eliminar el contexto /gptrm y repita la "
+"solicitud nuevamente."
+
+msgid "gpt_gemini_error"
+msgstr "❌ La solicitud falló."
+
+msgid "gpt_help"
+msgstr ""
+"ℹ️ Ingrese su solicitud después del comando /gpt\n"
+"También puede seleccionar un modelo de IA. Cuando selecciona un modelo, el contexto se elimina:"
+
+msgid "neuro_help"
+msgstr "ℹ️ Ingrese su solicitud después del comando /neuro"
+
+msgid "pm_default"
+msgstr "Lo siento, usa los comandos para procesar el contenido 😊"
+
+msgid "query_button"
+msgstr "Solicitud a la red neuronal."
+
+msgid "qwen_busy"
+msgstr ""
+"❌ Error: el servicio no está disponible temporalmente, inténtalo de nuevo "
+"más tarde"
+
+msgid "qwen_error"
+msgstr "❌ Error: solicitud fallida"
+
+msgid "qwen_help"
+msgstr "ℹ️ Ingrese su consulta después del comando /qwen"
+
+msgid "qwen_history_rm"
+msgstr "ℹ️ Historial de mensajes eliminado"
+
+msgid "qwen_network"
+msgstr "❌ Error: problema de conexión"
+
+msgid "qwen_server_error"
+msgstr "❌ Error: respuesta del servidor no válida"
+
+msgid "qwen_timeout"
+msgstr "❌ Error: se agotó el tiempo de respuesta"
+
+msgid "qwenimg_err"
+msgstr "❌Error al generar la imagen."
+
+msgid "qwenimg_gen"
+msgstr "⏳Generando imagen... Espere por favor."
+
+msgid "qwenimghelp"
+msgstr "ℹ️ Ingrese una descripción de la imagen después del comando."
+
+msgid "recognition_failed"
+msgstr "❌ Lamentablemente no se pudo reconocer el texto."
+
+msgid "send_link"
+msgstr ""
+"ℹ️ Proporcione un enlace a YouTube, Wikipedia o Habr después del comando, o "
+"use la reproducción"
+
+msgid "shazam_button"
+msgstr "reconocer musica"
+
+msgid "shazam_help"
+msgstr ""
+"ℹ️ Para reconocer una pista de audio, responda con el comando /shazam a un "
+"mensaje de voz/audio/video"
+
+msgid "shazam_not_found"
+msgstr "❌ Pista no reconocida"
+
+msgid "slowly"
+msgstr "No tan rápido, trabajaré en una cosa 😊"
+
+msgid "start_message"
+msgstr ""
+"**¡Hola! Soy UebekBot, tu asistente para trabajar con textos, imágenes y redes neuronales.**\n"
+"\n"
+"**Comandos básicos:**\n"
+"- **/qwen** — solicitud a la red neuronal chat.qwen.ai.\n"
+"- **/qwenrm** — elimina el historial de mensajes de Qwen.\n"
+"- **/pronóstico** — pronóstico del tiempo\n"
+"- **/summary** - un breve resumen de un vídeo de YouTube, Wikipedia o Habr.\n"
+"- **/ocr** — reconocimiento de texto en imágenes.\n"
+"- **/stt** — traducción de mensajes de voz o vídeos a texto.\n"
+"- **/tts** — traducción de texto a audio.\n"
+"- **/neuro** — búsqueda usando Yandex Neuro.\n"
+"- **/shazam** - reconocimiento de música en un archivo de voz/audio/vídeo a través de Shazam\n"
+"- **/rephrase**: varios métodos para reformular texto\n"
+"- **/qwenimg** — generación de imágenes a través de chat.qwen.ai.\n"
+"- **/flux** — generación de imágenes a través de Flux 2 pro.\n"
+"- **/gemimg** — generación y edición de imágenes mediante Gemini (Nano Banana)\n"
+"- **/gpt**: chatea con IA (GPT, Gemini Vision para imágenes).\n"
+"- **/gptrm** — elimina la sesión actual de GPT.\n"
+"Para seleccionar el modelo GPT, presione /gpt sin mensaje.\n"
+"Para analizar imágenes, envíe una imagen al chat o responda a una imagen con el comando /gpt.\n"
+"\n"
+"¡Escribe un comando o texto para comenzar! La red neuronal qwen se utiliza en mensajes personales 😊"
+
+msgid "stt_button"
+msgstr "Voz a texto"
+
+msgid "summary_detail"
+msgstr "Más detalles"
+
+msgid "summary_detail_failed"
+msgstr "❌ No se pudieron cargar los detalles."
+
+msgid "summary_failed"
+msgstr "❌ Desafortunadamente no fue posible hacer un apretón breve."
+
+msgid "text_or_reply"
+msgstr "Proporcione texto después del comando o use la reproducción"
+
+msgid "throttle_wait"
+msgstr "Espere {segundos} segundos antes de volver a realizar la solicitud"
+
+msgid "translate_button"
+msgstr "Traducir"
+
+msgid "tts_error"
+msgstr "❌ Error de generación de audio"
+
+msgid "tts_help"
+msgstr ""
+"ℹ️ Proporcione el texto después del comando. Ejemplo:\n"
+"`/tts Hola, ¿cómo estás?`"
+
+msgid "use_reply_or_attach_image"
+msgstr "ℹ️ Utilice una repetición o adjunte una imagen"
+
+msgid "voice_error"
+msgstr "❌ No hay texto en la respuesta."
+
+msgid "voice_help"
+msgstr "ℹ️ Responda al mensaje de voz /stt para generar voz a texto."
+
+msgid "voice_in_pm"
+msgstr "❓ ¿Qué debo hacer con este mensaje de voz?"
+
+msgid "you_choose_model"
+msgstr "has elegido el modelo"
