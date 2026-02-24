@@ -79,6 +79,7 @@ def format_temp(t):
 
 def wind_arrow(deg):
     arrows = ["↑", "↗", "→", "↘", "↓", "↙", "←", "↖"]
+    deg = (deg + 180) % 360
     idx = round(deg / 45) % 8
     return arrows[idx]
 
