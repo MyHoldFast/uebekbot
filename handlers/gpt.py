@@ -61,12 +61,12 @@ context_db, ContextQuery = DB("db/gpt_context.json").get_db()
 
 
 models = {
-    "gpt-5-mini": "gpt-5-mini",
+#    "gpt-5-mini": "gpt-5-mini",
     "gpt-4o-mini": "gpt-4o-mini",
     "llama-4": "meta-llama/Llama-4-Scout-17B-16E-Instruct",
-    "claude-3.5-haiku": "claude-3-5-haiku-latest",
+    "claude-3.5-haiku": "claude-haiku-4-5",
     "mistral-small-3": "mistralai/Mistral-Small-24B-Instruct-2501",
-    "openai/gpt-oss-120b": "openai/gpt-oss-120b",
+  #  "openai/gpt-oss-120b": "openai/gpt-oss-120b",
 }
 
 
@@ -229,7 +229,7 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
         messagetext += "\n" + command.args
     messagetext = messagetext.strip()
 
-    model = "gpt-5-mini"
+    model = "gpt-4o-mini"
     user_model = db.get(Query().uid == user_id)
     if user_model and user_model["model"] in models:
         model = user_model["model"]
