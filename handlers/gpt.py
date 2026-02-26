@@ -64,7 +64,7 @@ models = {
 #    "gpt-5-mini": "gpt-5-mini",
     "gpt-4o-mini": "gpt-4o-mini",
     "llama-4": "meta-llama/Llama-4-Scout-17B-16E-Instruct",
-    "claude-3.5-haiku": "claude-haiku-4-5",
+    "claude-haiku-4.5": "claude-haiku-4-5",
     "mistral-small-3": "mistralai/Mistral-Small-24B-Instruct-2501",
   #  "openai/gpt-oss-120b": "openai/gpt-oss-120b",
 }
