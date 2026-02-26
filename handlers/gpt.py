@@ -52,7 +52,7 @@ URL_PROXY = os.environ.get("URL_PROXY")
 if URL_PROXY:
     GEMINI_BASE_URL = URL_PROXY + GEMINI_BASE_URL
 
-GPT_API_URL = "https://duckai.mbteam.ru/v1/chat/completions"
+GPT_API_URL = os.environ.get("GPT_API_URL")
 
 router = Router()
 
