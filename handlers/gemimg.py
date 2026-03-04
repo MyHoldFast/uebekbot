@@ -37,7 +37,7 @@ async def get_client():
     async with client_lock:
         if client is None:
             client = GeminiClient(Secure_1PSID, Secure_1PSIDTS, proxy=None)
-            await client.init(timeout=180)
+            await client.init(timeout=300)
 
         return client
 
