@@ -4,7 +4,7 @@ from aiogram.types import Message, CallbackQuery, Update
 import asyncio
 from localization import get_localization, DEFAULT_LANGUAGE
 
-class ThrottlingMiddleware(BaseMiddleware):
+class RateLimitMiddleware(BaseMiddleware):
     def __init__(self, default_rate_limit: float = 1.0):
         self.default_rate_limit = default_rate_limit
         self.user_times = {}
@@ -16,7 +16,7 @@ class ThrottlingMiddleware(BaseMiddleware):
         _ = get_localization(user_language)
         current_time = asyncio.get_event_loop().time()
 
-        rate_limit = get_flag(data, "throttling") or self.default_rate_limit
+        rate_limit = get_flag(data, "ratelimit") or self.default_rate_limit
 
         if user_id in self.user_times:
             last_time = self.user_times[user_id]

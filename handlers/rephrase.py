@@ -11,7 +11,7 @@ from utils.typing_indicator import TypingIndicator
 from localization import get_localization, DEFAULT_LANGUAGE
 from utils.command_states import check_command_enabled
 from aiohttp import ClientSession
-from handlers.callbacks import throttle
+from handlers.callbacks import rate_limit
 
 router = Router()
 
@@ -111,7 +111,7 @@ async def cmd_rephrase(message: Message, command: CommandObject, bot: Bot):
 
 
 @router.callback_query(F.data.in_(actions))
-@throttle(seconds=5)
+@rate_limit(seconds=5)
 async def on_action_callback(callback: CallbackQuery, bot: Bot):
     action = callback.data
     chat_id = callback.message.chat.id

@@ -16,7 +16,7 @@ router = Router()
 
 user_cooldowns = {}
 
-def throttle(seconds: int = 5):
+def rate_limit(seconds: int = 5):
     def decorator(func):
         @wraps(func)
         async def wrapper(callback_query: CallbackQuery, *args, **kwargs):
@@ -35,7 +35,7 @@ def throttle(seconds: int = 5):
     return decorator
 
 @router.callback_query(lambda c: c.data == 'translate')
-@throttle(seconds=5) 
+@rate_limit(seconds=5) 
 async def translate_callback(callback_query: CallbackQuery, bot: Bot):
     user_language = callback_query.from_user.language_code or DEFAULT_LANGUAGE
     _ = get_localization(user_language)
@@ -47,7 +47,7 @@ async def translate_callback(callback_query: CallbackQuery, bot: Bot):
     await callback_query.answer()
 
 @router.callback_query(lambda c: c.data == 'stt_button')
-@throttle(seconds=5)
+@rate_limit(seconds=5)
 async def stt_callback(callback_query: CallbackQuery, bot: Bot):
     await callback_query.answer()
     message = await callback_query.message.reply("⏳")  
@@ -57,7 +57,7 @@ async def stt_callback(callback_query: CallbackQuery, bot: Bot):
 
 
 @router.callback_query(lambda c: c.data == 'shazam_button')
-@throttle(seconds=5)
+@rate_limit(seconds=5)
 async def shazam_callback(callback_query: CallbackQuery, bot: Bot): 
     await callback_query.answer()   
     message = await callback_query.message.reply("⏳")  
@@ -72,7 +72,7 @@ async def shazam_callback(callback_query: CallbackQuery, bot: Bot):
 #     await callback_query.answer()
 
 @router.callback_query(lambda c: c.data == 'query')
-@throttle(seconds=5)
+@rate_limit(seconds=5)
 async def query_callback(callback_query: CallbackQuery, bot: Bot):
     await callback_query.answer()
     user_language = callback_query.from_user.language_code or DEFAULT_LANGUAGE

@@ -6,12 +6,12 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 #from handlers.gpt import process_gpt, process_gemini
 from handlers.qwen import cmd_qwen
 from localization import get_localization, DEFAULT_LANGUAGE
-from utils.ThrottlingMiddleware import ThrottlingMiddleware
+from utils.RateLimitMiddleware import RateLimitMiddleware
 from utils.StatsMiddleware import save_stats
 
 router = Router()
 
-router.message.middleware(ThrottlingMiddleware(default_rate_limit=3.0))
+router.message.middleware(RateLimitMiddleware(default_rate_limit=3.0))
 
 is_not_forwarded = (
     F.forward_from == None,
