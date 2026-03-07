@@ -6,6 +6,7 @@ import aiohttp
 import re
 import time
 import itertools
+from handlers.callbacks import throttle
 from utils.markdownify import markdownify as md
 from io import BytesIO
 from utils.text_utils import split_html
@@ -91,6 +92,7 @@ async def update_model_message(callback_query: CallbackQuery, model: str):
         pass
 
 @router.callback_query(lambda c: c.data and c.data in models)
+@throttle(seconds=5) 
 async def callback_query_handler(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
     getmodel = Query()
