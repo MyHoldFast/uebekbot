@@ -2,6 +2,7 @@ import aiohttp
 import asyncio
 import os
 import re
+from aiohttp_socks import ProxyConnector, ProxyType
 
 from utils.typing_indicator import TypingIndicator
 from aiogram import Router, Bot
@@ -34,9 +35,20 @@ class Yandex300API:
             'yp': os.getenv("YANDEX_YP_COOK"),
             'summary-mode': 'short'
         }
+        
+    def _create_connector(self):
+        proxy_url = os.getenv("SOCKS5_PROXY")
+        if proxy_url:
+            return ProxyConnector.from_url(proxy_url)
+        return None
 
     async def __aenter__(self):
-        self.session = aiohttp.ClientSession(headers=self.headers, cookies=self.cookies)
+        connector = self._create_connector()
+        self.session = aiohttp.ClientSession(
+            headers=self.headers, 
+            cookies=self.cookies,
+            connector=connector
+        )
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -44,14 +56,25 @@ class Yandex300API:
             await self.session.close()
 
     async def post(self, url, data):
-        async with self.session.post(url, json=data, timeout=120) as response:
-            return await response.json()
+        try:
+            async with self.session.post(url, json=data, timeout=120) as response:
+                return await response.json()
+        except aiohttp.ClientProxyConnectionError as e:
+            print(f"Proxy connection error: {e}")
+            raise
+        except aiohttp.ClientError as e:
+            print(f"Client error: {e}")
+            raise
 
 async def generate_summary(input_value: str, content_type: str = "text") -> str:
     async with Yandex300API() as api:
         payload = {"text": input_value, "type": content_type} if content_type == "text" else {"video_url": input_value, "type": "video"} if content_type == "video" else {"article_url": input_value, "ignore_cache": False, "type": "article"}
         
-        gen_data = await api.post(GEN_URL, payload)
+        try:
+            gen_data = await api.post(GEN_URL, payload)
+        except Exception as e:
+            print(f"Error during API request: {e}")
+            return None
         
         if "message" in gen_data:
             return None
