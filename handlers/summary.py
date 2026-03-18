@@ -2,7 +2,7 @@ import aiohttp
 import asyncio
 import os
 import re
-from aiohttp_socks import ProxyConnector, ProxyType
+from aiohttp_socks import ProxyConnector
 
 from utils.typing_indicator import TypingIndicator
 from aiogram import Router, Bot
@@ -56,27 +56,18 @@ class Yandex300API:
             await self.session.close()
 
     async def post(self, url, data):
-        try:
-            async with self.session.post(url, json=data, timeout=120) as response:
-                return await response.json()
-        except aiohttp.ClientProxyConnectionError as e:
-            print(f"Proxy connection error: {e}")
-            raise
-        except aiohttp.ClientError as e:
-            print(f"Client error: {e}")
-            raise
+        async with self.session.post(url, json=data, timeout=120, allow_redirects=True) as response:
+            if response.status != 200:
+                return None
+            return await response.json()
 
 async def generate_summary(input_value: str, content_type: str = "text") -> str:
     async with Yandex300API() as api:
         payload = {"text": input_value, "type": content_type} if content_type == "text" else {"video_url": input_value, "type": "video"} if content_type == "video" else {"article_url": input_value, "ignore_cache": False, "type": "article"}
         
-        try:
-            gen_data = await api.post(GEN_URL, payload)
-        except Exception as e:
-            print(f"Error during API request: {e}")
-            return None
+        gen_data = await api.post(GEN_URL, payload)
         
-        if "message" in gen_data:
+        if not gen_data or "message" in gen_data:
             return None
 
         if gen_data.get('status_code') == 2:
@@ -98,6 +89,8 @@ async def generate_summary(input_value: str, content_type: str = "text") -> str:
                 payload["ignore_cache"] = False
             
             gen_data = await api.post(GEN_URL, payload)
+            if not gen_data:
+                return None
             await asyncio.sleep(gen_data['poll_interval_ms'] / 1000)
 
         return await process_summary_data(gen_data, content_type)
