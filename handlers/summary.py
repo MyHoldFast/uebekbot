@@ -57,8 +57,11 @@ class Yandex300API:
 
     async def post(self, url, data):
         async with self.session.post(url, json=data, timeout=120, allow_redirects=True) as response:
-            if response.status != 200:
+            content_type = response.headers.get('content-type', '')
+            
+            if 'application/json' not in content_type:
                 return None
+                
             return await response.json()
 
 async def generate_summary(input_value: str, content_type: str = "text") -> str:
