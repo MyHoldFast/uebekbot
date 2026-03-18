@@ -19,5 +19,6 @@ shazamio
 psutil
 gemini_webapi
 brotli
+aiodns
 
 uvloop #remove on windows

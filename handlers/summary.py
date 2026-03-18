@@ -2,7 +2,8 @@ import aiohttp
 import asyncio
 import os
 import re
-from aiohttp_socks import ProxyConnector
+from aiohttp_socks import ProxyConnector, ProxyType
+from aiohttp.resolver import AsyncResolver
 
 from utils.typing_indicator import TypingIndicator
 from aiogram import Router, Bot
@@ -35,19 +36,26 @@ class Yandex300API:
             'yp': os.getenv("YANDEX_YP_COOK"),
             'summary-mode': 'short'
         }
-        
-    def _create_connector(self):
-        proxy_url = os.getenv("SOCKS5_PROXY")
-        if proxy_url:
-            return ProxyConnector.from_url(proxy_url)
-        return None
 
     async def __aenter__(self):
-        connector = self._create_connector()
+        proxy_url = os.getenv("SOCKS5_PROXY")
+        connector = None
+        
+        if proxy_url:
+            # Принудительно задаём DNS
+            resolver = AsyncResolver(nameservers=['8.8.8.8', '1.1.1.1'])
+            connector = ProxyConnector.from_url(
+                proxy_url,
+                resolver=resolver,
+                force_close=True,
+                enable_cleanup_closed=True
+            )
+        
         self.session = aiohttp.ClientSession(
             headers=self.headers, 
             cookies=self.cookies,
-            connector=connector
+            connector=connector,
+            timeout=aiohttp.ClientTimeout(total=120)
         )
         return self
 
@@ -55,49 +63,25 @@ class Yandex300API:
         if self.session:
             await self.session.close()
 
-    async def post(self, url, data, retry_count=0):
-        # allow_redirects передаем в запрос, а не в сессию
-        async with self.session.post(url, json=data, timeout=120, allow_redirects=True) as response:
-            # Если нас редиректнуло на passport.yandex.ru
-            if 'passport.yandex.ru' in str(response.url) and retry_count < 1:
-                print("🔄 Passport redirect detected, retrying with auth...")
-                # Обновляем сессию с авторизацией
-                await self._refresh_auth()
-                # Пробуем еще раз
-                return await self.post(url, data, retry_count=1)
-            
+    async def post(self, url, data):
+        async with self.session.post(url, json=data, allow_redirects=True) as response:
+            # Проверяем статус
+            if response.status != 200:
+                print(f"Status: {response.status}, URL: {response.url}")
+                return None
             return await response.json()
-    
-    async def _refresh_auth(self):
-        """Обновление авторизации"""
-        # Заходим на главную страницу 300.ya.ru
-        async with self.session.get('https://300.ya.ru', allow_redirects=True) as resp:
-            # Сохраняем новые cookies
-            self.session.cookie_jar.update_cookies(resp.cookies)
-        
-        # Обновляем заголовок авторизации
-        self.session.headers.update({
-            'authorization': f'OAuth {os.getenv("YANDEX_OAUTH_TOKEN")}'
-        })
 
 async def generate_summary(input_value: str, content_type: str = "text") -> str:
     async with Yandex300API() as api:
         payload = {"text": input_value, "type": content_type} if content_type == "text" else {"video_url": input_value, "type": "video"} if content_type == "video" else {"article_url": input_value, "ignore_cache": False, "type": "article"}
         
-        try:
-            gen_data = await api.post(GEN_URL, payload)
-        except Exception as e:
-            print(f"Error in first request: {e}")
-            return None
+        gen_data = await api.post(GEN_URL, payload)
         
         if not gen_data or "message" in gen_data:
             return None
 
         if gen_data.get('status_code') == 2:
             return await process_summary_data(gen_data, content_type)
-
-        if 'session_id' not in gen_data:
-            return None
 
         session_id = gen_data['session_id']
         await asyncio.sleep(gen_data['poll_interval_ms'] / 1000)
@@ -114,14 +98,9 @@ async def generate_summary(input_value: str, content_type: str = "text") -> str:
                 payload["article_url"] = input_value
                 payload["ignore_cache"] = False
             
-            try:
-                gen_data = await api.post(GEN_URL, payload)
-                if not gen_data:
-                    return None
-            except Exception as e:
-                print(f"Error in polling: {e}")
+            gen_data = await api.post(GEN_URL, payload)
+            if not gen_data:
                 return None
-                
             await asyncio.sleep(gen_data['poll_interval_ms'] / 1000)
 
         return await process_summary_data(gen_data, content_type)
