@@ -81,7 +81,7 @@ async def extract_prompt_from_response(text):
 
 async def generate_image_gemini_web(user_input, image_paths=None):
     try:
-        enhanced_prompt = f"{user_input}. Generate a large, detailed, high-quality image."
+        enhanced_prompt = f"{user_input}. Generate a high-quality, standard-size image with rich detail and professional composition."
 
         client = await get_client()
         if not client:
@@ -142,7 +142,7 @@ async def generate_image_gemini_web(user_input, image_paths=None):
     except Exception:
         return [], None
 
-
+@check_command_enabled("gemimg")
 async def process_gemimg(message: Message, bot: Bot, user_input: str, photos):
     input_image_paths = []
     for photo in photos:
@@ -221,7 +221,6 @@ async def process_gemimg(message: Message, bot: Bot, user_input: str, photos):
 
 
 @router.message(F.media_group_id)
-@check_command_enabled("gemimg")
 async def handle_album_command(message: Message, bot: Bot):
     mgid = message.media_group_id
 
@@ -247,6 +246,7 @@ async def handle_album_command(message: Message, bot: Bot):
                 reply_photos.append(messages[0].reply_to_message.photo[-1])
 
             photos = reply_photos + [m.photo[-1] for m in messages if m.photo]
+            #print(photos)
 
             await process_gemimg(messages[0], bot, user_input, photos)
 
@@ -256,7 +256,6 @@ async def handle_album_command(message: Message, bot: Bot):
 
 
 @router.message(F.photo, F.caption.startswith("/gemimg"))
-@check_command_enabled("gemimg")
 async def handle_single_photo_with_caption(message: Message, bot: Bot):
     user_input = message.caption.replace("/gemimg", "").strip()
     photos = [message.photo[-1]]

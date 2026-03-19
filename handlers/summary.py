@@ -38,15 +38,12 @@ class Yandex300API:
         }
 
     async def __aenter__(self):
-        proxy_url = os.getenv("SOCKS5_PROXY")
+        proxy_url = None #os.getenv("SOCKS5_PROXY")
         connector = None
         
         if proxy_url:
-            # Принудительно задаём DNS
-            resolver = AsyncResolver(nameservers=['8.8.8.8', '1.1.1.1'])
             connector = ProxyConnector.from_url(
                 proxy_url,
-                resolver=resolver,
                 force_close=True,
                 enable_cleanup_closed=True
             )
