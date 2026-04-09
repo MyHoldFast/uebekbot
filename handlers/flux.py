@@ -51,7 +51,7 @@ async def cmd_flux(message: Message, command: CommandObject, bot: Bot):
         }
 
         payload = {
-            "model": "black-forest-labs/FLUX-2-pro",
+            "model": "black-forest-labs/FLUX-2-klein-9b",
             "prompt": prompt,
             "response_format": "b64_json",
             "height": 480,
