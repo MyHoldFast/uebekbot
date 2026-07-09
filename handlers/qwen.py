@@ -182,7 +182,7 @@ async def cmd_qwen(message: Message, command: CommandObject, bot: Bot, id=None, 
                     headers = await get_headers_with_key(current_key)
                     
                     json_data = {
-                        "model": "qwen3.5-plus",
+                        "model": "qwen3.7-max",
                         "messages": messages,
                         "stream": False,
                     }
