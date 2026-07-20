@@ -21,28 +21,125 @@ from gemini_webapi.constants import Model
 
 router = Router()
 
-client = None
-client_lock = asyncio.Lock()
 albums_buffer = {}
 
-SIZE_HINT = "Generate the image at standard resolution (around 1024x1024, or 1024x1536 / 1536x1024 depending on orientation), high detail, not a thumbnail."
+SIZE_HINT = "Generate the image at high resolution (around 2048x2048, or 2048x3072 / 3072x2048 depending on orientation), maximum detail, not a thumbnail."
+
+QUALITY_HINT = "Ultra high quality, sharp focus, finely detailed, no compression artifacts, no blur, no pixelation, professional-grade rendering."
+
+PSIDTS_PLACEHOLDER = "sidts-cookie"
+
+LANGUAGE_HINT = (
+    "If, for any reason (including hitting a usage limit or quota), you cannot "
+    "generate the image right now, write that explanation in English."
+)
+
+_cookie_pairs: list[tuple[str, str]] = []
+_clients: list[GeminiClient | None] = []
+_active_index = 0
+_locked_at_zero = False
+_client_lock = asyncio.Lock()
 
 
-async def get_client():
-    global client
+def _ensure_cookie_state():
+    global _cookie_pairs, _clients
 
-    Secure_1PSID = os.environ.get("GEMINI_SECURE_1PSID")
-    Secure_1PSIDTS = os.environ.get("GEMINI_SECURE_1PSIDTS")
+    if not _cookie_pairs:
+        _cookie_pairs = _parse_cookie_pairs()
+        _clients = [None] * len(_cookie_pairs)
 
-    if not Secure_1PSID:
-        return None
 
-    async with client_lock:
-        if client is None:
-            client = GeminiClient(Secure_1PSID, Secure_1PSIDTS, proxy=None)
-            await client.init(timeout=300, auto_close=False, auto_refresh=False)
+async def _get_or_create_client(idx: int) -> "GeminiClient":
+    if _clients[idx] is None:
+        psid, psidts = _cookie_pairs[idx]
+        gclient = GeminiClient(psid, psidts, proxy=None)
+        await gclient.init(timeout=300, auto_close=False, auto_refresh=False)
+        gclient._bot_psid = psid
+        gclient._bot_psidts = psidts
+        _clients[idx] = gclient
 
-        return client
+    return _clients[idx]
+
+
+async def get_active_client():
+    async with _client_lock:
+        _ensure_cookie_state()
+
+        if not _cookie_pairs:
+            return None, None
+
+        idx = _active_index
+        gclient = await _get_or_create_client(idx)
+        return idx, gclient
+
+
+async def handle_quota_exceeded(failed_idx: int):
+    global _active_index, _locked_at_zero
+
+    async with _client_lock:
+        n = len(_cookie_pairs)
+        if n <= 1:
+            return
+
+        if failed_idx == 0 and _locked_at_zero:
+            return
+
+        next_idx = (failed_idx + 1) % n
+        _active_index = next_idx
+
+        if next_idx == 0:
+            _locked_at_zero = True
+
+
+async def handle_success(succeeded_idx: int):
+    global _locked_at_zero
+
+    if succeeded_idx == 0 and _locked_at_zero:
+        async with _client_lock:
+            _locked_at_zero = False
+
+
+def _is_quota_exceeded_text(text: str) -> bool:
+    if not text:
+        return False
+
+    t = text.lower()
+
+    if "limit" in t and ("reset" in t or "settings" in t or "usage" in t):
+        return True
+
+    ru_markers = ("лимит", "настройках", "сброшен")
+    if sum(1 for m in ru_markers if m in t) >= 2:
+        return True
+
+    return False
+
+
+def _parse_cookie_pairs() -> list[tuple[str, str]]:
+    psid_env = os.environ.get("GEMINI_SECURE_1PSID", "") or ""
+    psidts_env = os.environ.get("GEMINI_SECURE_1PSIDTS", "") or ""
+
+    psids = [p.strip() for p in psid_env.split(";")]
+    psids = [p for p in psids if p]
+
+    if not psids:
+        return []
+
+    if ";" in psidts_env:
+        psidts_list = [p.strip() for p in psidts_env.split(";")]
+
+        if len(psidts_list) < len(psids):
+            psidts_list += [""] * (len(psids) - len(psidts_list))
+        elif len(psidts_list) > len(psids):
+            psidts_list = psidts_list[: len(psids)]
+
+        psidts_list = [p if p else PSIDTS_PLACEHOLDER for p in psidts_list]
+    else:
+        single = psidts_env.strip()
+        value = single if single else PSIDTS_PLACEHOLDER
+        psidts_list = [value] * len(psids)
+
+    return list(zip(psids, psidts_list))
 
 
 def _full_res_url(url: str) -> str:
@@ -127,8 +224,8 @@ async def _save_image(image, tmp_dir: str, gclient: "GeminiClient") -> str | Non
 
     try:
         cookies = {
-            "__Secure-1PSID": os.environ.get("GEMINI_SECURE_1PSID", ""),
-            "__Secure-1PSIDTS": os.environ.get("GEMINI_SECURE_1PSIDTS", ""),
+            "__Secure-1PSID": getattr(gclient, "_bot_psid", ""),
+            "__Secure-1PSIDTS": getattr(gclient, "_bot_psidts", ""),
         }
         headers = {
             "User-Agent": (
@@ -151,20 +248,35 @@ async def _save_image(image, tmp_dir: str, gclient: "GeminiClient") -> str | Non
 
 
 async def generate_image_gemini_web(user_input, image_paths=None):
-    enhanced_prompt = f"Generate image: {user_input}. {SIZE_HINT}"
+    enhanced_prompt = f"Generate image: {user_input}. {SIZE_HINT} {QUALITY_HINT} {LANGUAGE_HINT}"
 
-    gclient = await get_client()
-    if not gclient:
-        return [], None
+    _ensure_cookie_state()
+    max_attempts = max(len(_cookie_pairs), 1)
 
     files = image_paths if image_paths else []
     tmp_dir = tempfile.mkdtemp()
 
-    try:
-        if files:
-            response = await gclient.generate_content(enhanced_prompt, files=files, model=Model.BASIC_FLASH)
-        else:
-            response = await gclient.generate_content(enhanced_prompt, model=Model.BASIC_FLASH)
+    last_text = None
+    tried_indexes = set()
+
+    for _attempt in range(max_attempts):
+        idx, gclient = await get_active_client()
+
+        if gclient is None:
+            break
+
+        if idx in tried_indexes:
+            break
+
+        tried_indexes.add(idx)
+
+        try:
+            if files:
+                response = await gclient.generate_content(enhanced_prompt, files=files, model=Model.BASIC_FLASH)
+            else:
+                response = await gclient.generate_content(enhanced_prompt, model=Model.BASIC_FLASH)
+        except Exception:
+            return [], None
 
         image_paths_result = []
         response_text = None
@@ -176,38 +288,54 @@ async def generate_image_gemini_web(user_input, image_paths=None):
                     image_paths_result.append(saved)
 
             if image_paths_result:
+                await handle_success(idx)
                 if response.text:
                     response_text = response.text
                 return image_paths_result, response_text
+
+        if response.text and _is_quota_exceeded_text(response.text):
+            await handle_quota_exceeded(idx)
+            last_text = response.text
+            continue
+
+        await handle_success(idx)
 
         if response.text:
             extracted_prompt = await extract_prompt_from_response(response.text)
 
             if extracted_prompt:
-                second_response = await gclient.generate_content(
-                    f"{extracted_prompt}. {SIZE_HINT}", model=Model.BASIC_FLASH
-                )
+                try:
+                    second_response = await gclient.generate_content(
+                        f"{extracted_prompt}. {SIZE_HINT} {LANGUAGE_HINT}", model=Model.BASIC_FLASH
+                    )
+                except Exception:
+                    second_response = None
 
-                if second_response.images:
-                    for image in second_response.images:
-                        saved = await _save_image(image, tmp_dir, gclient)
-                        if saved:
-                            image_paths_result.append(saved)
+                if second_response is not None:
+                    if second_response.images:
+                        for image in second_response.images:
+                            saved = await _save_image(image, tmp_dir, gclient)
+                            if saved:
+                                image_paths_result.append(saved)
 
-                    if image_paths_result:
-                        if second_response.text:
-                            response_text = second_response.text
-                        return image_paths_result, response_text
+                        if image_paths_result:
+                            if second_response.text:
+                                response_text = second_response.text
+                            return image_paths_result, response_text
 
-                if second_response.text:
-                    response_text = second_response.text
+                    if second_response.text and _is_quota_exceeded_text(second_response.text):
+                        await handle_quota_exceeded(idx)
+                        last_text = second_response.text
+                        continue
+
+                    if second_response.text:
+                        response_text = second_response.text
             else:
                 response_text = response.text
 
         return image_paths_result, response_text
 
-    except Exception:
-        return [], None
+    return [], last_text
 
 
 @check_command_enabled("gemimg")
