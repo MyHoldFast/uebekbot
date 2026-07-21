@@ -91,8 +91,8 @@ msgstr "ℹ️ Enter image description after command."
 
 msgid "gemimghelp"
 msgstr ""
-"ℹ️ Enter a description of the image after the command. To edit the image, "
-"reply to it with the command and the query"
+"ℹ️ Enter a description of the image after the command. To edit an image, "
+"respond to it with a command and a request"
 
 msgid "qwenimg_gen"
 msgstr "⏳ Generating image... Please wait."
