@@ -23,7 +23,7 @@ router = Router()
 
 albums_buffer = {}
 
-SIZE_HINT = "Generate the image at high resolution (around 2048x2048, or 2048x3072 / 3072x2048 depending on orientation), maximum detail, not a thumbnail."
+SIZE_HINT = "Generate the one image at high resolution (around 2048x2048, or 2048x3072 / 3072x2048 depending on orientation), maximum detail, not a thumbnail."
 
 QUALITY_HINT = "Ultra high quality, sharp focus, finely detailed, no compression artifacts, no blur, no pixelation, professional-grade rendering."
 
@@ -34,11 +34,23 @@ LANGUAGE_HINT = (
     "generate the image right now, write that explanation in English."
 )
 
+_TRAILING_MARKER_RE = re.compile(r"[\s]*_\d+_?\s*$")
+
 _cookie_pairs: list[tuple[str, str]] = []
 _clients: list[GeminiClient | None] = []
 _active_index = 0
 _locked_at_zero = False
 _client_lock = asyncio.Lock()
+
+
+def _strip_trailing_marker(text: str | None) -> str:
+    if not text:
+        return ""
+    return _TRAILING_MARKER_RE.sub("", text).strip()
+
+
+def _is_junk_text(text: str | None) -> bool:
+    return not _strip_trailing_marker(text)
 
 
 def _ensure_cookie_state():
@@ -109,7 +121,8 @@ def _is_quota_exceeded_text(text: str) -> bool:
         return True
 
     ru_markers = ("лимит", "настройках", "сброшен")
-    if sum(1 for m in ru_markers if m in t) >= 2:
+    matched = [m for m in ru_markers if m in t]
+    if len(matched) >= 2:
         return True
 
     return False
@@ -210,12 +223,24 @@ async def _save_image(image, tmp_dir: str, gclient: "GeminiClient") -> str | Non
     if full_res_url != original_url:
         image.url = full_res_url
 
+    download_url = full_res_url
+
     try:
-        await image.save(
-            path=os.path.dirname(tmp_path),
-            filename=os.path.basename(tmp_path),
-            skip_invalid_filename=True,
-        )
+        try:
+            await image.save(
+                path=os.path.dirname(tmp_path),
+                filename=os.path.basename(tmp_path),
+                skip_invalid_filename=True,
+            )
+        except TypeError as te:
+            if "skip_invalid_filename" in str(te):
+                await image.save(
+                    path=os.path.dirname(tmp_path),
+                    filename=os.path.basename(tmp_path),
+                )
+            else:
+                raise
+
         if os.path.exists(tmp_path) and os.path.getsize(tmp_path) > 0:
             if _is_valid_image(tmp_path):
                 return tmp_path
@@ -234,7 +259,11 @@ async def _save_image(image, tmp_dir: str, gclient: "GeminiClient") -> str | Non
             )
         }
         async with httpx.AsyncClient(follow_redirects=True, timeout=30, cookies=cookies, headers=headers) as http_client:
-            resp = await http_client.get(image.url)
+            resp = await http_client.get(download_url)
+
+            if resp.status_code == 400 and download_url != original_url:
+                resp = await http_client.get(original_url)
+
             resp.raise_for_status()
             with open(tmp_path, "wb") as f:
                 f.write(resp.content)
@@ -259,7 +288,7 @@ async def generate_image_gemini_web(user_input, image_paths=None):
     last_text = None
     tried_indexes = set()
 
-    for _attempt in range(max_attempts):
+    for attempt in range(max_attempts):
         idx, gclient = await get_active_client()
 
         if gclient is None:
@@ -272,9 +301,9 @@ async def generate_image_gemini_web(user_input, image_paths=None):
 
         try:
             if files:
-                response = await gclient.generate_content(enhanced_prompt, files=files, model=Model.BASIC_FLASH)
+                response = await gclient.generate_content(enhanced_prompt, files=files, model="gemini-flash-lite")
             else:
-                response = await gclient.generate_content(enhanced_prompt, model=Model.BASIC_FLASH)
+                response = await gclient.generate_content(enhanced_prompt, model="gemini-flash-lite")
         except Exception:
             return [], None
 
@@ -306,7 +335,7 @@ async def generate_image_gemini_web(user_input, image_paths=None):
             if extracted_prompt:
                 try:
                     second_response = await gclient.generate_content(
-                        f"{extracted_prompt}. {SIZE_HINT} {LANGUAGE_HINT}", model=Model.BASIC_FLASH
+                        f"{extracted_prompt}. {SIZE_HINT} {LANGUAGE_HINT}", model="gemini-flash-lite"
                     )
                 except Exception:
                     second_response = None
@@ -370,34 +399,21 @@ async def process_gemimg(message: Message, bot: Bot, user_input: str, photos):
 
             if generated_image_paths:
                 await safe_delete(sent_message)
+                caption_text = _strip_trailing_marker(response_text) or None
 
                 if len(generated_image_paths) == 1:
-                    caption = response_text[:1000] if response_text else None
-                    await message.reply_photo(
-                        photo=FSInputFile(generated_image_paths[0]),
-                        caption=caption,
-                        parse_mode="Markdown"
-                    )
+                    caption = caption_text[:1000] if caption_text else None
+                    await _safe_reply_photo(message, FSInputFile(generated_image_paths[0]), caption)
                 else:
-                    media_group = []
-                    for i, image_path in enumerate(generated_image_paths):
-                        if i == 0 and response_text:
-                            caption = response_text[:1000]
-                            media_group.append(
-                                InputMediaPhoto(
-                                    media=FSInputFile(image_path),
-                                    caption=caption,
-                                    parse_mode="Markdown"
-                                )
-                            )
-                        else:
-                            media_group.append(InputMediaPhoto(media=FSInputFile(image_path)))
-
-                    await message.reply_media_group(media=media_group)
+                    await _safe_reply_media_group(message, generated_image_paths, caption_text)
 
             elif response_text:
                 await safe_delete(sent_message)
-                await message.reply(response_text[:4000], parse_mode="Markdown")
+                cleaned = _strip_trailing_marker(response_text)
+                if not cleaned:
+                    await message.reply(_("gemimg_err"))
+                else:
+                    await _safe_reply_text(message, cleaned)
 
             else:
                 await safe_delete(sent_message)
@@ -502,34 +518,21 @@ async def cmd_gemimg(message: Message, command: CommandObject, bot: Bot):
 
             if generated_image_paths:
                 await safe_delete(sent_message)
+                caption_text = _strip_trailing_marker(response_text) or None
 
                 if len(generated_image_paths) == 1:
-                    caption = response_text[:1000] if response_text else None
-                    await message.reply_photo(
-                        photo=FSInputFile(generated_image_paths[0]),
-                        caption=caption,
-                        parse_mode="Markdown"
-                    )
+                    caption = caption_text[:1000] if caption_text else None
+                    await _safe_reply_photo(message, FSInputFile(generated_image_paths[0]), caption)
                 else:
-                    media_group = []
-                    for i, image_path in enumerate(generated_image_paths):
-                        if i == 0 and response_text:
-                            caption = response_text[:1000]
-                            media_group.append(
-                                InputMediaPhoto(
-                                    media=FSInputFile(image_path),
-                                    caption=caption,
-                                    parse_mode="Markdown"
-                                )
-                            )
-                        else:
-                            media_group.append(InputMediaPhoto(media=FSInputFile(image_path)))
-
-                    await message.reply_media_group(media=media_group)
+                    await _safe_reply_media_group(message, generated_image_paths, caption_text)
 
             elif response_text:
                 await safe_delete(sent_message)
-                await message.reply(response_text[:4000], parse_mode="Markdown")
+                cleaned = _strip_trailing_marker(response_text)
+                if not cleaned:
+                    await message.reply(_("gemimg_err"))
+                else:
+                    await _safe_reply_text(message, cleaned)
 
             else:
                 await safe_delete(sent_message)
@@ -546,6 +549,51 @@ async def cmd_gemimg(message: Message, command: CommandObject, bot: Bot):
                         os.remove(path)
                     except Exception:
                         pass
+
+
+async def _safe_reply_photo(message: Message, photo: FSInputFile, caption: str | None):
+    try:
+        await message.reply_photo(photo=photo, caption=caption, parse_mode="Markdown")
+    except TelegramBadRequest as e:
+        if "can't parse entities" in str(e).lower():
+            await message.reply_photo(photo=photo, caption=caption, parse_mode=None)
+        else:
+            raise
+
+
+async def _safe_reply_media_group(message: Message, image_paths: list[str], response_text: str | None):
+    def build(parse_mode):
+        group = []
+        for i, image_path in enumerate(image_paths):
+            if i == 0 and response_text:
+                group.append(
+                    InputMediaPhoto(
+                        media=FSInputFile(image_path),
+                        caption=response_text[:1000],
+                        parse_mode=parse_mode,
+                    )
+                )
+            else:
+                group.append(InputMediaPhoto(media=FSInputFile(image_path)))
+        return group
+
+    try:
+        await message.reply_media_group(media=build("Markdown"))
+    except TelegramBadRequest as e:
+        if "can't parse entities" in str(e).lower():
+            await message.reply_media_group(media=build(None))
+        else:
+            raise
+
+
+async def _safe_reply_text(message: Message, text: str):
+    try:
+        await message.reply(text[:4000], parse_mode="Markdown")
+    except TelegramBadRequest as e:
+        if "can't parse entities" in str(e).lower():
+            await message.reply(text[:4000], parse_mode=None)
+        else:
+            raise
 
 
 async def safe_delete(message):
