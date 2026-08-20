@@ -225,6 +225,29 @@ async def process_gemini(message: Message, command: CommandObject, bot: Bot, pho
         await message.reply(_("gpt_gemini_error"))
 
 
+async def request_gpt_api(model_key: str, messages_for_api: list, max_attempts: int = 3):
+    last_error = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    GPT_API_URL,
+                    json={"model": models[model_key], "messages": messages_for_api},
+                    timeout=60,
+                ) as resp:
+                    data = await resp.json()
+
+            return data["choices"][0]["message"]["content"]
+
+        except Exception as e:
+            last_error = e
+            print(f"GPT request attempt {attempt}/{max_attempts} failed:", e)
+            if attempt < max_attempts:
+                await asyncio.sleep(1)
+
+    raise last_error
+
+
 async def process_gpt(message: Message, command: CommandObject, user_id):
     messagetext = message.reply_to_message.text if message.reply_to_message else ""
     if command.args:
@@ -255,15 +278,7 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
         )
 
         async with TypingIndicator(bot=message.bot, chat_id=message.chat.id):
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    GPT_API_URL,
-                    json={"model": models[model], "messages": messages_for_api},
-                    timeout=60,
-                ) as resp:
-                    data = await resp.json()
-
-        answer = data["choices"][0]["message"]["content"]
+            answer = await request_gpt_api(model, messages_for_api, max_attempts=3)
 
         chat_messages = messages_for_api + [
             {"role": "assistant", "content": answer}
