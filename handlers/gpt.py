@@ -63,11 +63,9 @@ context_db, ContextQuery = DB("db/gpt_context.json").get_db()
 
 models = {
     "gpt-5.4-nano": "gpt-5.4-nano",
-  #  "gpt-4o-mini": "gpt-4o-mini",
     "llama-4": "meta-llama/Llama-4-Scout-17B-16E-Instruct",
     "claude-haiku-4.5": "claude-haiku-4-5",
     "mistral-small-3": "mistralai/Mistral-Small-24B-Instruct-2501",
-  #  "openai/gpt-oss-120b": "openai/gpt-oss-120b",
 }
 
 
@@ -161,6 +159,10 @@ def process_latex(text):
     )
 
 
+def remove_citation_tags(text: str) -> str:
+    return re.sub(r'<citation[^>]*>[^<]*</citation>', '', text)
+
+
 def split_message(text: str, max_length: int = 4000):
     return [text[i:i + max_length] for i in range(0, len(text), max_length)]
 
@@ -214,7 +216,8 @@ async def process_gemini(message: Message, command: CommandObject, bot: Bot, pho
         for candidate in data.get("candidates", []):
             for part in candidate.get("content", {}).get("parts", []):
                 if "text" in part:
-                    for chunk in split_html(telegram_format(part["text"])):
+                    cleaned_text = remove_citation_tags(part["text"])
+                    for chunk in split_html(telegram_format(cleaned_text)):
                         await message.reply(chunk, parse_mode="HTML")
                     return
 
@@ -286,6 +289,7 @@ async def process_gpt(message: Message, command: CommandObject, user_id):
         save_user_context(user_id, chat_messages, None, None)
 
         answer = process_latex(telegram_format(answer))
+        answer = remove_citation_tags(answer)
         for chunk in split_html(answer):
             await message.reply(chunk, parse_mode="HTML")
 
