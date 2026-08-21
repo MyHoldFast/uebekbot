@@ -160,7 +160,7 @@ def process_latex(text):
 
 
 def remove_citation_tags(text: str) -> str:
-    return re.sub(r'<citation[^>]*>[^<]*</citation>', '', text)
+    return re.sub(r'</?citation[^>]*>', '', text)
 
 
 def split_message(text: str, max_length: int = 4000):
